@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## 1.0.0
+
 ### Added
 
 - Added the following principal dependencies: 
