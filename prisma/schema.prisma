@@ -1,0 +1,286 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("MYSQL_PRISMA_URL") // uses connection pooling
+}
+
+model User {
+  id            String       @id @default(cuid())
+  name          String
+  lastName      String       @map("last_name")
+  password      String?
+  email         String
+  emailVerified Boolean?     @map("email_verified")
+  phoneNumber   String       @map("phone_number")
+  isAdmin       Boolean      @default(false) @map("is_admin")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime?    @updatedAt @map("updated_at")
+  sessions      Session[]
+  userCourse    UserCourse[]
+  cart          Cart[]
+
+  @@unique([email, phoneNumber])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  id      String   @id @default(cuid())
+  email   String   @map("email")
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
+model OtpVerification {
+  id       String @id @default(cuid())
+  sid      String @unique
+  value    String @map("user_id")
+  attempts Int
+  type     String
+  status   String
+}
+
+model PasswordResetToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
+model Course {
+  id              Int            @id @default(autoincrement())
+  canonicalId     String         @default("") @db.VarChar(255)
+  title           String
+  description     String         @db.Text
+  courseImage     String         @default("") @map("course_image")
+  price           Float
+  categoryId      Int            @default(0)
+  isActive        Boolean        @map("is_active")
+  instructorName  String         @map("instructor_name")
+  instructorPhoto String         @default("") @map("instructor_photo")
+  deleted         Boolean        @default(false)
+  expiresAt       DateTime       @default(now()) @map("expires_at")
+  createdAt       DateTime       @updatedAt @map("created_at")
+  updatedAt       DateTime?      @map("updated_at")
+  category        CourseCategory @relation(fields: [categoryId], references: [id])
+
+  courseModules CourseModules[]
+  userCourse    UserCourse[]
+  cart          Cart[]
+  userQuizState UserQuizState[]
+}
+
+model CourseModules {
+  id                Int     @id @default(autoincrement())
+  courseId          Int     @map("course_id")
+  title             String
+  minRequiredPoints Int     @map("min_require_points")
+  deleted           Boolean @default(false)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  course          Course            @relation(fields: [courseId], references: [id])
+  moduleClass     ModuleClass[]
+  moduleQuiz      ModuleQuiz[]
+  userModuleState UserModuleState[]
+  UserQuizState   UserQuizState[]
+}
+
+model ModuleClass {
+  id             Int       @id @default(autoincrement())
+  title          String
+  description    String    @db.Text
+  courseModuleId Int       @map("course_module_id")
+  videoPath      String    @map("video_path")
+  videoSize      Int       @default(0) @map("video_size")
+  videoDuration  Int       @default(0) @map("video_duration")
+  deleted        Boolean   @default(false)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime? @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  courseModule     CourseModules      @relation(fields: [courseModuleId], references: [id])
+  UserClassesState UserClassesState[]
+}
+
+model ModuleQuiz {
+  id             Int       @id @default(autoincrement())
+  title          String
+  description    String    @db.Text
+  courseModuleId Int       @map("course_module_id")
+  deleted        Boolean   @default(false)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime? @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  courseModule   CourseModules    @relation(fields: [courseModuleId], references: [id])
+  quizQuestion   QuizQuestion[]
+  userQuizAnswer UserQuizAnswer[]
+  userQuizState  UserQuizState[]
+}
+
+model QuizQuestion {
+  id        Int       @id @default(autoincrement())
+  quizId    Int       @map("quiz_id")
+  title     String
+  type      String
+  points    Int
+  deleted   Boolean   @default(false)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  moduleQuiz             ModuleQuiz               @relation(fields: [quizId], references: [id])
+  possibleAnswerQuestion PossibleAnswerQuestion[]
+  userQuizAnswer         UserQuizAnswer[]
+}
+
+model PossibleAnswerQuestion {
+  id         Int       @id @default(autoincrement())
+  questionId Int       @map("question_id")
+  value      String
+  isCorrect  Boolean   @default(false) @map("is_correct")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime? @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+
+  quizQuestion   QuizQuestion     @relation(fields: [questionId], references: [id])
+  userQuizAnswer UserQuizAnswer[]
+}
+
+model UserCourse {
+  id          Int       @id @default(autoincrement())
+  userId      String    @map("user_id")
+  courseId    Int       @map("course_id")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime? @updatedAt @map("updated_at")
+
+  user             User               @relation(fields: [userId], references: [id])
+  course           Course             @relation(fields: [courseId], references: [id])
+  userModuleState  UserModuleState[]
+  userClassesState UserClassesState[]
+  userQuizAnswer   UserQuizAnswer[]
+  userQuizState    UserQuizState[]
+}
+
+model UserQuizState {
+  id             Int       @id @default(autoincrement())
+  userCourseId   Int       @map("user_course_id")
+  courseModuleId Int       @map("course_module_id")
+  quizId         Int       @map("quiz_id")
+  retries        Int       @map("retries")
+  result         Int       @map("result")
+  passed         Boolean   @map("passed")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime? @updatedAt @map("updated_at")
+
+  userCourse   UserCourse    @relation(fields: [userCourseId], references: [id])
+  moduleQuiz   ModuleQuiz    @relation(fields: [quizId], references: [id])
+  courseModule CourseModules @relation(fields: [courseModuleId], references: [id])
+  Course       Course?       @relation(fields: [courseId], references: [id])
+  courseId     Int?
+}
+
+model Cart {
+  id        Int       @id @default(autoincrement())
+  userId    String    @map("user_id")
+  courseId  Int       @map("course_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  user     User       @relation(fields: [userId], references: [id])
+  course   Course     @relation(fields: [courseId], references: [id])
+  purchase Purchase[]
+}
+
+model Purchase {
+  id              Int       @id @default(autoincrement())
+  cartId          Int       @map("cart_id")
+  total           Float
+  subtotal        Float
+  status          String
+  trxId           String    @default("") @map("trx_id")
+  reference       String    @default("") @map("reference")
+  paymentMethod   String    @default("") @map("payment_method_type")
+  trxCreationDate DateTime  @default(now()) @map("trx_creation_map")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime? @updatedAt @map("updated_at")
+
+  cart Cart @relation(fields: [cartId], references: [id])
+}
+
+model UserModuleState {
+  id           Int @id @default(autoincrement())
+  userCourseId Int @map("user_course_id")
+  moduleId     Int @map("module_id")
+
+  completed Boolean
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  userCourse   UserCourse    @relation(fields: [userCourseId], references: [id])
+  courseModule CourseModules @relation(fields: [moduleId], references: [id])
+}
+
+model UserClassesState {
+  id               Int       @id @default(autoincrement())
+  userCourseId     Int       @map("user_course_id")
+  classId          Int       @map("class_id")
+  currentVideoTime Float     @map("current_video_time")
+  completed        Boolean
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime? @updatedAt @map("updated_at")
+
+  userCourse  UserCourse  @relation(fields: [userCourseId], references: [id])
+  moduleClass ModuleClass @relation(fields: [classId], references: [id])
+}
+
+model UserQuizAnswer {
+  id           Int       @id @default(autoincrement())
+  userCourseId Int       @map("user_course_id")
+  quizId       Int       @map("quiz_id")
+  questionId   Int       @map("question_id")
+  answer       String    @map("answer")
+  correct      String    @map("correct")
+  isCorrect    Boolean   @map("is_correct")
+  points       Int
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime? @updatedAt @map("updated_at")
+
+  userCourse               UserCourse              @relation(fields: [userCourseId], references: [id])
+  moduleQuiz               ModuleQuiz              @relation(fields: [quizId], references: [id])
+  quizQuestion             QuizQuestion            @relation(fields: [questionId], references: [id])
+  PossibleAnswerQuestion   PossibleAnswerQuestion? @relation(fields: [possibleAnswerQuestionId], references: [id])
+  possibleAnswerQuestionId Int?
+}
+
+model CourseCategory {
+  id        Int       @id @default(autoincrement())
+  name      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  course Course[]
+}
