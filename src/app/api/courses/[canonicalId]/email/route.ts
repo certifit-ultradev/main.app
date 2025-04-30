@@ -2,7 +2,8 @@ import { mapErrorToAPIResponse } from '@/exceptions/error-encoder';
 import { sendEmailCourseRequestInfo } from '@/services/email';
 import { NextRequest } from 'next/server';
 
-export async function POST(req: NextRequest, context: { params: { canonicalId: string } }) {
+// @ts-expect-error: params
+export async function POST(req: NextRequest, context) {
     try {
         // Obtener el canonicalId desde los parámetros de la URL
         const { canonicalId } = context.params;

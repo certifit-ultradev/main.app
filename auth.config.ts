@@ -17,9 +17,8 @@ export const authConfig: NextAuthConfig = {
             return token;
         },
         async session({ session, token }) {
-            console.log("session func", typeof token);
-            session.user.id = token.id;
-            session.user.isAdmin = token.isAdmin;
+            session.user.id = typeof token.id === 'string' ? token.id : "";
+            session.user.isAdmin = typeof token.isAdmin === 'boolean' ? token.isAdmin : false;
             return session;
         }
     },

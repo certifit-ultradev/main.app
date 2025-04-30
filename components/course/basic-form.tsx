@@ -3,12 +3,13 @@
 import { listAllCourseCategories } from '@/actions/category/list';
 import { cn } from '@/lib/utils';
 import { CourseBasicInfoSchema } from '@/utils/schemas';
-import { CourseCategoryData, CourseData } from '@/utils/types';
+import { CourseCategoryData, CourseData, ErrMap } from '@/utils/types';
 import { ErrorMessage } from '@hookform/error-message';
 import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { z } from 'zod';
 import { Button } from '../ui/button';
 import _ from 'lodash';
+import { mapZodErrors } from '@/utils/zod-errors-mapper';
 
 interface CourseBasicFormProps {
     data: CourseData;
@@ -17,7 +18,7 @@ interface CourseBasicFormProps {
 };
 
 export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProps) => {
-    const [errors, setErrors] = useState({});
+    const [errors, setErrors] = useState<ErrMap>({});
     const [categories, setCategories] = useState<CourseCategoryData[]>([]);// Estado para categorías
 
     useEffect(() => {
@@ -39,28 +40,24 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
         }
     }
 
+
+
     const validateBasicData = () => {
         try {
             CourseBasicInfoSchema.parse(data);
         } catch (e) {
             if (e instanceof z.ZodError) {
-                setErrors(e.errors);
-                const fieldErrors = e.errors.reduce((acc, error) => {
-                    const path = error.path.join('.');
-                    acc[path] = {
-                        type: error.code,
-                        message: error.message
-                    };
-                    return acc;
-                }, {});
-                setErrors(fieldErrors);
+                setErrors(mapZodErrors(e));
             }
             return false;
         }
         return true;
     };
 
-    const handleBasicDataChange = (field: string, value: string) => {
+    const handleBasicDataChange = <K extends keyof CourseData>(
+        field: K,
+        value: CourseData[K],
+    ) => {
         setData((prevData) => {
             const newData = _.cloneDeep(prevData);
             newData[field] = value;
@@ -68,19 +65,20 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
         });
     };
 
-    const handleFileBasicDataChange = (field: string, e) => {
+    const handleFileBasicDataChange = <K extends keyof CourseData>(
+        field: K,
+        e: React.ChangeEvent<HTMLInputElement>,
+    ) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setData((prevData) => {
-                const newData = _.cloneDeep(prevData);
-                newData[field] = file;
-                return newData;
-            });
-        }
+        if (!file) return;
+        setData((prevData) => {
+            const newData = _.cloneDeep(prevData);
+            newData[field] = file as CourseData[K];
+            return newData;
+        });
     };
 
-
-    const handleCategoryBasicDataChange = (e) => {
+    const handleCategoryBasicDataChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const options = e.target.selectedOptions;
         if (e.target.value != "" && options[0]) {
             setData((prevData) => {
@@ -124,7 +122,7 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
                         <div className={cn('mb-4')}>
                             <p className={cn('text-sm text-gray-700')}>
                                 Imagen cargada:{" "}
-                                <a href={data.courseImage} target="_blank" rel="noopener noreferrer" className={cn('text-[#0BBBE7] underline')}>
+                                <a href={typeof data.courseImage === "string" ? data.courseImage : ""} target="_blank" rel="noopener noreferrer" className={cn('text-[#0BBBE7] underline')}>
                                     Ver imagen
                                 </a>
                             </p>
@@ -151,8 +149,8 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
                     <label className={cn('block text-sm font-medium text-gray-700 mb-2"')} htmlFor="price">
                         Precio *
                     </label>
-                    <input type="number" min="1" id="price" placeholder="$135.000" onChange={(e) => handleBasicDataChange('price', e.target.value)} value={data.price}
-                        className={cn('w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-[#0BBBE7]')} />
+                    <input type="number" min="1" id="price" placeholder="$135.000" onChange={(e) => handleBasicDataChange('price', Number(e.target.value))} value={data.price}
+                        className={cn('w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#0BBBE7]')} />
                     <ErrorMessage
                         errors={errors}
                         name='price'
@@ -169,7 +167,7 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
                         Instructor *
                     </label>
                     <input type="text" id="instructorName" placeholder="[Nombre de instructor]" onChange={(e) => handleBasicDataChange('instructorName', e.target.value)} value={data.instructorName}
-                        className={cn('w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-[#0BBBE7]')} />
+                        className={cn('w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#0BBBE7]')} />
                     <ErrorMessage
                         errors={errors}
                         name='instructorName'
@@ -186,7 +184,7 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
                         <div className={cn('mb-4')}>
                             <p className={cn('text-sm text-gray-700')}>
                                 Imagen cargada:{" "}
-                                <a href={data.instructorPhoto} target="_blank" rel="noopener noreferrer" className={cn('text-[#0BBBE7] underline')}>
+                                <a href={typeof data.instructorPhoto === "string" ? data.instructorPhoto : ""} target="_blank" rel="noopener noreferrer" className={cn('text-[#0BBBE7] underline')}>
                                     Ver imagen
                                 </a>
                             </p>
@@ -216,9 +214,9 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
                     </label>
                     <select
                         id="category"
-                        value={data.category.id ? data.category.id : ""}
+                        value={data.category?.id ? data.category.id : ""}
                         onChange={(e) => handleCategoryBasicDataChange(e)}
-                        className={cn('w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-[#0BBBE7]')}
+                        className={cn('w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#0BBBE7]')}
                     >
                         <option value="" disabled>
                             -- Selecciona una categoría --
@@ -249,8 +247,8 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
                     <label className={cn('block text-sm font-medium text-gray-700 mb-2"')} htmlFor="description">
                         Descripción
                     </label>
-                    <textarea id="description" rows="4" onChange={(e) => handleBasicDataChange('description', e.target.value)} value={data.description}
-                        className={cn('w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-[#0BBBE7]')}
+                    <textarea id="description" rows={4} onChange={(e) => handleBasicDataChange('description', e.target.value)} value={data.description}
+                        className={cn('w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#0BBBE7]')}
                         placeholder="Descripción..." />
                     <ErrorMessage
                         errors={errors}

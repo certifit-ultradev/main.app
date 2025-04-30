@@ -3,13 +3,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { notFound } from 'next/navigation';
 
-type UserViewPageProps = {
-    params: {
-        id: string;
-    }
-};
-
-const UserViewPage = async ({ params }: UserViewPageProps) => {
+// @ts-expect-error: params
+const UserViewPage = async ({ params }) => {
     const { id } = await params;
     const result = await fetchUserById({ data: { id } });
     if (!result.success) {

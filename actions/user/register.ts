@@ -41,3 +41,37 @@ export const edit = async (request: ServerActionRequest<EditUserData>): Promise<
             }
         });
 }
+
+export const activate = async (request: ServerActionRequest<{ id: string }>): Promise<ServerActionResponse<null>> => {
+    return await Middlewares<null, { id: string }>(
+        request,
+        [isAdmin],
+        async (request: { id: string }) => {
+            try {
+                const user = await editUserById(request.id, { emailVerified: true });
+                if (!user) {
+                    return { success: false, error: "No se pudo activar el usuario." }
+                }
+                return { success: true, message: "Usuario activado correctamente." }
+            } catch (error) {
+                return mapErrorToServerActionResponse(error);
+            }
+        });
+}
+
+export const deactivate = async (request: ServerActionRequest<{ id: string }>): Promise<ServerActionResponse<null>> => {
+    return await Middlewares<null, { id: string }>(
+        request,
+        [isAdmin],
+        async (request: { id: string }) => {
+            try {
+                const user = await editUserById(request.id, { emailVerified: false });
+                if (!user) {
+                    return { success: false, error: "No se pudo desactiar el usuario." }
+                }
+                return { success: true, message: "Usuario desactivado correctamente." }
+            } catch (error) {
+                return mapErrorToServerActionResponse(error);
+            }
+        });
+}

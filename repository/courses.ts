@@ -62,19 +62,20 @@ export const findThreeCoursesActives = async (userId?: string): Promise<Course[]
                 include: {
                     moduleClass: true
                 }
-            }
+            },
+            userCourse: {
+                where: {
+                    userId,
+                },
+            },
         },
         where: {
             isActive: true
         }
     };
 
-    if (userId) {
-        query.include.userCourse = {
-            where: {
-                userId,
-            },
-        }
+    if (!userId) {
+        delete (query.include as any).userCourse;
     }
 
     console.dir(query, { depth: null });
@@ -124,6 +125,7 @@ export const findUserCourses = async (userId?: string): Promise<UserCourse[]> =>
             id: userCourse.id,
             userId: userCourse.userId,
             courseId: userCourse.courseId,
+            completedAt: userCourse.completedAt,
             createdAt: userCourse.createdAt,
             updatedAt: userCourse.updatedAt,
             course: new Course({ ...userCourse.course }),
@@ -338,7 +340,7 @@ export const createFullCourse = async (course: CourseData): Promise<Course> => {
                 description: course.description,
                 price: Number(course.price),
                 courseImage: "",
-                categoryId: course.category.id || 0,
+                categoryId: course.category?.id || 0,
                 instructorName: course.instructorName,
                 instructorPhoto: "",
                 expiresAt: new Date(course.expiresAt),
@@ -422,8 +424,8 @@ export const createFullCourse = async (course: CourseData): Promise<Course> => {
         throw new Error("No se pudo crear el curso");
     }
 
-    const courseImageUrl = await storeVideoBlobStorage(`/courses/${txCourse.id}/`, course.courseImage);
-    const instructorPhotoImageUrl = await storeVideoBlobStorage(`/courses/${txCourse.id}/`, course.instructorPhoto);
+    const courseImageUrl = await storeVideoBlobStorage(`/courses/${txCourse.id}/`, course.courseImage as File);
+    const instructorPhotoImageUrl = await storeVideoBlobStorage(`/courses/${txCourse.id}/`, course.instructorPhoto as File);
 
     await prisma.course.update({
         where: { id: txCourse.id },
@@ -498,7 +500,7 @@ export const countCourseSales = async (): Promise<ResultSalesCourse[]> => {
 }
 
 export const sumCourseSalesByLastMonth = async (): Promise<CoursesMonthResult> => {
-    const [result] = await prisma.$queryRaw<CoursesMonthResult>`
+    const [result] = await prisma.$queryRaw<CoursesMonthResult[]>`
         SELECT
           SUM(
             CASE WHEN MONTH(p.created_at) = MONTH(CURRENT_DATE())
@@ -550,6 +552,10 @@ const modelMap: Record<string, keyof PrismaClient> = {
     quiz: 'moduleQuiz',
     question: 'quizQuestion',
     option: 'possibleAnswerQuestion'
+};
+
+type TransactionClientWithModels = {
+    [K in keyof PrismaClient as K extends `$${string}` ? never : K]: PrismaClient[K]
 };
 
 export const updateFullCourse = async (courseId: number, adds: Change[], updates: Change[], deletes: Change[]) => {
@@ -716,7 +722,8 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                 }
 
                 try {
-                    await tx[prismaModelName].update({
+                    const txModel = (tx as any)[prismaModelName];
+                    await txModel.update({
                         where: { id },
                         data,
                     });
@@ -853,7 +860,7 @@ export const createUserClassState = async (state: UserClassesState): Promise<Use
         }
     });
 
-    let userClassState = {};
+    let userClassState: UserClassesState | null = null;
     if (!existState) {
         userClassState = await prisma.userClassesState.create({
             data: {
@@ -916,7 +923,7 @@ export const createQuestionAnswer = async (answer: UserQuizAnswer): Promise<User
         }
     });
 
-    let userQuestionAnswer = {};
+    let userQuestionAnswer: UserQuizAnswer | null = null;
     if (!existAnswer) {
         userQuestionAnswer = await prisma.userQuizAnswer.create({
             data: {
@@ -952,7 +959,11 @@ export const createQuestionAnswer = async (answer: UserQuizAnswer): Promise<User
 
 export const createUserModuleState = async (state: UserModuleState): Promise<UserModuleState | null> => {
     const userClassState = await prisma.userModuleState.create({
-        data: state
+        data: {
+            userCourseId: state.userCourseId,
+            moduleId: state.moduleId,
+            completed: state.completed,
+        }
     });
     if (!userClassState) {
         return null;
@@ -961,30 +972,19 @@ export const createUserModuleState = async (state: UserModuleState): Promise<Use
 }
 
 export const updateCourse = async (courseId: number, data: Partial<Course>): Promise<Course> => {
+    const { category, courseModules, cart, userCourse, ...updateData } = data;
     const updatedCourse = await prisma.course.update({
         where: { id: courseId },
-        data: {
-            title: data.title,
-            description: data.description,
-            courseImage: data.courseImage,
-            isActive: data.isActive,
-            price: data.price,
-            instructorName: data.instructorName,
-            instructorPhoto: data.instructorPhoto,
-            expiresAt: data.expiresAt,
-            categoryId: data.category?.id
-        },
+        data: updateData,
     });
     return new Course({ ...updatedCourse });
 };
 
 export const updateModule = async (moduleId: number, data: Partial<CourseModules>): Promise<CourseModules> => {
+    const { moduleClass, moduleQuiz, ...updateData } = data;
     const updatedModule = await prisma.courseModules.update({
         where: { id: moduleId },
-        data: {
-            title: data.title,
-            minRequiredPoints: data.minRequiredPoints,
-        },
+        data: updateData,
     });
     return new CourseModules({ ...updatedModule });
 };
@@ -992,36 +992,25 @@ export const updateModule = async (moduleId: number, data: Partial<CourseModules
 export const updateClass = async (classId: number, data: Partial<ModuleClass>): Promise<ModuleClass> => {
     const updatedClass = await prisma.moduleClass.update({
         where: { id: classId },
-        data: {
-            title: data.title,
-            description: data.description,
-            videoPath: data.videoPath,
-            videoDuration: data.videoDuration,
-            videoSize: data.videoSize
-        },
+        data,
     });
     return new ModuleClass({ ...updatedClass });
 };
 
 export const updateQuiz = async (quizId: number, data: Partial<ModuleQuiz>): Promise<ModuleQuiz> => {
+    const { quizQuestion, userQuizState, ...updateData } = data;
     const updatedQuiz = await prisma.moduleQuiz.update({
         where: { id: quizId },
-        data: {
-            title: data.title,
-            description: data.description,
-        },
+        data: updateData,
     });
     return new ModuleQuiz({ ...updatedQuiz });
 };
 
 export const updateQuestion = async (questionId: number, data: Partial<QuizQuestion>): Promise<QuizQuestion> => {
+    const { possibleAnswerQuestion, ...updateData } = data;
     const updatedQuestion = await prisma.quizQuestion.update({
         where: { id: questionId },
-        data: {
-            title: data.title,
-            type: data.type,
-            points: data.points,
-        },
+        data: updateData,
     });
     return new QuizQuestion({ ...updatedQuestion });
 };
@@ -1029,10 +1018,7 @@ export const updateQuestion = async (questionId: number, data: Partial<QuizQuest
 export const updateOption = async (optionId: number, data: Partial<PossibleAnswerQuestion>): Promise<PossibleAnswerQuestion> => {
     const updatedOption = await prisma.possibleAnswerQuestion.update({
         where: { id: optionId },
-        data: {
-            value: data.value,
-            isCorrect: data.isCorrect,
-        },
+        data: data,
     });
     return new PossibleAnswerQuestion({ ...updatedOption });
 };

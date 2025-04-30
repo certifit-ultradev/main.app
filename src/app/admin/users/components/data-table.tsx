@@ -22,11 +22,19 @@ import { useEffect, useState } from 'react'
 import { listAll } from '@/actions/user/list'
 import { UserList } from '@/utils/types'
 import { UserDataTableColumns } from './columns';
+import { activate, deactivate } from '@/actions/user/register'
+import Modal from '@/components/modal'
+import { CheckIcon, XIcon } from '@/components/svg/certifit-icons'
 
 export function UserListDataTable() {
     const [data, setData] = useState<UserList[]>([]);
     const [totalPages, setTotalPages] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+    const [activationResult, setActivationResult] = useState({
+        success: false,
+        message: ''
+    });
 
     // Estado local de paginación: pageIndex y pageSize
     const [pagination, setPagination] = useState<PaginationState>({
@@ -55,10 +63,34 @@ export function UserListDataTable() {
         fetchData();
     }, [pagination.pageIndex, pagination.pageSize]);
 
+    const handleActivateCourse = async (id: string) => {
+        const result = await activate({ data: { id: id } });
+        setActivationResult({
+            success: true,
+            message: result.message ? result.message : ''
+        });
+        setIsOpen(true);
+    };
+
+    const handleDectivateCourse = async (id: string) => {
+        const result = await deactivate({ data: { id: id } });
+        setActivationResult({
+            success: true,
+            message: result.message ? result.message : ''
+        });
+        setIsOpen(true);
+    };
+
+    const handleModalClose = () => {
+        setIsOpen(false);
+        window.location.reload();
+    };
+
+    const columns = UserDataTableColumns({ onActivate: handleActivateCourse, onDeactivate: handleDectivateCourse });
 
     const table = useReactTable({
         data,
-        columns: UserDataTableColumns(),
+        columns: columns,
         // Indicamos que la paginación es manual
         manualPagination: true,
         // Pasamos el estado de paginación actual
@@ -155,6 +187,30 @@ export function UserListDataTable() {
                 >
                     {'>>'}
                 </Button>
+            </div>
+            {/* Modal de resultado */}
+            <div>
+                <Modal open={isOpen} setOpen={handleModalClose} closeButton={false}>
+                    <div>
+                        <div className={cn('sm:flex sm:items-start')}>
+                            <div className={cn('text-center sm:text-left w-full')}>
+                                <div className={cn('grid px-4 py-3 justify-items-center items-center sm:px-6')}>
+                                    <div className={cn('rounded-2xl flex items-center justify-center w-[89px] h-[89px] bg-[#EBF9EE]')}>
+                                        <div className={cn('rounded-2xl flex items-center justify-center w-[65px] h-[65px] bg-[#CEF4D7]')}>
+                                            {activationResult.success ? <CheckIcon width={56} height={57} className={cn('text-5xl text')} /> : <XIcon width={56} height={57} className={cn('text-5xl text')} />}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className={cn('grid px-4 py-3 justify-items-center items-center sm:px-6')}>
+                                    <p>Resultado activación</p>
+                                </div>
+                                <div className={cn('grid px-4 bg-[#F5F8FE] py-3 justify-items-center items-center sm:px-6')}>
+                                    <p>{activationResult.message}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Modal>
             </div>
         </div>
 

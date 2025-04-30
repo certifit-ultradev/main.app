@@ -26,6 +26,9 @@ export async function POST(req: NextRequest) {
         return Response.json(result);
     } catch (error) {
         console.error(mapErrorToAPIResponse(error));
-        return null;
+        return Response.json({
+            success: false,
+            message: "Error al procesar el evento"
+        });
     }
 }

@@ -60,13 +60,12 @@ export const updateUserById = async (id: string, data: Partial<User>): Promise<U
         data.password = await bcrypt.hash(data.password, 10);
     }
 
-    delete data['confirmPassword'];
-
-    // Actualizamos el usuario en la base de datos
-    return await prisma.user.update({
+    const { userCourse, ...updateData } = data;
+    const updatedUser = await prisma.user.update({
         where: { id },
-        data,
+        data: updateData,
     });
+    return new User(updatedUser);
 }
 
 export const createUser = async (user: User): Promise<User | null> => {
@@ -75,7 +74,17 @@ export const createUser = async (user: User): Promise<User | null> => {
     }
 
     const createdUser = await prisma.user.create({
-        data: user
+        data: {
+            name: user.name,
+            lastName: user.lastName,
+            password: user.password,
+            email: user.email,
+            isAdmin: user.isAdmin,
+            emailVerified: user.emailVerified,
+            phoneNumber: user.phoneNumber,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
+        }
     });
     return createdUser;
 }

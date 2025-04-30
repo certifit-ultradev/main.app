@@ -30,8 +30,6 @@ export default auth((req: { auth?: Session |null; nextUrl?: NextURL; headers: He
         return;
     }
 
-    console.log("req.auth?.user", req.auth?.user);
-
     const isAdmin = req.auth?.user?.isAdmin;
     if (isVideoRoute) {
         if (!isLoggedIn) {

@@ -14,9 +14,9 @@ const CreateCoursesPage: NextPage = () => {
     const [data, setData] = useState<CourseData>({
         title: '',
         price: 0.0,
-        courseImage: null,
+        courseImage: '',
         instructorName: '',
-        instructorPhoto: null,
+        instructorPhoto: '',
         category: { name: '' },
         description: '',
         expiresAt: '',
@@ -38,7 +38,7 @@ const CreateCoursesPage: NextPage = () => {
                     <CourseClassesForm previousStep={previousStep} nextStep={nextStep} setData={setData} data={data} />
                 )}
                 {step === 3 && (
-                    <CourseReviewForm previousStep={previousStep} nextStep={nextStep} data={data} />
+                    <CourseReviewForm previousStep={previousStep} nextStep={nextStep} data={data} originalData={data} />
                 )}
             </div>
         </div>

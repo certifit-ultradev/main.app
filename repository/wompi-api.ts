@@ -1,5 +1,6 @@
 import { TransactionError } from "@/exceptions/transaction-error";
 import { Transaction } from "@/models/transaction";
+import { TransactionWompiResponse } from "@/utils/types";
 
 const urlSanbox = 'https://sandbox.wompi.co/v1';
 const urlProd = 'https://production.wompi.co/v1';
@@ -26,5 +27,5 @@ export const getTransaction = async (trxId: string): Promise<Transaction> => {
 
     const originalData = await response.json();
 
-    return Transaction.fromWompiResponse(originalData);
+    return Transaction.fromWompiResponse(originalData as TransactionWompiResponse);
 }

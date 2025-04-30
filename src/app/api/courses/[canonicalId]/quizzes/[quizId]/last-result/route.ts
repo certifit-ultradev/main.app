@@ -2,6 +2,7 @@ import { mapErrorToAPIResponse } from '@/exceptions/error-encoder';
 import { getUserQuizState } from '@/services/courses';
 import { NextRequest } from 'next/server';
 
+// @ts-expect-error: params
 export async function GET(req: NextRequest, context) {
     try {
         const params = await context.params;

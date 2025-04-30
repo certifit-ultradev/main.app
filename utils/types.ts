@@ -157,8 +157,8 @@ export interface UserList {
     phoneNumber: string;
     isAdmin: boolean;
     emailVerified: boolean;
-    createdAt: Date;
-    updatedAt: Date | null;
+    createdAt?: Date;
+    updatedAt?: Date | null;
 }
 
 export interface UserCreateData {
@@ -167,8 +167,8 @@ export interface UserCreateData {
     lastName: string;
     email: string;
     phoneNumber: string;
-    password: string;
-    confirmPassword: string;
+    password?: string;
+    confirmPassword?: string;
 }
 
 export interface DataPaginated<T> {
@@ -191,15 +191,15 @@ export interface CoursePlainData {
     instructorName: string;
     instructorPhoto: any;
     courseDuration: string;
-    category: CourseCategoryData;
+    category?: CourseCategoryData | null;
     description: string;
     alreadyPurchased: boolean;
     expiresAt: Date;
 }
 
 export interface ClassProgress {
-    id: number,
-    name: string,
+    id?: number,
+    title: string,
     completed: boolean
 }
 
@@ -211,9 +211,9 @@ export interface CoursePublicData {
     instructorName: string;
     instructorPhoto: any;
     courseDuration?: string;
-    category: CourseCategoryData;
+    category?: CourseCategoryData | null;
     description: string;
-    expiresAt: string;
+    expiresAt: Date;
     classViewed: ClassViewed[];
     moduleViewed: ModuleViewed[];
     modules: CourseModule[] | undefined;
@@ -227,17 +227,38 @@ export interface CoursePublicData {
     visibleClasses: any
 }
 
+export interface CoursePublicDataWithOutCompletion {
+    canonicalId: string;
+    title: string;
+    price: number;
+    courseImage: any;
+    instructorName: string;
+    instructorPhoto: any;
+    courseDuration?: string;
+    category?: CourseCategoryData | null;
+    description: string;
+    expiresAt: Date;
+    modules: CourseModule[] | undefined;
+    classViewed?: ClassViewed[] | null;
+    moduleViewed?: ModuleViewed[] | null;
+    classesWithCompletion?: ClassProgress[] | null,
+    progressPercent: number,
+    currentIndex: number,
+    totalClasses: number,
+    visibleClasses: any
+}
+
 export interface RemapedCourse {
     canonicalId: string;
     title: string;
     price: number;
     courseImage: any;
-    instructorName?: string;
+    instructorName: string;
     instructorPhoto: any;
     courseDuration?: string;
-    category: CourseCategoryData;
+    category?: CourseCategoryData | null;
     description: string;
-    expiresAt?: Date;
+    expiresAt: Date;
     classViewed?: ClassViewed[] | null;
     moduleViewed?: ModuleViewed[] | null;
     modules: CourseModule[] | undefined;
@@ -280,10 +301,10 @@ export interface CourseData {
     id?: number;
     title: string;
     price: number;
-    courseImage: any;
+    courseImage: File | string;
     instructorName: string;
-    instructorPhoto: any;
-    category: CourseCategoryData;
+    instructorPhoto: File | string;
+    category?: CourseCategoryData | null;
     description: string;
     expiresAt: string;
     modules: CourseModule[] | undefined;
@@ -294,8 +315,8 @@ export interface CourseModule {
     courseId?: number;
     minRequiredPoints: number;
     title: string;
-    classes: ModuleClass[] | undefined;
-    quiz: QuizModule | undefined;
+    classes?: ModuleClass[] | undefined;
+    quiz?: QuizModule | undefined;
 };
 
 export interface ModuleClass {
@@ -303,7 +324,7 @@ export interface ModuleClass {
     courseModuleId?: number;
     title: string;
     description: string;
-    video?: any;
+    video?: File | string | null;
     videoSize?: number;
     videoDuration?: number;
 }
@@ -324,7 +345,7 @@ export interface CurrentUserQuizState {
 
 export interface RemapedClass {
     id?: number,
-    title?: string,
+    title: string,
     completed: boolean
 }
 
@@ -346,7 +367,7 @@ export interface QuestionOption {
 
 export interface CourseCategoryData {
     id?: number
-    name: string
+    name?: string
 }
 
 export interface CreateQuestionAnswer {
@@ -440,3 +461,27 @@ export interface RequestCourseData {
     detalles: string,
     terminos: boolean,
 }
+
+export interface TransactionWompiResponse {
+    data: {
+        id: string
+        created_at: Date
+        amount_in_cents: number
+        status: string
+        reference: string
+        customer_email: string
+        currency: string
+        payment_method_type: string
+        payment_method: {
+            phone_number: string
+        };
+        redirect_url: string
+        payment_link_id: string
+    }
+}
+
+export type ErrAcc = { type: string; message: string };
+export type ErrMap = Record<string, ErrAcc>;
+
+export type OptionalKeys<T> = { [K in keyof T]-?: undefined extends T[K] ? K : never }[keyof T];
+export type RequiredKeys<T> = Exclude<keyof T, OptionalKeys<T>>;

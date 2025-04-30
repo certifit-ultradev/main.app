@@ -9,10 +9,9 @@ declare module "next-auth" {
         } & DefaultSession["user"];
     }
 
-
     interface User {
         id: string;
-        isAdmin: boolean;
+        isAdmin?: boolean;
     }
 }
 

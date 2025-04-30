@@ -3,5 +3,5 @@ export interface SubmitButtonProps {
   label: string
   customClass?: string
   disabled?: boolean
-  onClick?: (e) => void
+  onClick?: () => void
 }

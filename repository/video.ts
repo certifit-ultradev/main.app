@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { put } from '@vercel/blob';
 import { generateFileName } from '@/utils/upload-file-blob';
 
-export const saveVideoLocalStorage = async (file): Promise<string> => {
+export const saveVideoLocalStorage = async (file: File): Promise<string> => {
     if (!file) {
         throw new Error('No file provided');
     }

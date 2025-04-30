@@ -1,4 +1,4 @@
-import { CourseData, CourseModule } from "@/utils/types";
+import { CourseData, CourseModule, ErrMap, ModuleClass, QuestionOption, QuizModule, QuizQuestions } from "@/utils/types";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { Tab, TabGroup, TabList, TabPanels, TabPanel } from '@headlessui/react';
 import { AddCircleOutline, DeleteForever } from "@mui/icons-material";
@@ -8,6 +8,7 @@ import { z } from "zod";
 import _ from "lodash";
 import { cn } from "@/lib/utils";
 import { ErrorMessage } from "@hookform/error-message";
+import { mapZodErrors } from "@/utils/zod-errors-mapper";
 
 interface CourseBasicFormProps {
     data: CourseData;
@@ -17,7 +18,7 @@ interface CourseBasicFormProps {
 };
 
 export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: CourseBasicFormProps) => {
-    const [errors, setErrors] = useState({});
+    const [errors, setErrors] = useState<ErrMap>({});
     const [modules, setModules] = useState<CourseModule[]>([]);
 
     useEffect(() => {
@@ -37,15 +38,7 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
             setErrors({});
         } catch (e) {
             if (e instanceof z.ZodError) {
-                const fieldErrors = e.errors.reduce((acc, error) => {
-                    const path = error.path.join('-');
-                    acc[path] = {
-                        type: error.code,
-                        message: error.message
-                    };
-                    return acc;
-                }, {});
-                setErrors(fieldErrors);
+                setErrors(mapZodErrors(e));
             }
             return false;
         }
@@ -57,9 +50,20 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
     };
 
     const addClassToModule = (moduleIndex: number) => {
-        setModules((prevModules) => {
+        setModules(prevModules => {
             const newModules = _.cloneDeep(prevModules);
-            newModules[moduleIndex].classes.push({ title: '', description: '', video: null });
+            const mod = newModules[moduleIndex];
+
+            if (!mod.classes) {
+                mod.classes = [];
+            }
+
+            mod.classes.push({
+                title: "",
+                description: "",
+                video: null,
+            });
+
             return newModules;
         });
     };
@@ -67,33 +71,34 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
     const removeClassFromModule = (moduleIndex: number, classIndex: number) => {
         setModules((prevModules) => {
             const newModules = _.cloneDeep(prevModules);
-            newModules[moduleIndex].classes = newModules[moduleIndex].classes.filter((_, idx) => idx !== classIndex);
+            newModules[moduleIndex].classes = newModules[moduleIndex].classes!.filter((_, idx) => idx !== classIndex);
             return newModules;
         });
     };
 
-    const handleClassChange = (moduleIndex: number, classIndex: number, field: string, value: string|File) => {
-        if (field == 'video' && value instanceof File) {
+    const handleClassChange = <K extends keyof ModuleClass>(
+        moduleIndex: number,
+        classIndex: number,
+        field: K,
+        value: ModuleClass[K],
+    ) => {
+        if (field === "video" && value instanceof File) {
             const fileURL = URL.createObjectURL(value as File);
 
-            // Crear un elemento <video> temporal
             const video = document.createElement("video");
             video.src = fileURL;
             video.addEventListener("loadedmetadata", () => {
-                // Duración en segundos
                 const vidDuration = video.duration;
                 setModules((prevModules) => {
                     console.log("prevModules addEventListener", prevModules);
                     const newModules = _.cloneDeep(prevModules);
-                    newModules[moduleIndex].classes[classIndex]['videoDuration'] = vidDuration;
+                    newModules[moduleIndex].classes![classIndex]['videoDuration'] = vidDuration;
                     return newModules;
                 });
 
-                // Liberar la URL temporal si quieres limpiar memoria
                 URL.revokeObjectURL(fileURL);
             });
 
-            // Opcionalmente, manejar errores de carga
             video.addEventListener("error", (err) => {
                 console.error("Error al cargar video:", err);
             });
@@ -101,7 +106,7 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
 
         setModules((prevModules) => {
             const newModules = _.cloneDeep(prevModules);
-            newModules[moduleIndex].classes[classIndex][field] = value;
+            newModules[moduleIndex].classes![classIndex][field] = value;
             return newModules;
         });
     };
@@ -122,10 +127,14 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
         });
     };
 
-    const handleQuizChange = (moduleIndex: number, field: string, value: string) => {
+    const handleQuizChange = <K extends keyof QuizModule>(
+        moduleIndex: number,
+        field: K,
+        value: QuizModule[K],
+    ) => {
         setModules((prevModules) => {
             const newModules = _.cloneDeep(prevModules);
-            newModules[moduleIndex].quiz[field] = value;
+            newModules[moduleIndex].quiz![field] = value;
             return newModules;
         });
     };
@@ -133,31 +142,58 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
     const addQuestionToQuiz = (moduleIndex: number) => {
         setModules((prevModules) => {
             const newModules = _.cloneDeep(prevModules);
-            newModules[moduleIndex].quiz.questions.push({ type: 'multiple', title: '', points: 0, options: [{ value: '', isCorrect: false }] });
+            newModules[moduleIndex].quiz!.questions!.push({ type: 'multiple', title: '', points: 0, options: [{ value: '', isCorrect: false }] });
             return newModules;
         });
     };
 
-    const handleQuestionChange = (moduleIndex: number, questionIndex: number, field: string, value: string) => {
+    const handleQuestionChange = <K extends keyof QuizQuestions>(
+        moduleIndex: number,
+        questionIndex: number,
+        field: K,                     // ahora TS sabe que es clave de ModuleClass
+        value: QuizQuestions[K],       // y el valor tiene el tipo correcto
+    ) => {
         const newModules = [...modules];
-        newModules[moduleIndex].quiz.questions[questionIndex][field] = value;
+        newModules[moduleIndex].quiz!.questions![questionIndex][field] = value;
         setModules(newModules);
     };
 
     const addOptionToQuestion = (moduleIndex: number, questionIndex: number) => {
         const newModules = [...modules];
-        newModules[moduleIndex].quiz.questions[questionIndex].options.push({ value: '', isCorrect: false });
+        newModules[moduleIndex].quiz!.questions![questionIndex].options!.push({ value: '', isCorrect: false });
         setModules(newModules);
     };
 
-    const handleOptionChange = (moduleIndex: number, questionIndex: number, optionIndex: number, field: string, value: string) => {
+    /**
+   * 
+   * const handleOptionChange = <K extends keyof QuestionOption>(
+      moduleIndex: number,
+      questionIndex: number,
+      optionIndex: number,
+      field: K,                     
+      value: QuestionOption[K],      
+    ) => {
+   * 
+   * @param moduleIndex 
+   * 
+   * @param field 
+   * @param value 
+   */
+
+    const handleOptionChange = <K extends keyof QuestionOption>(
+        moduleIndex: number,
+        questionIndex: number,
+        optionIndex: number,
+        field: K,
+        value: QuestionOption[K],
+    ) => {
         const newModules = [...modules];
         if (field === 'isCorrect' && value) {
             newModules[moduleIndex].quiz?.questions?.[questionIndex].options?.forEach((option, idx) => {
                 option.isCorrect = idx === optionIndex;
             });
         } else {
-            newModules[moduleIndex].quiz.questions[questionIndex].options[optionIndex][field] = value;
+            newModules[moduleIndex].quiz!.questions![questionIndex].options![optionIndex][field] = value;
         }
         setModules(newModules);
     };
@@ -360,7 +396,7 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                                             <div className={cn('mb-4')}>
                                                 <p className={cn('text-sm text-gray-700')}>
                                                     Video cargado:{" "}
-                                                    <a href={cls.video} target="_blank" rel="noopener noreferrer" className={cn('text-[#0BBBE7] underline')}>
+                                                    <a href={typeof cls.video === 'string' ? cls.video : ""} target="_blank" rel="noopener noreferrer" className={cn('text-[#0BBBE7] underline')}>
                                                         Ver video
                                                     </a>
                                                 </p>
@@ -528,7 +564,7 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                                                             />
                                                             <ErrorMessage
                                                                 errors={errors}
-                                                                name={`${moduleIndex}-quiz-questions-${questionIndex}-text`}
+                                                                name={`${moduleIndex}-quiz-questions-${questionIndex}-title`}
                                                                 render={({ message }) => (
                                                                     <p className={cn('text-red-500 text-sm text-left w-full')}>
                                                                         {message}
@@ -614,7 +650,7 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                                                                                 className={cn('text-red-500 hover:underline')}
                                                                                 onClick={() => {
                                                                                     const newModules = [...modules];
-                                                                                    newModules[moduleIndex].quiz.questions[questionIndex].options.splice(optionIndex, 1);
+                                                                                    newModules[moduleIndex].quiz!.questions![questionIndex].options!.splice(optionIndex, 1);
                                                                                     setModules(newModules);
                                                                                 }}
                                                                             >

@@ -9,7 +9,7 @@ import { UserExistError } from "./user-exist";
 import { Prisma } from "@prisma/client";
 import { AuthError } from "next-auth";
 
-export function mapErrorToAPIResponse(error) {
+export function mapErrorToAPIResponse(error: unknown) {
     switch (true) {
         case error instanceof CourseAlreadyPurchasedError:
         case error instanceof TransactionError:
@@ -41,7 +41,7 @@ export function mapErrorToAPIResponse(error) {
     }
 }
 
-export function mapErrorToServerActionResponse(error) {
+export function mapErrorToServerActionResponse(error: unknown) {
     switch (true) {
         case error instanceof CourseAlreadyPurchasedError:
         case error instanceof TransactionError:
@@ -60,13 +60,26 @@ export function mapErrorToServerActionResponse(error) {
                 default:
                     return { success: false, error: "Algo ha pasado, intenta mas tarde!" };
             }
-        case error instanceof Prisma.PrismaClientValidationError:
+        
         case error instanceof Prisma.PrismaClientRustPanicError:
         case error instanceof Prisma.PrismaClientInitializationError:
         case error instanceof Prisma.PrismaClientKnownRequestError:
+        case error instanceof Prisma.PrismaClientValidationError:
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+                console.log(`Error conocido de Prisma (código ${error.code}): ${error.message}`);
+                // Errores conocidos de Prisma
+                if (error.code === 'P2002') {
+                    return {
+                        success: false,
+                        message: "El correo electrónico ya está en uso.",
+                    }
+                } else {
+                    console.log(`Error conocido de Prisma (código ${error.code}): ${error.message}`);
+                }
+            }
             return {
                 success: false,
-                message: error.message + error.cause,
+                message: "ocurrio un error, intente mas tarde",
             };
         case error instanceof Error:
             return {
@@ -86,7 +99,7 @@ export function mapErrorToServerActionResponse(error) {
     }
 }
 
-export function logPrismaError(error) {
+export function logPrismaError(error: unknown) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
         console.log(`Error conocido de Prisma (código ${error.code}): ${error.message}`);
         // Errores conocidos de Prisma

@@ -20,12 +20,12 @@ export const register = async (request: ServerActionRequest<CourseData>): Promis
                 const modules = course.courseModules?.map((courseModule): CourseModule => ({
                     id: courseModule.id,
                     courseId: courseModule.courseId,
-                    name: courseModule.title,
+                    title: courseModule.title,
                     minRequiredPoints: courseModule.minRequiredPoints,
                     classes: courseModule.moduleClass?.map((cls) => ({
                         id: cls.id,
                         courseModuleId: cls.courseModuleId,
-                        name: cls.title,
+                        title: cls.title,
                         description: cls.description,
                         video: cls.videoPath,
                     })),

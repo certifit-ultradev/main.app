@@ -62,9 +62,10 @@ export const registerUser = async (userInfo: RegisterUser | UserCreateData): Pro
             name: userInfo.name,
             lastName: userInfo.lastName,
             password: userInfo.password,
+            isAdmin: false,
             email: userInfo.email,
+            emailVerified: false,
             phoneNumber: userInfo.phoneNumber,
-            emailVerified: false
         }));
     } catch (error) {
         logPrismaError(error);
@@ -75,7 +76,7 @@ export const registerUser = async (userInfo: RegisterUser | UserCreateData): Pro
 export const editUserById = async (id: string, userInfo: Partial<User>): Promise<User> => {
     try {
         const filteredData = cleanData(userInfo);
-        return await updateUserById(id, new User(filteredData));
+        return await updateUserById(id, filteredData);
     } catch (error) {
         logPrismaError(error);
         throw error;

@@ -3,7 +3,7 @@ import { CourseData } from "./types";
 export interface Change {
     type: string;         // Tipo de elemento que cambió
     action: string;       // 'added', 'updated', 'deleted'
-    path: { [key: string]: number | string }; // Objeto con tipos como claves y IDs o propiedades como valores
+    path: { [key: string]: number | string | null }; // Objeto con tipos como claves y IDs o propiedades como valores
     data?: any;           // Datos del elemento modificado
 }
 
@@ -139,7 +139,7 @@ export function diffCourses(originalCourse: CourseData, modifiedCourse: CourseDa
     diff(
         originalCourse,
         modifiedCourse,
-        { course: originalCourse.id },
+        { course: originalCourse.id as number },
         changes,
         'course'
     );

@@ -15,7 +15,7 @@ export const getAllCourseCategories = async (): Promise<CourseCategory[]> => {
 export const registerCourseCategory = async (data: CourseCategoryData): Promise<CourseCategory | null> => {
     try {
         return await createCourseCategory(new CourseCategory({
-            name: data.name
+            name: data.name as string
         }));
     } catch (error) {
         logPrismaError(error);
@@ -27,7 +27,7 @@ export const changeCourseCategory = async (data: Partial<CourseCategoryData>): P
     try {
         return await updateCourseCategory(new CourseCategory({
             id: data.id,
-            name: data.name
+            name: data.name as string
         }));
     } catch (error) {
         logPrismaError(error);

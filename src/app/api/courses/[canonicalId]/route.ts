@@ -1,8 +1,9 @@
 import { mapErrorToAPIResponse } from '@/exceptions/error-encoder';
-import { getUserCourseWithModulesByCanonicalId} from '@/services/courses';
+import { getUserCourseWithModulesByCanonicalId } from '@/services/courses';
 import { CourseModule, QuestionOption, QuizQuestions } from '@/utils/types';
 import { NextRequest } from 'next/server';
 
+// @ts-expect-error: context
 export async function GET(req: NextRequest, context) {
     try {
         const params = await context.params;
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest, context) {
         if (!course) {
             throw new Error("El curso no existe");
         }
-        
+
         const modules = course.courseModules?.map((courseModule): CourseModule => ({
             id: courseModule.id,
             courseId: courseModule.courseId,
@@ -29,8 +30,8 @@ export async function GET(req: NextRequest, context) {
             quiz: {
                 id: courseModule.moduleQuiz?.[0].id,
                 courseModuleId: courseModule.moduleQuiz?.[0].courseModuleId,
-                title: courseModule.moduleQuiz?.[0].title,
-                description: courseModule.moduleQuiz?.[0].description,
+                title: courseModule.moduleQuiz?.[0].title as string,
+                description: courseModule.moduleQuiz?.[0].description as string,
                 questions: courseModule.moduleQuiz?.[0].quizQuestion?.map((question): QuizQuestions => ({
                     id: question.id,
                     quizModuleId: question.quizId,
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest, context) {
         }));
 
         if (!course.userCourse) {
-            throw Error("El curso no le pertenece al usuario"); 
+            throw Error("El curso no le pertenece al usuario");
         }
 
         return Response.json({

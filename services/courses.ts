@@ -1,13 +1,10 @@
 import { Course } from "@/models/course";
 import { CourseModules } from "@/models/course-modules";
-import { allCourses, countAllActiveCourses, countAllCourses, countCourseSales, createCourseModule, createFullCourse, createModuleClass, createModuleQuiz, createQuestionAnswer, createQuestionOption, createQuizQuestion, createUserClassState, createUserModuleFinishState, createUserQuizState, deleteClass, deleteCourse, deleteModule, deleteOption, deleteQuestion, deleteQuiz, findCourseByCanonicalId, findCourseById, findCourseWithModulesByCanonicalId, findModulesByCourseId, findQuizAnswersByQuizId, findThreeCoursesActives, findUserCourseByCanonicalId, findUserCourses, findUserCourseWithModulesByCanonicalId, findUserQuizState, sumCourseSalesByLastMonth, sumUsersByLastMonth, updateClass, updateCourse, updateFullCourse, updateModule, updateOption, updateQuestion } from "@/repository/courses";
-import { CalculateQuizScore, CourseData, CourseModule, CoursePlainData, CoursePublicData, CoursesMonthResult, CreateQuestionAnswer, DataPaginated, ModuleClass, QuestionOption, QuizModule, QuizQuestions, RemapedCourse, RequestDataPaginated, ResultQuizScore, ResultSalesCourse, UsersMonthResult } from "@/utils/types";
-import { ModuleClass as ModelModuleClass } from "@/models/module-class";
+import { allCourses, countAllActiveCourses, countAllCourses, countCourseSales, createFullCourse, createQuestionAnswer, createUserClassState, createUserModuleFinishState, createUserQuizState, findCourseByCanonicalId, findCourseById, findModulesByCourseId, findQuizAnswersByQuizId, findThreeCoursesActives, findUserCourseByCanonicalId, findUserCourses, findUserCourseWithModulesByCanonicalId, findUserQuizState, sumCourseSalesByLastMonth, sumUsersByLastMonth, updateClass, updateCourse, updateFullCourse } from "@/repository/courses";
+import { CalculateQuizScore, CourseData, CourseModule, CoursePlainData, CoursePublicData, CoursePublicDataWithOutCompletion, CoursesMonthResult, CreateQuestionAnswer, DataPaginated, RemapedClass, RemapedCourse, RequestDataPaginated, ResultQuizScore, ResultSalesCourse, UsersMonthResult } from "@/utils/types";
 import { QuizQuestion as ModuleQuizQuestion, QuizQuestion } from "@/models/quiz-question";
 import { diffCourses } from "@/utils/diff";
-import { ModuleQuiz } from "@/models/module-quiz";
 import { PossibleAnswerQuestion } from "@/models/possible-answer-question";
-import { storeVideoBlobStorage } from "./video";
 import { calculateTotalVideoDuration, formatVideoDuration } from "@/utils/video";
 import { auth } from "@/auth";
 import { UserClassesState } from "@/models/user-classes-state";
@@ -19,6 +16,7 @@ import { logPrismaError } from "@/exceptions/error-encoder";
 import { getCourseProgress } from "@/utils/classes";
 import { UserQuizState } from "@/models/user-quiz-state";
 import { NotFoundError } from "@/exceptions/not-found";
+import { number } from "zod";
 
 export const COURSES_PAGE_SIZE = 10;
 
@@ -80,7 +78,7 @@ export const getUserCourseWithModulesByCanonicalId = async (canonicalId: string)
             moduleQuiz: [
                 {
                     id: courseModule.moduleQuiz?.[0].id,
-                    courseModuleId: courseModule.moduleQuiz?.[0].courseModuleId,
+                    courseModuleId: courseModule.moduleQuiz?.[0].courseModuleId as number,
                     title: courseModule.moduleQuiz?.[0].title ?? '',
                     description: courseModule.moduleQuiz?.[0].description ?? '',
                     quizQuestion: courseModule.moduleQuiz?.[0].quizQuestion?.map((question): QuizQuestion => ({
@@ -116,7 +114,7 @@ export const getUserCourseQuizAnswers = async (canonicalId: string, quizId: numb
             throw new Error("Este curso no pertenece al usuario");
         }
 
-        let userCourseId = course.userCourse[0].id;
+        let userCourseId = course.userCourse![0].id as number;
         return await findQuizAnswersByQuizId(userCourseId, quizId);
     } catch (error) {
         logPrismaError(error);
@@ -160,16 +158,10 @@ export const getTopThreeCourses = async (): Promise<CoursePlainData[]> => {
         const userID = session?.user.id;
         const activeCourses = await findThreeCoursesActives(userID);
         return activeCourses.map<CoursePlainData>((course: Course) => {
-            const modules = course.courseModules?.map((courseModule): CourseModule => ({
-                id: courseModule.id,
-                courseId: courseModule.courseId,
-                classes: courseModule.moduleClass?.map((cls) => ({
-                    videoDuration: cls.videoDuration,
-                }))
-            }));
+            const modules = course.courseModules;
 
             const videoDur = formatVideoDuration(calculateTotalVideoDuration(modules ?? []))
-            const isAlreadyPurchased = course.userCourse?.length > 0;
+            const isAlreadyPurchased = (course.userCourse?.length ?? 0) > 0;
 
             return {
                 id: course.id,
@@ -192,7 +184,7 @@ export const getTopThreeCourses = async (): Promise<CoursePlainData[]> => {
     }
 }
 
-export const getUserCourses = async (): Promise<CoursePublicData[]> => {
+export const getUserCourses = async (): Promise<CoursePublicDataWithOutCompletion[]> => {
     try {
         const session = await auth();
         const userID = session?.user.id;
@@ -200,7 +192,7 @@ export const getUserCourses = async (): Promise<CoursePublicData[]> => {
             throw new UserNotLoggedError("El usuario debe loguearse");
         }
         const userCourses = await findUserCourses(userID);
-        return userCourses.map<CoursePublicData>((userCourse: UserCourse) => {
+        return userCourses.map<CoursePublicDataWithOutCompletion>((userCourse: UserCourse) => {
             const modules = userCourse.course?.courseModules?.map((courseModule): CourseModule => ({
                 id: courseModule.id,
                 courseId: courseModule.courseId,
@@ -218,17 +210,17 @@ export const getUserCourses = async (): Promise<CoursePublicData[]> => {
                 }))
             }));
 
-            const remapedCourse:RemapedCourse = {
-                canonicalId: userCourse.course?.canonicalId,
-                title: userCourse.course?.title,
-                price: userCourse.course?.price,
+            const remapedCourse: RemapedCourse = {
+                canonicalId: userCourse.course?.canonicalId as string,
+                title: userCourse.course?.title as string,
+                price: userCourse.course?.price as number,
                 courseDuration: formatVideoDuration(calculateTotalVideoDuration(modules ?? [])),
                 courseImage: userCourse.course?.courseImage,
-                instructorName: userCourse.course?.instructorName,
+                instructorName: userCourse.course?.instructorName as string,
                 instructorPhoto: userCourse.course?.instructorPhoto,
                 category: userCourse.course?.category,
                 description: userCourse.course?.description ?? "",
-                expiresAt: userCourse.course?.expiresAt,
+                expiresAt: userCourse.course?.expiresAt as Date,
                 classViewed: userCourse.userClassesState,
                 moduleViewed: userCourse.userModuleState,
                 modules: modules,
@@ -240,7 +232,11 @@ export const getUserCourses = async (): Promise<CoursePublicData[]> => {
 
             return {
                 ...remapedCourse,
-                ...progressCalculation
+                classesWithCompletion: progressCalculation?.classesWithCompletion,
+                visibleClasses: progressCalculation?.visibleClasses,
+                progressPercent: progressCalculation?.progressPercent as number,
+                currentIndex: progressCalculation?.currentIndex as number,
+                totalClasses: progressCalculation?.totalClasses as number,
             };
         });
     } catch (error) {
@@ -344,7 +340,7 @@ export const registerClassCurrentState = async (courseId: string, classId: numbe
             throw new Error("El curso no le pertenece al usuario");
         }
 
-        const userCourseId = courseData.userCourse[0].id;
+        const userCourseId = courseData.userCourse[0].id as number;
         const currentClassState = await createUserClassState(new UserClassesState({
             userCourseId,
             classId,
@@ -376,7 +372,7 @@ export const registerModuleFinishtState = async (courseId: string, moduleId: num
             throw new Error("El curso no le pertenece al usuario");
         }
 
-        const userCourseId = courseData.userCourse[0].id;
+        const userCourseId = courseData.userCourse[0].id as number;
         const currentModuleState = await createUserModuleFinishState(new UserModuleState({
             userCourseId,
             moduleId,
@@ -412,11 +408,11 @@ export const registerQuestionAnswer = async (data: CreateQuestionAnswer) => {
             throw new Error("Modulo invalido");
         }
 
-        if (module.moduleQuiz[0].id != data.quizId) {
+        if (module.moduleQuiz![0].id != data.quizId) {
             throw new Error("Quiz invalido");
         }
 
-        const question = module.moduleQuiz[0].quizQuestion?.find((question) => question.id === data.questionId);
+        const question = module.moduleQuiz![0].quizQuestion?.find((question) => question.id === data.questionId);
         if (!question) {
             throw new Error("Pregunta invalida");
         }
@@ -432,20 +428,20 @@ export const registerQuestionAnswer = async (data: CreateQuestionAnswer) => {
         switch (question.type) {
             case 'text':
                 isCorrect = option?.value === data.answer;
-                correctOption = question.possibleAnswerQuestion?.pop();
+                correctOption = question.possibleAnswerQuestion?.pop() as PossibleAnswerQuestion;
                 break;
             case 'multiple':
-                isCorrect = option?.isCorrect;
-                correctOption = question.possibleAnswerQuestion?.find((option) => option.isCorrect);
+                isCorrect = option?.isCorrect as boolean;
+                correctOption = question.possibleAnswerQuestion?.find((option) => option.isCorrect) as PossibleAnswerQuestion;
                 break;
         }
 
-        const userCourseId = courseData.userCourse[0].id;
+        const userCourseId = courseData.userCourse[0].id as number;
         const answerQuestionCreated = await createQuestionAnswer(new UserQuizAnswer({
             userCourseId: userCourseId,
             questionId: data.questionId,
             quizId: data.quizId,
-            answer: data.answer,
+            answer: data.answer as string,
             correct: correctOption?.value,
             isCorrect,
             points: isCorrect ? question.points : 0
@@ -484,8 +480,8 @@ export const calculateQuizScore = async (data: CalculateQuizScore): Promise<Resu
         }
 
         let totalPoints = 0;
-        const questionsCount = module.moduleQuiz[0].quizQuestion.length;
-        const userQuizAnswers = await findQuizAnswersByQuizId(courseData.userCourse[0].id, data.quizId);
+        const questionsCount = module.moduleQuiz[0].quizQuestion!.length;
+        const userQuizAnswers = await findQuizAnswersByQuizId(courseData.userCourse[0].id as number, data.quizId);
 
         if (userQuizAnswers.length == 0) {
             throw new Error(`El quiz ${data.quizId} del módulo no tiene respuesta`);
@@ -497,7 +493,7 @@ export const calculateQuizScore = async (data: CalculateQuizScore): Promise<Resu
 
         let currentQuizState: UserQuizState | null = null;
         try {
-            currentQuizState = await findUserQuizState(data.quizId, courseData.userCourse[0].id);
+            currentQuizState = await findUserQuizState(data.quizId, courseData.userCourse[0].id as number);
         } catch (error) {
             if (!(error instanceof NotFoundError)) {
                 throw error;
@@ -507,8 +503,8 @@ export const calculateQuizScore = async (data: CalculateQuizScore): Promise<Resu
         const retries = !currentQuizState ? 1 : currentQuizState.retries + 1;
         const createdUserQuizState = await createUserQuizState(new UserQuizState({
             quizId: data.quizId,
-            userCourseId: courseData.userCourse[0].id,
-            courseModuleId: module.id,
+            userCourseId: courseData.userCourse[0].id as number,
+            courseModuleId: module.id as number,
             retries: retries,
             result: totalPoints,
             passed: totalPoints >= module.minRequiredPoints
@@ -541,7 +537,7 @@ export const getUserQuizState = async (canonicalId: string, quizId: number): Pro
             throw new Error("El curso no le pertenece al usuario");
         }
 
-        return await findUserQuizState(quizId, courseData.userCourse[0].id);
+        return await findUserQuizState(quizId, courseData.userCourse[0].id as number);
     } catch (error) {
         logPrismaError(error);
         throw error;

@@ -40,8 +40,8 @@ export const newPassword = async (
             return { success: false, error: "El correo no existe!" };
         }
 
-        await editUserById(existingUser.id, { password });
-        await removePasswordResetToken(existingUser.id);
+        await editUserById(existingUser.id!, { password });
+        await removePasswordResetToken(existingUser.id!);
         return { success: true, message: "Contraseña actualizada!" };
     } catch (error) {
         return mapErrorToServerActionResponse(error);
