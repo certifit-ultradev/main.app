@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require('./app/generated/prisma/client');
 const bcrypt = require('bcrypt');
 
 const prismaCli = new PrismaClient();
@@ -20,7 +20,7 @@ async function user() {
                 password: hashedPassword,
                 isAdmin: true,
                 email: 'certifit.ultra@gmail.com',
-                emailVerified: true,
+                emailVerified: new Date,
                 phoneNumber: "123456789",
                 createdAt: new Date(),
                 updatedAt: new Date()

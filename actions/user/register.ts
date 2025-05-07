@@ -4,7 +4,8 @@ import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 import { editUserById, registerUser } from "@/services/user";
 import { EditUserData, ServerActionRequest, ServerActionResponse, UserCreateData } from "@/utils/types"
 import { Middlewares } from "../server-action-middleware";
-import { isAdmin } from "../middlewares/is-admin";
+import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
+import { cleanData } from "@/utils/filter-data";
 
 export const register = async (request: ServerActionRequest<UserCreateData>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, UserCreateData>(
@@ -30,7 +31,13 @@ export const edit = async (request: ServerActionRequest<EditUserData>): Promise<
         [isAdmin],
         async (request: EditUserData) => {
             try {
-                const user = await editUserById(request.id, request.userData);
+                if (request.userData.password !== request.userData.confirmPassword) {
+                    return { success: false, error: "Las contraseñas no coinciden." }
+                }
+
+                delete request.userData.confirmPassword;
+                const filteredData = cleanData(request.userData);
+                const user = await editUserById(request.id, filteredData);
                 if (!user) {
                     return { success: false, error: "No se pudo crear el usuario." }
                 }
@@ -48,7 +55,7 @@ export const activate = async (request: ServerActionRequest<{ id: string }>): Pr
         [isAdmin],
         async (request: { id: string }) => {
             try {
-                const user = await editUserById(request.id, { emailVerified: true });
+                const user = await editUserById(request.id, { emailVerified: new Date() });
                 if (!user) {
                     return { success: false, error: "No se pudo activar el usuario." }
                 }
@@ -62,10 +69,10 @@ export const activate = async (request: ServerActionRequest<{ id: string }>): Pr
 export const deactivate = async (request: ServerActionRequest<{ id: string }>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, { id: string }>(
         request,
-        [isAdmin],
+        [isAdmin, isEmailVerified],
         async (request: { id: string }) => {
             try {
-                const user = await editUserById(request.id, { emailVerified: false });
+                const user = await editUserById(request.id, { emailVerified: null });
                 if (!user) {
                     return { success: false, error: "No se pudo desactiar el usuario." }
                 }

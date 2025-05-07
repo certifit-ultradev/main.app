@@ -3,13 +3,13 @@
 import { getAllUsers } from "@/services/user";
 import { DataPaginated, FetchPage, ServerActionRequest, ServerActionResponse, UserList } from "@/utils/types";
 import { Middlewares } from "../server-action-middleware";
-import { isAdmin } from "../middlewares/is-admin";
+import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
 import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 
 export const listAll = async (request: ServerActionRequest<FetchPage>): Promise<ServerActionResponse<DataPaginated<UserList>>> => {
     return await Middlewares<DataPaginated<UserList>, FetchPage>(
         request,
-        [isAdmin],
+        [isAdmin, isEmailVerified],
         async (request: FetchPage) => {
             try {
                 const usersPaged = await getAllUsers({ page:request.page });
@@ -35,7 +35,7 @@ export const listAll = async (request: ServerActionRequest<FetchPage>): Promise<
                             email: user.email,
                             phoneNumber: user.phoneNumber,
                             isAdmin: user.isAdmin,
-                            emailVerified: user.emailVerified ?? false,
+                            emailVerified: user.emailVerified,
                             createdAt: user.createdAt,
                             updatedAt: user.updatedAt
                         })),

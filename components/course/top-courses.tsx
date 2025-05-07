@@ -153,6 +153,8 @@ const ModalCourseDetail = ({ course, isOpen, setOpen }: ModalCourseDetailProp) =
                                 <Image
                                     src={course.courseImage}
                                     alt={course.title}
+                                    width={500}
+                                    height={300}
                                     className={cn("w-full h-auto rounded-md object-cover")}
                                 />
                             </div>

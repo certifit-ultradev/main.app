@@ -7,7 +7,7 @@ export const checkIfUserIsActive = async (email: string): Promise<ServerActionRe
     try {
         const user = await getUserByEmail(email);
         return {
-            success: user?.emailVerified ?? false,
+            success: user?.emailVerified ? true : false,
         }
     } catch (error) {
         console.error('Error al verificar si el usuario activado:', error);

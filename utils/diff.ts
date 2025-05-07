@@ -1,147 +1,154 @@
-import { CourseData } from "./types";
+// utils/diffCourses.ts
+import { CourseData, CourseModule, ModuleClass, QuestionOption, QuizModule, QuizQuestions } from "./types";
+
+export type CourseElement =
+  | CourseData
+  | CourseModule
+  | ModuleClass
+  | QuizModule
+  | QuizQuestions
+  | QuestionOption;
 
 export interface Change {
-    type: string;         // Tipo de elemento que cambió
-    action: string;       // 'added', 'updated', 'deleted'
-    path: { [key: string]: number | string | null }; // Objeto con tipos como claves y IDs o propiedades como valores
-    data?: any;           // Datos del elemento modificado
+  type: string;
+  action: "added" | "updated" | "deleted";
+  path: { [key: string]: number | string | null };
+  data?: CourseElement | Partial<CourseElement>;
 }
 
 function diff(
-    original: any,
-    modified: any,
-    path: { [key: string]: number | string | null } = {},
-    changes: Change[] = [],
-    parentKey: string = ''
+  original: any,
+  modified: any,
+  path: Record<string, number | string | null> = {},
+  changes: Change[] = [],
+  parentKey = ""
 ): Change[] {
-    const currentType = getItemType(modified, parentKey);
-    let currentPath = { ...path };
+  const currentType = getItemType(modified, parentKey);
+  const currentPath = { ...path };
 
-    if (modified && modified.id !== undefined) {
-        currentPath[currentType] = modified.id;
-    } else if (currentType && !currentPath[currentType]) {
-        currentPath[currentType] = null;
+  // Asignar ID (o null) del elemento actual al path
+  if (modified && modified.id !== undefined) {
+    currentPath[currentType] = modified.id;
+  } else if (currentType && currentPath[currentType] === undefined) {
+    currentPath[currentType] = null;
+  }
+
+  /* ---------- 1. Arrays ---------- */
+  if (Array.isArray(original) && Array.isArray(modified)) {
+    const toMap = (arr: any[]) =>
+      new Map(
+        arr.map((item, idx) => [
+          item.id !== undefined ? `id_${item.id}` : `index_${idx}`,
+          item,
+        ])
+      );
+
+    const originalMap = toMap(original);
+    const modifiedMap = toMap(modified);
+
+    // eliminados
+    for (const [key, origItem] of originalMap.entries()) {
+      if (!modifiedMap.has(key)) {
+        changes.push({
+          type: getItemType(origItem, parentKey),
+          action: "deleted",
+          path: {
+            ...currentPath,
+            [getItemType(origItem, parentKey)]: origItem.id ?? key,
+          },
+          data: origItem,
+        });
+      }
     }
 
-    if (Array.isArray(original) && Array.isArray(modified)) {
-        const originalMap = new Map();
-        original.forEach((item: any, index: number) => {
-            const key = item.id !== undefined ? `id_${item.id}` : `index_${index}`;
-            originalMap.set(key, item);
+    // añadidos / actualizados
+    for (const [key, modItem] of modifiedMap.entries()) {
+      const origItem = originalMap.get(key);
+      const itemPath = {
+        ...currentPath,
+        [getItemType(modItem, parentKey)]: modItem.id ?? key,
+      };
+
+      if (!origItem) {
+        changes.push({
+          type: getItemType(modItem, parentKey),
+          action: "added",
+          path: itemPath,
+          data: modItem,
         });
-
-        const modifiedMap = new Map();
-        modified.forEach((item: any, index: number) => {
-            const key = item.id !== undefined ? `id_${item.id}` : `index_${index}`;
-            modifiedMap.set(key, item);
-        });
-
-        // Detectar elementos eliminados
-        for (const [key, origItem] of originalMap.entries()) {
-            if (!modifiedMap.has(key)) {
-                changes.push({
-                    type: getItemType(origItem, parentKey),
-                    action: 'deleted',
-                    path: {
-                        ...currentPath,
-                        [getItemType(origItem, parentKey)]: origItem.id !== undefined ? origItem.id : key,
-                    },
-                    data: origItem,
-                });
-            }
-        }
-
-        // Detectar elementos agregados y actualizados
-        for (const [key, modItem] of modifiedMap.entries()) {
-            const origItem = originalMap.get(key);
-            const itemPath = { ...currentPath };
-            if (modItem.id !== undefined) {
-                itemPath[getItemType(modItem, parentKey)] = modItem.id;
-            } else {
-                itemPath[getItemType(modItem, parentKey)] = key;
-            }
-
-            if (!origItem) {
-                changes.push({
-                    type: getItemType(modItem, parentKey),
-                    action: 'added',
-                    path: itemPath,
-                    data: modItem,
-                });
-            } else {
-                diff(origItem, modItem, itemPath, changes);
-            }
-        }
-    } else if (isObject(original) && isObject(modified)) {
-        const keys = new Set([...Object.keys(original), ...Object.keys(modified)]);
-        for (const key of keys) {
-            if (key === 'id') continue; // Ignorar el campo 'id'
-            const origValue = original[key];
-            const modValue = modified[key];
-
-            if (isObject(origValue) || Array.isArray(origValue)) {
-                diff(origValue, modValue, currentPath, changes, key);
-            } else if (origValue !== modValue) {
-                const propPath = { ...currentPath, property: key };
-                changes.push({
-                    type: currentType,
-                    action: 'updated',
-                    path: propPath,
-                    data: { [key]: modValue },
-                });
-            }
-        }
+      } else {
+        diff(origItem, modItem, itemPath, changes, parentKey);
+      }
     }
+  }
 
-    return changes;
+  /* ---------- 2. Objetos ---------- */
+  else if (isObject(original) && isObject(modified)) {
+    const keys = new Set([...Object.keys(original), ...Object.keys(modified)]);
+    for (const key of keys) {
+      if (key === "id") continue;
+
+      const origValue = original[key];
+      const modValue = modified[key];
+
+      if (isObject(origValue) || Array.isArray(origValue)) {
+        diff(origValue, modValue, currentPath, changes, key); // mantenemos key como parentKey
+      } else if (origValue !== modValue) {
+        changes.push({
+          type: currentType,
+          action: "updated",
+          path: { ...currentPath, property: key },
+          data: { [key]: modValue },
+        });
+      }
+    }
+  }
+
+  return changes;
 }
 
+function getItemType(item: any, parentKey = ""): string {
+  if (!item) return "unknown";
 
-function getItemType(item: any, parentKey: string = ''): string {
-    if (!item) return 'unknown';
+  // para arrays usamos el nombre del array singularizado
+  if (Array.isArray(item)) return singularize(parentKey) || "unknownArray";
 
-    if (Array.isArray(item)) {
-        if (parentKey) {
-            return singularize(parentKey);
-        } else if (item.length > 0) {
-            return getItemType(item[0]);
-        } else {
-            return 'unknownArray';
-        }
-    }
+  // detección explícita
+  if (item.modules) return "course";
+  if (item.classes) return "module";
+  if (item.questions) return "quiz";
+  if ("video" in item || "videoPath" in item) return "class";
+  if (item.options) return "question";
 
-    if (item.hasOwnProperty('modules')) return 'course';
-    if (item.hasOwnProperty('classes')) return 'module';
-    if (item.hasOwnProperty('questions')) return 'quiz';
-    if (item.hasOwnProperty('video') || item.hasOwnProperty('videoPath')) return 'class';
-    if (item.hasOwnProperty('options')) return 'question';
-    if (item.hasOwnProperty('correct')) return 'option';
-    return parentKey || 'unknown';
+  if ("isCorrect" in item) return "option";
+
+  return parentKey ? singularize(parentKey) : "unknown";
 }
 
 function singularize(key: string): string {
-    const singulars: { [key: string]: string } = {
-        'modules': 'module',
-        'classes': 'class',
-        'questions': 'question',
-        'options': 'option',
-        'quizzes': 'quiz',
-    };
-    return singulars[key] || key;
+  const dict: Record<string, string> = {
+    modules: "module",
+    classes: "class",
+    questions: "question",
+    options: "option",
+    quizzes: "quiz",
+  };
+  return dict[key] ?? key;
 }
 
-function isObject(obj: any): boolean {
-    return obj !== null && typeof obj === 'object' && !Array.isArray(obj);
+function isObject(o: any): o is Record<string, unknown> {
+  return o && typeof o === "object" && !Array.isArray(o);
 }
 
-export function diffCourses(originalCourse: CourseData, modifiedCourse: CourseData): Change[] {
-    const changes: Change[] = [];
-    diff(
-        originalCourse,
-        modifiedCourse,
-        { course: originalCourse.id as number },
-        changes,
-        'course'
-    );
-    return changes;
+export function diffCourses(
+  originalCourse: CourseData,
+  modifiedCourse: CourseData
+): Change[] {
+  return diff(
+    originalCourse,
+    modifiedCourse,
+    { course: originalCourse.id as number},
+    [],
+    "course"
+  );
 }

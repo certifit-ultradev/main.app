@@ -53,7 +53,7 @@ export const verifyEmail = async (token: string): Promise<ServerActionResponse<n
         }
 
         const confirmEmail = await editUserById(existingUser.id!, {
-            emailVerified: true,
+            emailVerified: new Date(),
             email: existingToken.email,
         });
 

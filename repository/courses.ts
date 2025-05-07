@@ -12,10 +12,12 @@ import { UserQuizAnswer } from "@/models/user-quiz-answer";
 import { UserQuizState } from "@/models/user-quiz-state";
 import { UserModuleState } from "@/models/user_module_state";
 import { storeVideoBlobStorage } from "@/services/video";
+import { CourseChange } from "@/utils/change-types";
 import { mergeChangesByTypeAndId, toSnakeCase } from "@/utils/classes";
 import { Change } from "@/utils/diff";
+import { isCourseModule, isModuleClass, isOption, isQuestion } from "@/utils/type-guards";
 import { CourseData, CoursesMonthResult, ResultSalesCourse, UsersMonthResult } from "@/utils/types";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 export const allCourses = async (page: number, pageSize: number): Promise<Course[]> => {
     if (page < 1) {
@@ -483,65 +485,59 @@ export const findUserQuizState = async (quizId: number, userCourseId: number) =>
 
 export const countCourseSales = async (): Promise<ResultSalesCourse[]> => {
     const results = await prisma.$queryRaw<ResultSalesCourse[]>`
-        SELECT CONCAT(c.id, " - ", c.title) AS courseName,
+        SELECT CONCAT(c.id, ' - ', c.title) AS course_name,
             COUNT(p.id) AS total
-        FROM Purchase p
-        INNER JOIN Cart cart ON cart.id = p.cart_id
-        INNER JOIN Course c ON c.id = cart.course_id
+        FROM "Purchase" p
+        INNER JOIN "Cart" cart ON cart.id = p.cart_id
+        INNER JOIN "Course" c ON c.id = cart.course_id
         GROUP BY c.id
     `;
 
     return results.map<ResultSalesCourse>((r) => {
         return {
-            courseName: r.courseName.substring(0, 20) + '...',
+            course_name: r.course_name.substring(0, 20) + '...',
             total: Number(r.total)
         }
     });
 }
 
 export const sumCourseSalesByLastMonth = async (): Promise<CoursesMonthResult> => {
-    const [result] = await prisma.$queryRaw<CoursesMonthResult[]>`
+    const [result] = await prisma.$queryRaw<CoursesMonthResult[]>(Prisma.sql`
         SELECT
-          SUM(
-            CASE WHEN MONTH(p.created_at) = MONTH(CURRENT_DATE())
-                 AND YEAR(created_at) = YEAR(CURRENT_DATE())
-            THEN 1 ELSE 0 END
-          ) AS currentMonthCount,
-          SUM(
-            CASE WHEN MONTH(created_at) = MONTH(CURRENT_DATE() - INTERVAL 1 MONTH)
-                 AND YEAR(created_at) = YEAR(CURRENT_DATE() - INTERVAL 1 MONTH)
-            THEN 1 ELSE 0 END
-          ) AS previousMonthCount
-        FROM Purchase p
+            COUNT(*) FILTER (
+                WHERE date_trunc('month', p.created_at) = date_trunc('month', CURRENT_DATE)
+            ) AS current_month_count,
+            COUNT(*) FILTER (
+                WHERE date_trunc('month', p.created_at) = date_trunc('month', CURRENT_DATE - interval '1 month')
+            ) AS previous_month_count
+        FROM "Purchase" p
         WHERE
-            p.status = 'APPROVED'
-    `;
+            p.status = 'APPROVED';`);
+
+    console.log("result sumCourseSalesByLastMonth", result);
 
     return {
-        currentMonthCount: Number(result.currentMonthCount),
-        previousMonthCount: Number(result.previousMonthCount),
+        current_month_count: Number(result.current_month_count),
+        previous_month_count: Number(result.previous_month_count),
     };;
 }
 
 export const sumUsersByLastMonth = async (): Promise<UsersMonthResult> => {
     const [result] = await prisma.$queryRaw<UsersMonthResult[]>`
         SELECT
-          SUM(
-            CASE WHEN MONTH(created_at) = MONTH(CURRENT_DATE())
-                 AND YEAR(created_at) = YEAR(CURRENT_DATE())
-            THEN 1 ELSE 0 END
-          ) AS currentMonthCount,
-          SUM(
-            CASE WHEN MONTH(created_at) = MONTH(CURRENT_DATE() - INTERVAL 1 MONTH)
-                 AND YEAR(created_at) = YEAR(CURRENT_DATE() - INTERVAL 1 MONTH)
-            THEN 1 ELSE 0 END
-          ) AS previousMonthCount
-        FROM User
+            COUNT(*) FILTER (
+                WHERE date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE)
+            ) AS currentMonthCount,
+            COUNT(*) FILTER (
+                WHERE date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE - interval '1 month')
+            ) AS previousMonthCount
+        FROM "User";
       `;
 
+    console.log("result sumUsersByLastMonth", result);
     return {
-        currentMonthCount: Number(result.currentMonthCount),
-        previousMonthCount: Number(result.previousMonthCount),
+        current_month_count: Number(result.current_month_count),
+        previous_month_count: Number(result.previous_month_count),
     };
 }
 
@@ -554,18 +550,22 @@ const modelMap: Record<string, keyof PrismaClient> = {
     option: 'possibleAnswerQuestion'
 };
 
-type TransactionClientWithModels = {
-    [K in keyof PrismaClient as K extends `$${string}` ? never : K]: PrismaClient[K]
-};
-
-export const updateFullCourse = async (courseId: number, adds: Change[], updates: Change[], deletes: Change[]) => {
-    let courseImage;
-    let instructorPhoto;
+export const updateFullCourse = async (
+    courseId: number,
+    adds: CourseChange[],
+    updates: CourseChange[],
+    deletes: CourseChange[]
+) => {
+    let courseImage: File | undefined;
+    let instructorPhoto: File | undefined;
 
     await prisma.$transaction(async (tx) => {
         for (const add of adds) {
             switch (add.type) {
                 case 'question':
+                    if (!isQuestion(add.data))
+                        throw new Error("Datos de pregunta incompletos");
+
                     const createdQuizQuestion = await tx.quizQuestion.create({
                         data: {
                             title: add.data.title,
@@ -579,6 +579,9 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                     }
 
                     for (const option of add.data.options ?? []) {
+                        if (!isOption(add.data))
+                            throw new Error("Datos de opción incompletos");
+
                         const createdQuestionOption = await tx.possibleAnswerQuestion.create({
                             data: {
                                 questionId: createdQuizQuestion.id,
@@ -592,6 +595,8 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                     }
                     break;
                 case 'option':
+                    if (!isOption(add.data))
+                        throw new Error("Datos de opción incompletos");
                     const createdQuestionOption = await tx.possibleAnswerQuestion.create({
                         data: {
                             questionId: Number(add.path.question),
@@ -604,14 +609,16 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                     }
                     break;
                 case 'class':
+                    if (!isModuleClass(add.data))
+                        throw new Error("Datos de clase incompletos");
                     const createdModuleClass = await tx.moduleClass.create({
                         data: {
                             title: add.data.title,
                             description: add.data.description,
                             courseModuleId: Number(add.path.module),
-                            videoPath: add.data.video,
+                            videoPath: add.data.video as string,
                             videoDuration: add.data.videoDuration,
-                            videoSize: add.data.video.size
+                            videoSize: add.data.videoSize 
                         }
                     });
                     if (!createdModuleClass) {
@@ -619,6 +626,9 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                     }
                     break;
                 case 'module':
+                    if (!isCourseModule(add.data))
+                        throw new Error("Datos de módulo incompletos");
+
                     const createdCourseModule = await tx.courseModules.create({
                         data: {
                             courseId: Number(add.path.course),
@@ -630,15 +640,15 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                         throw new Error("El modulo no pudo ser creado");
                     }
 
-                    for (const cls of add.data.classes) {
+                    for (const cls of add.data.classes ?? []) {
                         const createdModuleClass = await tx.moduleClass.create({
                             data: {
                                 title: cls.title,
                                 description: cls.description,
                                 courseModuleId: createdCourseModule.id,
-                                videoPath: cls.video,
+                                videoPath: cls.video as string,
                                 videoDuration: cls.videoDuration,
-                                videoSize: cls.video.size
+                                videoSize: cls.videoSize
                             }
                         });
                         if (!createdModuleClass) {
@@ -649,12 +659,12 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                     const createdQuiz = await tx.moduleQuiz.create({
                         data: {
                             courseModuleId: createdCourseModule.id,
-                            title: add.data.quiz.title,
-                            description: add.data.quiz.description
+                            title: add.data.quiz?.title as string,
+                            description: add.data.quiz?.description as string
                         }
                     });
 
-                    for (const question of add.data.quiz.questions) {
+                    for (const question of add.data.quiz?.questions ?? []) {
                         const createdQuizQuestion = await tx.quizQuestion.create({
                             data: {
                                 title: question.title,
@@ -667,7 +677,7 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                             throw new Error("La pregunta no pudo ser creada");
                         }
 
-                        for (const option of question.options) {
+                        for (const option of question.options ?? []) {
                             const createdQuestionOption = await tx.possibleAnswerQuestion.create({
                                 data: {
                                     questionId: createdQuizQuestion.id,
@@ -685,6 +695,7 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
         }
 
         const updatesGrouped = mergeChangesByTypeAndId(updates);
+        console.log("updatesGrouped", updatesGrouped);
         for (const type of Object.keys(updatesGrouped)) {
             // Resolvemos el nombre del modelo en Prisma
             const prismaModelName = modelMap[type];
@@ -702,10 +713,12 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
 
                 if (data.courseImage) {
                     courseImage = data.courseImage;
+                    delete data.courseImage;
                 }
 
                 if (data.instructorPhoto) {
                     instructorPhoto = data.instructorPhoto;
+                    delete data.instructorPhoto;
                 }
 
                 if (data.expiresAt) {
@@ -768,18 +781,23 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                     });
                     break;
                 default:
-                    throw new Error(`Tipo desconocido para eliminar: ${dlt.type}`);
+                    throw new Error(`Tipo desconocido para eliminar: ${dlt}`);
             }
         }
     });
 
-
     if (courseImage) {
-        await storeVideoBlobStorage(`/courses/${courseId}/`, courseImage);
+        const url = await storeVideoBlobStorage(`/courses/${courseId}/`, courseImage);
+        await updateCourse(courseId, {
+            courseImage: url,
+        });
     }
 
     if (instructorPhoto) {
-        await storeVideoBlobStorage(`/courses/${courseId}/`, instructorPhoto);
+        const url = await storeVideoBlobStorage(`/courses/${courseId}/`, instructorPhoto);
+        await updateCourse(courseId, {
+            instructorPhoto: url
+        });
     }
 }
 

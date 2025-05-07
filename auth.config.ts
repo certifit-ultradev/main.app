@@ -13,12 +13,14 @@ export const authConfig: NextAuthConfig = {
             if (user) {
                 token.id = user.id;
                 token.isAdmin = user.isAdmin ?? false;
+                token.emailVerified = user.emailVerified ?? null;
             }
             return token;
         },
         async session({ session, token }) {
             session.user.id = typeof token.id === 'string' ? token.id : "";
             session.user.isAdmin = typeof token.isAdmin === 'boolean' ? token.isAdmin : false;
+            session.user.emailVerified = token.emailVerified as Date;
             return session;
         }
     },

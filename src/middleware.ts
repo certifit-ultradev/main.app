@@ -21,6 +21,10 @@ export default auth((req: { auth?: Session |null; nextUrl?: NextURL; headers: He
         return;
     }
 
+    if (!req.auth?.user?.emailVerified) {
+        return Response.redirect(new URL('/verify-email', nextUrl));
+    }
+
     const isApiAuthRoute = nextUrl.pathname.startsWith(apiRoute);
     const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
     const isAuthRoute = authRoutes.includes(nextUrl.pathname);

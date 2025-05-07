@@ -45,7 +45,7 @@ export const UserDataTableColumns = ({ onActivate, onDeactivate }: CreateUserCol
             header: 'Estado',
             cell: ({ row }) => {
                 let status = <span className={cn('box-decoration-slice p-1 rounded-lg bg-[#CACAD0]')}>Email No Verificado</span>
-                if (row.getValue('emailVerified') === true) {
+                if (row.getValue('emailVerified')) {
                     status = <span className={cn('text-white p-1 rounded-lg box-decoration-slice bg-[#2A8940]')}>Email Verificado</span>
                 }
 
@@ -57,7 +57,7 @@ export const UserDataTableColumns = ({ onActivate, onDeactivate }: CreateUserCol
             id: 'actions',
             enableHiding: false,
             cell: ({ row }) => {
-                const user = row.original
+                const user = row.original;
                 return (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -83,11 +83,11 @@ export const UserDataTableColumns = ({ onActivate, onDeactivate }: CreateUserCol
                                     if (!user.emailVerified) {
                                         await onActivate(user.id as string);
                                     } else {
-                                        await onDeactivate(user.id as string);                                    
+                                        await onDeactivate(user.id as string);
                                     }
                                 }}
                             >
-                                {user.emailVerified ? 'Desactivar' : 'Activar'} usuario
+                                {!user.emailVerified ? 'Activar' : 'Desactivar'} usuario
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem

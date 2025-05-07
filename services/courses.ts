@@ -17,6 +17,7 @@ import { getCourseProgress } from "@/utils/classes";
 import { UserQuizState } from "@/models/user-quiz-state";
 import { NotFoundError } from "@/exceptions/not-found";
 import { number } from "zod";
+import { CourseChange } from "@/utils/change-types";
 
 export const COURSES_PAGE_SIZE = 10;
 
@@ -63,6 +64,10 @@ export const getUserCourseWithModulesByCanonicalId = async (canonicalId: string)
         if (!userID) {
             throw new UserNotLoggedError("El usuario debe loguearse");
         }
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
+        }
 
         let course = await findUserCourseWithModulesByCanonicalId(canonicalId, userID);
         if (!course.courseModules) {
@@ -108,6 +113,10 @@ export const getUserCourseQuizAnswers = async (canonicalId: string, quizId: numb
         if (!userID) {
             throw new UserNotLoggedError("El usuario debe loguearse");
         }
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
+        }
 
         let course = await findUserCourseByCanonicalId(canonicalId, userID);
         if (course.userCourse?.length == 0) {
@@ -129,6 +138,10 @@ export const getUserCourseByCanonicalId = async (canonicalId: string): Promise<C
         if (!userId) {
             throw new UserNotLoggedError("El usuario debe loguearse");
         }
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
+        }
 
         return await findUserCourseByCanonicalId(canonicalId, userId);
     } catch (error) {
@@ -144,6 +157,10 @@ export const getCourseByCanonicalId = async (canonicalId: string): Promise<Cours
         if (!userID) {
             throw new UserNotLoggedError("El usuario debe loguearse");
         }
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
+        }
 
         return await findCourseByCanonicalId(canonicalId, userID);
     } catch (error) {
@@ -158,7 +175,22 @@ export const getTopThreeCourses = async (): Promise<CoursePlainData[]> => {
         const userID = session?.user.id;
         const activeCourses = await findThreeCoursesActives(userID);
         return activeCourses.map<CoursePlainData>((course: Course) => {
-            const modules = course.courseModules;
+            const modules = course.courseModules?.map((courseModule): CourseModule => ({
+                id: courseModule.id,
+                courseId: courseModule.courseId,
+                title: courseModule.title,
+                minRequiredPoints: courseModule.minRequiredPoints,
+                quiz: undefined,
+                classes: courseModule.moduleClass?.map((cls) => ({
+                    id: cls.id,
+                    courseModuleId: cls.courseModuleId,
+                    title: cls.title,
+                    description: cls.description,
+                    video: cls.videoPath,
+                    videoDuration: cls.videoDuration,
+                    videoSize: cls.videoSize
+                }))
+            }));
 
             const videoDur = formatVideoDuration(calculateTotalVideoDuration(modules ?? []))
             const isAlreadyPurchased = (course.userCourse?.length ?? 0) > 0;
@@ -179,6 +211,7 @@ export const getTopThreeCourses = async (): Promise<CoursePlainData[]> => {
             }
         });
     } catch (error) {
+        console.log("error", error);
         logPrismaError(error);
         return [];
     }
@@ -190,6 +223,10 @@ export const getUserCourses = async (): Promise<CoursePublicDataWithOutCompletio
         const userID = session?.user.id;
         if (!userID) {
             throw new UserNotLoggedError("El usuario debe loguearse");
+        }
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
         }
         const userCourses = await findUserCourses(userID);
         return userCourses.map<CoursePublicDataWithOutCompletion>((userCourse: UserCourse) => {
@@ -260,16 +297,16 @@ export const editCourse = async (originalCourseData: CourseData, newCourseData: 
             throw new Error("El curso no tiene identificador valido");
         }
 
-        const changes = diffCourses(originalCourseData, newCourseData);
-        const adds = changes.filter((change) => {
+        const changes = diffCourses(originalCourseData, newCourseData) as CourseChange[];
+        const adds = changes.filter((change: CourseChange) => {
             return change.action == 'added';
         });
 
-        const updates = changes.filter((change) => {
+        const updates = changes.filter((change: CourseChange) => {
             return change.action == 'updated';
         });
 
-        const deletes = changes.filter((change) => {
+        const deletes = changes.filter((change: CourseChange) => {
             return change.action == 'deleted';
         });
 
@@ -334,7 +371,10 @@ export const registerClassCurrentState = async (courseId: string, classId: numbe
         if (!userID) {
             throw new UserNotLoggedError("El usuario debe loguearse");
         }
-
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
+        }
         const courseData = await findUserCourseWithModulesByCanonicalId(courseId, userID);
         if (!courseData.userCourse) {
             throw new Error("El curso no le pertenece al usuario");
@@ -366,7 +406,10 @@ export const registerModuleFinishtState = async (courseId: string, moduleId: num
         if (!userID) {
             throw new UserNotLoggedError("El usuario debe loguearse");
         }
-
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
+        }
         const courseData = await findUserCourseWithModulesByCanonicalId(courseId, userID);
         if (!courseData.userCourse) {
             throw new Error("El curso no le pertenece al usuario");
@@ -397,7 +440,10 @@ export const registerQuestionAnswer = async (data: CreateQuestionAnswer) => {
         if (!userID) {
             throw new UserNotLoggedError("El usuario debe loguearse");
         }
-
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
+        }
         const courseData = await findUserCourseWithModulesByCanonicalId(data.canonicalId, userID);
         if (!courseData.userCourse) {
             throw new Error("El curso no le pertenece al usuario");
@@ -464,6 +510,10 @@ export const calculateQuizScore = async (data: CalculateQuizScore): Promise<Resu
         const userID = session?.user.id;
         if (!userID) {
             throw new UserNotLoggedError("El usuario debe loguearse");
+        }
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
         }
         const courseData = await findUserCourseWithModulesByCanonicalId(data.canonicalId, userID);
         if (!courseData.userCourse) {
@@ -532,6 +582,11 @@ export const getUserQuizState = async (canonicalId: string, quizId: number): Pro
         if (!userID) {
             throw new UserNotLoggedError("El usuario debe loguearse");
         }
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
+        }
+
         const courseData = await findUserCourseWithModulesByCanonicalId(canonicalId, userID);
         if (!courseData.userCourse) {
             throw new Error("El curso no le pertenece al usuario");
@@ -551,6 +606,10 @@ export const calculateTotalSalesPerCourse = async (): Promise<ResultSalesCourse[
         if (!userID) {
             throw new UserNotLoggedError("El usuario debe loguearse");
         }
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
+        }
         return await countCourseSales();
     } catch (error) {
         logPrismaError(error);
@@ -567,7 +626,8 @@ export const calculateTotalSalesByMonth = async (): Promise<CoursesMonthResult> 
         }
         return await sumCourseSalesByLastMonth();
     } catch (error) {
-        logPrismaError(error);
+        console.log("error", error);
+        //logPrismaError(error);
         throw error;
     }
 }

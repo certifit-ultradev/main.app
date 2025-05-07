@@ -47,3 +47,10 @@ export const updateCourseCategory = async (category: CourseCategory): Promise<Co
     });
     return updateCourseCategory;
 }
+
+export const deleteCourseCategory = async (id: number): Promise<CourseCategory> => {
+    const deleteCourseCategory = await prisma.courseCategory.delete({
+        where: { id }
+    });
+    return deleteCourseCategory;
+}

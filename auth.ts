@@ -6,6 +6,7 @@ import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
 import { getUserByEmail } from '@/services/user';
 import bcrypt from "bcryptjs";
+const extendedPrisma = prisma.$extends({});
 
 export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
     ...authConfig,
@@ -21,10 +22,16 @@ export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
                         const { email, password } = parsedCredentials.data;
                         const user = await getUserByEmail(email);
                         if (!user || !user.password) return null;
+
+                        if (user.emailVerified === null) {
+                            return null;
+                        }
+
                         const passwordsMatch = await bcrypt.compare(password, user.password);
 
                         if (passwordsMatch) return user;
                     } catch (error) {
+                        console.log("error", error);
                         return null;
                     }
                 }
@@ -32,6 +39,6 @@ export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
             },
         }),
     ],
-    adapter: PrismaAdapter(prisma),
+    adapter: PrismaAdapter(extendedPrisma),
     session: { strategy: "jwt" }
 });

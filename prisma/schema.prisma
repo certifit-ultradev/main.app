@@ -1,6 +1,7 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["relationJoins"]
+  output          = "app/generated/prisma/client"
 }
 
 datasource db {
@@ -14,7 +15,7 @@ model User {
   lastName      String       @map("last_name")
   password      String?
   email         String
-  emailVerified Boolean?     @map("email_verified")
+  emailVerified DateTime?    @map("email_verified")
   phoneNumber   String       @map("phone_number")
   isAdmin       Boolean      @default(false) @map("is_admin")
   createdAt     DateTime     @default(now()) @map("created_at")
@@ -120,7 +121,7 @@ model ModuleClass {
   updatedAt      DateTime? @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
 
-  courseModule     CourseModules      @relation(fields: [courseModuleId], references: [id])
+  courseModule     CourseModules      @relation(fields: [courseModuleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   UserClassesState UserClassesState[]
 }
 
@@ -134,7 +135,7 @@ model ModuleQuiz {
   updatedAt      DateTime? @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
 
-  courseModule   CourseModules    @relation(fields: [courseModuleId], references: [id])
+  courseModule   CourseModules    @relation(fields: [courseModuleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   quizQuestion   QuizQuestion[]
   userQuizAnswer UserQuizAnswer[]
   userQuizState  UserQuizState[]
@@ -151,7 +152,7 @@ model QuizQuestion {
   updatedAt DateTime? @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  moduleQuiz             ModuleQuiz               @relation(fields: [quizId], references: [id])
+  moduleQuiz             ModuleQuiz               @relation(fields: [quizId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   possibleAnswerQuestion PossibleAnswerQuestion[]
   userQuizAnswer         UserQuizAnswer[]
 }
@@ -165,7 +166,7 @@ model PossibleAnswerQuestion {
   updatedAt  DateTime? @updatedAt @map("updated_at")
   deletedAt  DateTime? @map("deleted_at")
 
-  quizQuestion   QuizQuestion     @relation(fields: [questionId], references: [id])
+  quizQuestion   QuizQuestion     @relation(fields: [questionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userQuizAnswer UserQuizAnswer[]
 }
 
@@ -197,8 +198,8 @@ model UserQuizState {
   updatedAt      DateTime? @updatedAt @map("updated_at")
 
   userCourse   UserCourse    @relation(fields: [userCourseId], references: [id])
-  moduleQuiz   ModuleQuiz    @relation(fields: [quizId], references: [id])
-  courseModule CourseModules @relation(fields: [courseModuleId], references: [id])
+  moduleQuiz   ModuleQuiz    @relation(fields: [quizId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  courseModule CourseModules @relation(fields: [courseModuleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   Course       Course?       @relation(fields: [courseId], references: [id])
   courseId     Int?
 }
@@ -254,7 +255,7 @@ model UserClassesState {
   updatedAt        DateTime? @updatedAt @map("updated_at")
 
   userCourse  UserCourse  @relation(fields: [userCourseId], references: [id])
-  moduleClass ModuleClass @relation(fields: [classId], references: [id])
+  moduleClass ModuleClass @relation(fields: [classId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model UserQuizAnswer {
@@ -270,9 +271,9 @@ model UserQuizAnswer {
   updatedAt    DateTime? @updatedAt @map("updated_at")
 
   userCourse               UserCourse              @relation(fields: [userCourseId], references: [id])
-  moduleQuiz               ModuleQuiz              @relation(fields: [quizId], references: [id])
-  quizQuestion             QuizQuestion            @relation(fields: [questionId], references: [id])
-  PossibleAnswerQuestion   PossibleAnswerQuestion? @relation(fields: [possibleAnswerQuestionId], references: [id])
+  moduleQuiz               ModuleQuiz              @relation(fields: [quizId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  quizQuestion             QuizQuestion            @relation(fields: [questionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  PossibleAnswerQuestion   PossibleAnswerQuestion? @relation(fields: [possibleAnswerQuestionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   possibleAnswerQuestionId Int?
 }
 

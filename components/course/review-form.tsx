@@ -10,6 +10,7 @@ import { uploadFile } from '@/utils/upload-file-blob';
 import SubmitButton from '../submitButton';
 import { Button } from '@nextui-org/react';
 import { FormError } from '../form/form-error';
+import { diffCourses } from '@/utils/diff';
 
 interface CourseReviewFormProps {
     data: CourseData;
@@ -68,6 +69,10 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                                         return;
                                     }
 
+                                    console.log("clsCreatedId", clsCreatedId);
+                                    console.log("putBlobResult.url", putBlobResult.url);
+                                    console.log("file.size", file.size);
+
                                     await editClassVideoPath({
                                         data: {
                                             clsId: clsCreatedId, videoPath: putBlobResult.url, videoSize: file.size
@@ -100,16 +105,20 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                 const uploadPromises: Promise<void>[] = [];
                 data.modules?.forEach((module, mIndex) => {
                     module.classes?.forEach((cls, clsIndex) => {
-                        const file = cls.video;
+                        const file = cls.video;                        
                         if (file instanceof File) {
+                            console.log("file", file.size);
                             const uploadPromise = uploadFile(`/courses/${data.id}/`, file)
                                 .then(async (putBlobResult) => {
+                                    console.log("putBlobResult", putBlobResult);
+                                    console.log("file size", file.size);
                                     if (dataWithOutFiles.modules &&
                                         dataWithOutFiles.modules[mIndex] &&
                                         dataWithOutFiles.modules[mIndex].classes &&
                                         dataWithOutFiles.modules[mIndex].classes[clsIndex])
                                     {
                                         dataWithOutFiles.modules[mIndex].classes[clsIndex].video = putBlobResult.url;
+                                        dataWithOutFiles.modules[mIndex].classes[clsIndex].videoSize = file.size;
                                     } else {
                                         setError("La estructura en dataWithOutFiles no existe para actualizar la URL del video.");
                                         console.error("La estructura en dataWithOutFiles no existe para actualizar la URL del video.", { mIndex, clsIndex });
@@ -125,6 +134,11 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                 });
 
                 await Promise.all(uploadPromises);
+
+                console.log("dataWithOutFiles", dataWithOutFiles);
+                
+                console.log("diff", diffCourses(originalData, dataWithOutFiles));
+
                 const editResult = await edit({ data: { originalCourseData: originalData, newCourseData: dataWithOutFiles } });
                 setIsLoading(false);
                 if (editResult.success) {

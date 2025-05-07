@@ -25,6 +25,11 @@ export const quoteCoursePaymentTransaction = async (courseCanonicalId: string) =
         if (!userId) {
             throw new UserNotLoggedError("El usuario debe loguearse");
         }
+        console.log("session", session.user);
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
+        }
         const course = await getCourseByCanonicalId(courseCanonicalId);
         if (!course) {
             throw new NotFoundError("Curso no encontrado");
@@ -71,6 +76,7 @@ export const quoteCoursePaymentTransaction = async (courseCanonicalId: string) =
             expirationTime: Date.now()
         };
     } catch (error) {
+        console.log("error", error);
         logPrismaError(error);
         throw error;
     }
@@ -82,6 +88,10 @@ export const createCoursePaymentTransaction = async (purchaseId: number, trxId: 
         const userId = session?.user.id;
         if (!userId) {
             throw new UserNotLoggedError("El usuario debe loguearse");
+        }
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
         }
 
         const purchase = await findUserPurchaseById(purchaseId, userId);

@@ -1,6 +1,6 @@
 import { logPrismaError } from "@/exceptions/error-encoder";
 import { CourseCategory } from "@/models/course-category";
-import { allCategories, createCourseCategory, findCategoryById, updateCourseCategory } from "@/repository/categories";
+import { allCategories, createCourseCategory, deleteCourseCategory, findCategoryById, updateCourseCategory } from "@/repository/categories";
 import { CourseCategoryData } from "@/utils/types";
 
 export const getAllCourseCategories = async (): Promise<CourseCategory[]> => {
@@ -29,6 +29,15 @@ export const changeCourseCategory = async (data: Partial<CourseCategoryData>): P
             id: data.id,
             name: data.name as string
         }));
+    } catch (error) {
+        logPrismaError(error);
+        throw error;
+    }
+}
+
+export const removeCourseCategory = async (id: number) => {
+    try {
+        await deleteCourseCategory(id);
     } catch (error) {
         logPrismaError(error);
         throw error;

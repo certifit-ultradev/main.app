@@ -64,7 +64,7 @@ export const registerUser = async (userInfo: RegisterUser | UserCreateData): Pro
             password: userInfo.password,
             isAdmin: false,
             email: userInfo.email,
-            emailVerified: false,
+            emailVerified: null,
             phoneNumber: userInfo.phoneNumber,
         }));
     } catch (error) {
@@ -75,8 +75,7 @@ export const registerUser = async (userInfo: RegisterUser | UserCreateData): Pro
 
 export const editUserById = async (id: string, userInfo: Partial<User>): Promise<User> => {
     try {
-        const filteredData = cleanData(userInfo);
-        return await updateUserById(id, filteredData);
+        return await updateUserById(id, userInfo);
     } catch (error) {
         logPrismaError(error);
         throw error;

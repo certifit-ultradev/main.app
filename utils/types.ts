@@ -156,7 +156,7 @@ export interface UserList {
     email: string;
     phoneNumber: string;
     isAdmin: boolean;
-    emailVerified: boolean;
+    emailVerified?: Date | null;
     createdAt?: Date;
     updatedAt?: Date | null;
 }
@@ -337,18 +337,6 @@ export interface QuizModule {
     questions: QuizQuestions[] | undefined;
 }
 
-export interface CurrentUserQuizState {
-    retries: number
-    result: number
-    passed: boolean
-}
-
-export interface RemapedClass {
-    id?: number,
-    title: string,
-    completed: boolean
-}
-
 export interface QuizQuestions {
     id?: number;
     quizModuleId?: number;
@@ -363,6 +351,18 @@ export interface QuestionOption {
     quizQuestionId?: number;
     value: string,
     isCorrect: boolean
+}
+
+export interface CurrentUserQuizState {
+    retries: number
+    result: number
+    passed: boolean
+}
+
+export interface RemapedClass {
+    id?: number,
+    title: string,
+    completed: boolean
 }
 
 export interface CourseCategoryData {
@@ -392,7 +392,7 @@ export interface ResultQuizScore {
 }
 
 export interface ResultSalesCourse {
-    courseName: string
+    course_name: string
     total: number
 }
 
@@ -432,13 +432,13 @@ export interface EditUserData {
 }
 
 export interface UsersMonthResult {
-    currentMonthCount: number;
-    previousMonthCount: number;
+    current_month_count: number;
+    previous_month_count: number;
 }
 
 export interface CoursesMonthResult {
-    currentMonthCount: number;
-    previousMonthCount: number;
+    current_month_count: number;
+    previous_month_count: number;
 }
 
 export interface PorcentialVariation {

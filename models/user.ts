@@ -7,7 +7,7 @@ export class User {
     password?: string | null;
     email: string;
     isAdmin: boolean;
-    emailVerified?: boolean | null;
+    emailVerified?: Date | null;
     phoneNumber: string;
     createdAt?: Date;
     updatedAt?: Date | null;
@@ -21,7 +21,7 @@ export class User {
             password?: string | null;
             email: string;
             isAdmin: boolean;
-            emailVerified?: boolean | null;
+            emailVerified?: Date | null;
             phoneNumber: string;
             createdAt?: Date;
             updatedAt?: Date | null;
