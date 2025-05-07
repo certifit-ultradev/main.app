@@ -21,7 +21,7 @@ export default auth((req: { auth?: Session |null; nextUrl?: NextURL; headers: He
         return;
     }
 
-    if (!req.auth?.user?.emailVerified) {
+    if (isLoggedIn && !req.auth?.user?.emailVerified) {
         return Response.redirect(new URL('/verify-email', nextUrl));
     }
 
