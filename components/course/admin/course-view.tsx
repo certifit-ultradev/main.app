@@ -123,6 +123,7 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
                     <h4 className={cn('text-xl font-semibold mb-4')}>Imagen del curso</h4>
                     <div className={cn('mb-6')}>
                         {data.courseImage ? (<Image
+                            unoptimized={true}
                             src={typeof data.courseImage === "string" ? data.courseImage : ""}
                             width={500}
                             height={400}

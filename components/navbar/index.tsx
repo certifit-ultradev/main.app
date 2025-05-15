@@ -53,6 +53,7 @@ function Navbar(): JSX.Element {
             <div className="flex-shrink-0 mr-4">
                 <Link href="/">
                     <Image
+                        unoptimized={true}
                         src='/logo.png'
                         alt='logo'
                         width={100}

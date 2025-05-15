@@ -60,6 +60,7 @@ export const LoginForm = () => {
                     width={200}
                     height={38}
                     className={cn('w-20 mb-6 text-left invert')}
+                    unoptimized={true}
                     priority
                 />
 
@@ -155,6 +156,7 @@ export const LoginForm = () => {
                         width={500}
                         height={500}
                         alt="Entrenador"
+                        unoptimized={true}
                         className={cn('relative z-9 rounded-full w-[30rem] h-[30rem] object-cover')} />
 
                     <div className={cn('absolute top-0 left-[-1rem] bg-white text-black p-4 rounded-lg shadow-md flex items-center space-x-1')}>

@@ -105,7 +105,7 @@ export function EmptyCourseProgressCard({ course, index }: CourseProgressCardPro
             )}>
                 {/* Contenido superior */}
                 <div className={cn("relative mb-4")}>
-                    <Image src={course.courseImage} alt={`Curso ${index + 1}`} className={cn('w-full h-auto rounded-lg object-cover')} width={350} height={200} />
+                    <Image src={course.courseImage} alt={`Curso ${index + 1}`} className={cn('w-full h-auto rounded-lg object-cover')} width={350} height={200} unoptimized={true}/>
                     <div className={cn('absolute top-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full')}>
                         {course.courseDuration}
                     </div>

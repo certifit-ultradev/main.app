@@ -109,6 +109,7 @@ export default function Home() {
                         <div className={cn('relative')}>
                             <div className={cn('absolute inset-0 rounded-full border-[16px] border-gray-800')}></div>
                             <Image src="/trainer_1.png"
+                                unoptimized={true}
                                 width={446}
                                 height={447}
                                 alt="Entrenador"
@@ -247,7 +248,7 @@ export default function Home() {
                     {/* Imagen de la izquierda (visible en pantallas md y superiores) */}
                     <div className={cn("w-full md:w-1/2 hidden md:flex")}>
                         <div className={cn("bg-black rounded-xl overflow-hidden shadow-xl relative")}>
-                            <Image src="/contacto.png" alt="Imagen Contacto" className={cn("w-full h-auto object-cover rounded-xl")} width={458} height={586} />
+                            <Image unoptimized={true} src="/contacto.png" alt="Imagen Contacto" className={cn("w-full h-auto object-cover rounded-xl")} width={458} height={586} />
                         </div>
                     </div>
                     {/* Formulario a la derecha */}
@@ -338,6 +339,7 @@ export default function Home() {
                     <div className={cn('flex flex-col items-center md:items-start')}>
                         <div className={cn('mb-4')}>
                             <Image src='/logo.png'
+                                unoptimized={true}
                                 alt='logo'
                                 width={200}
                                 height={38}
