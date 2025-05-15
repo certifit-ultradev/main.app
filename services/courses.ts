@@ -176,6 +176,9 @@ export const getUserCourseByCanonicalId = async (canonicalId: string): Promise<C
         return await findUserCourseByCanonicalId(canonicalId, userId);
     } catch (error) {
         logPrismaError(error);
+        if (error instanceof NotFoundError) {
+            return {} as Course;
+        }
         throw error;
     }
 }
@@ -199,6 +202,7 @@ export const getCourseByCanonicalId = async (canonicalId: string): Promise<Cours
 
         return await findCourseByCanonicalId(canonicalId, userID);
     } catch (error) {
+        console.log("course error", error);
         logPrismaError(error);
         throw error;
     }
