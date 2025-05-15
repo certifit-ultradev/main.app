@@ -108,8 +108,7 @@ export default function Home() {
                     <div className={cn('relative w-full md:w-1/2 lg:w-1/2 mt-10 md:mt-0 flex justify-center md:justify-center nn:mb-10')}>
                         <div className={cn('relative')}>
                             <div className={cn('absolute inset-0 rounded-full border-[16px] border-gray-800')}></div>
-                            <Image src="/trainer_1.png"
-                                unoptimized={true}
+                            <Image src="https://vnruzfzvnvdhb848.public.blob.vercel-storage.com/public/trainer_1-3XsmrTsq0RrcTtYZpXgf2EcVP4cyw6.png"
                                 width={446}
                                 height={447}
                                 alt="Entrenador"
@@ -248,7 +247,7 @@ export default function Home() {
                     {/* Imagen de la izquierda (visible en pantallas md y superiores) */}
                     <div className={cn("w-full md:w-1/2 hidden md:flex")}>
                         <div className={cn("bg-black rounded-xl overflow-hidden shadow-xl relative")}>
-                            <Image unoptimized={true} src="/contacto.png" alt="Imagen Contacto" className={cn("w-full h-auto object-cover rounded-xl")} width={458} height={586} />
+                            <Image src="https://vnruzfzvnvdhb848.public.blob.vercel-storage.com/public/contacto-oJMlgDHcAo1MLaPAMXHcRSXrvm3iSN.png" alt="Imagen Contacto" className={cn("w-full h-auto object-cover rounded-xl")} width={458} height={586} />
                         </div>
                     </div>
                     {/* Formulario a la derecha */}
@@ -338,8 +337,7 @@ export default function Home() {
                 <div className={cn('max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between px-4 sm:px-6 lg:px-8')}>
                     <div className={cn('flex flex-col items-center md:items-start')}>
                         <div className={cn('mb-4')}>
-                            <Image src='/logo.png'
-                                unoptimized={true}
+                            <Image src='https://vnruzfzvnvdhb848.public.blob.vercel-storage.com/public/logo-Xm0liee8ZmpclDqhTaYAi5vKcHPiEz.png'
                                 alt='logo'
                                 width={200}
                                 height={38}

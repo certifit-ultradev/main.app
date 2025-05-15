@@ -29,7 +29,7 @@ export default function MobileMenu(props: MobileMenuProps) {
             {isOpen && (
                 <div className={cn('fixed inset-0 bg-[#121313] bg-opacity-100 z-50 flex flex-col p-4 w-full')}>
                     <div className={cn('flex items-center justify-between mb-8')}>
-                        <Image unoptimized={true} src="/logo.png" alt="logo" width={100} height={30} className={cn('w-20')} />
+                        <Image src="https://vnruzfzvnvdhb848.public.blob.vercel-storage.com/public/logo-Xm0liee8ZmpclDqhTaYAi5vKcHPiEz.png" alt="logo" width={100} height={30} className={cn('w-20')} />
                         <button onClick={handleClose}>
                             <svg className={cn('w-6 h-6 text-white')} fill="none" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />

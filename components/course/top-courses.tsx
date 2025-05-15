@@ -77,7 +77,7 @@ export const TopThreeCourses = () => {
                         "text-center px-4 py-2"
                     )} style={{ scrollSnapAlign: "center" }}>
                         <div className={cn('relative mb-4')}>
-                            <Image unoptimized={true} src={course.courseImage} alt={`Curso ${index + 1}`} className={cn('w-full h-full rounded-lg')} width={310} height={212} />
+                            <Image src={course.courseImage} alt={`Curso ${index + 1}`} className={cn('w-full h-full rounded-lg')} width={310} height={212} />
                             <div className={cn('absolute top-2 right-2 bg-[#ababab] bg-opacity-60 text-white text-xs px-2 py-1 rounded-full')}>
                                 {course.courseDuration}
                             </div>
@@ -97,7 +97,7 @@ export const TopThreeCourses = () => {
                         </p>
                         <div className={cn('flex items-center justify-between text-sm flex-col space-x-3 lg:flex-row')}>
                             <div className={cn('flex items-center space-x-2')}>
-                                <Image unoptimized={true} src={course.instructorPhoto} alt="Instructor" className={cn('w-6 h-6 rounded-full')} width={40} height={40} />
+                                <Image src={course.instructorPhoto} alt="Instructor" className={cn('w-6 h-6 rounded-full')} width={40} height={40} />
                                 <div className={cn('items-center justify-between text-sm')}>
                                     <p className={cn('text-[#101828] font-bold')}>{course.instructorName}</p>
                                     <p className={cn('text-gray-500 text-xs')}>Entrenador</p>
@@ -151,7 +151,6 @@ const ModalCourseDetail = ({ course, isOpen, setOpen }: ModalCourseDetailProp) =
                         {course.courseImage && (
                             <div className={cn("mb-4")}>
                                 <Image
-                                    unoptimized={true}
                                     src={course.courseImage}
                                     alt={course.title}
                                     width={500}
