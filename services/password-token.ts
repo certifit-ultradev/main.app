@@ -1,9 +1,8 @@
 import { ResetPasswordTokenResult } from "@/utils/types";
 import { PasswordResetToken } from "../models/password-reset-token";
-import { createPasswordResetToken, findPasswordResetTokenByToken } from "../repository/password-reset-token";
+import { createPasswordResetToken, deletePasswordResetToken, findPasswordResetTokenByToken } from "../repository/password-reset-token";
 import { generateExpirationToken } from "../utils/expiraton-token";
 import { sendPasswordResetEmail } from "@/repository/nodemailer";
-import { deleteVerificationToken } from "@/repository/verification-token";
 import { logPrismaError } from "@/exceptions/error-encoder";
 
 /**
@@ -62,12 +61,12 @@ export const getPasswordResetTokenByToken = async (token: string): Promise<Passw
 
 /**
  * 
- * @param id 
+ * @param token 
  * @returns 
  */
-export const removePasswordResetToken = async (id: string): Promise<ResetPasswordTokenResult> => {
+export const removePasswordResetToken = async (token: string): Promise<ResetPasswordTokenResult> => {
     try {
-        const passwordResetToken = await deleteVerificationToken(id);
+        const passwordResetToken = await deletePasswordResetToken(token);
         if (!passwordResetToken) {
             throw new Error("el token no se pudo borrar");
         }

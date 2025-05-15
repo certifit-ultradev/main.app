@@ -36,7 +36,8 @@ export const quoteCoursePaymentTransaction = async (courseCanonicalId: string) =
             throw new UserNotLoggedError("El usuario debe verificar su email");
         }
         const course = await getCourseByCanonicalId(courseCanonicalId);
-        if (!course) {
+        if (course === null) {
+            console.log("course", "course === null");
             throw new NotFoundError("Curso no encontrado");
         }
 

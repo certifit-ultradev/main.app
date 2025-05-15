@@ -11,12 +11,12 @@ import { UserCourse } from "@/models/user-course";
 import { UserQuizAnswer } from "@/models/user-quiz-answer";
 import { UserQuizState } from "@/models/user-quiz-state";
 import { UserModuleState } from "@/models/user_module_state";
+import { Prisma, PrismaClient } from "@/prisma/app/generated/prisma/client";
 import { storeVideoBlobStorage } from "@/services/video";
 import { CourseChange } from "@/utils/change-types";
 import { mergeChangesByTypeAndId, toSnakeCase } from "@/utils/classes";
 import { isCourseModule, isModuleClass, isOption, isQuestion } from "@/utils/type-guards";
 import { CourseData, CoursesMonthResult, ResultSalesCourse, UsersMonthResult } from "@/utils/types";
-import { Prisma, PrismaClient } from "@prisma/client";
 
 /**
  * 
@@ -262,7 +262,7 @@ export const findCourseByCanonicalId = async (id: string, userId: string): Promi
         where: { canonicalId: id }
     });
 
-    if (!course) {
+    if (course === null) {
         throw new NotFoundError('Curso no encontrado');
     }
 
@@ -353,7 +353,8 @@ export const findUserCourseWithModulesByCanonicalId = async (id: string, userId:
         where: { canonicalId: id }
     });
 
-    if (!course) {
+     if (course === null) {
+        console.log("findUserCourseWithModulesByCanonicalId");
         throw new NotFoundError('Curso no encontrado');
     }
 
