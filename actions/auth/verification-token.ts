@@ -67,7 +67,7 @@ export const verifyEmail = async (token: string): Promise<ServerActionResponse<n
         });
 
         if (confirmEmail && existingToken.id) {
-            const result = await removeVerificationToken(existingToken.id);
+            const result = await removeVerificationToken(existingToken.token);
             if (!result.success) {
                 return { success: false, message: "Ocurrio un error" };
             }

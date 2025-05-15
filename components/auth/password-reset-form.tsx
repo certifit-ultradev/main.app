@@ -41,7 +41,7 @@ export const PasswordResetForm = () => {
                 if (result.success) {
                     setSuccess(result.message);
                 } else {
-                    setError(result.error);
+                    setError(result.message);
                 }
             });
         });

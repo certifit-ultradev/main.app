@@ -90,11 +90,11 @@ export const createPasswordResetToken = async ({ email, token, expires }: Passwo
 
 /**
  * 
- * @param id 
+ * @param token 
  * @returns 
  */
-export const deletePasswordResetToken = async (id: string) => {
+export const deletePasswordResetToken = async (token: string) => {
     return await prisma.passwordResetToken.delete({
-        where: { id },
+        where: { token },
     });
 }

@@ -2,9 +2,16 @@
 
 ## [unreleased]
 
+## 1.1.0
+
 ### Changed
 
 - Adjust Prisma import on error-encoder
+- Adjust body upload size from 500mb to 900mb
+
+### Fixed
+
+- Fixed change password error deleting password-token-verification
 
 ## 1.0.0
 

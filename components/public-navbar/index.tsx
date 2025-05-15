@@ -47,7 +47,7 @@ export default function PublicNavbar() {
             <div className="flex-shrink-0 mr-4">
                 <Link href="/">
                     <Image
-                        src='/logo.png'
+                        src='https://vnruzfzvnvdhb848.public.blob.vercel-storage.com/public/logo-Xm0liee8ZmpclDqhTaYAi5vKcHPiEz.png'
                         alt='logo'
                         width={100}
                         height={30}

@@ -96,8 +96,6 @@ export const updateUserById = async (id: string, data: Partial<User>): Promise<U
         data.password = await bcrypt.hash(data.password, 10);
     }
 
-    console.log('data', data);
-
     const { userCourse, ...updateData } = data;
     const updatedUser = await prisma.user.update({
         where: { id },
