@@ -5,6 +5,12 @@ import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 import { ServerActionResponse } from "@/utils/types";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 
+/**
+ * 
+ * @param param0 
+ * @param callbackUrl 
+ * @returns 
+ */
 export const logout = async (): Promise<ServerActionResponse<null>> => {
     try {
         await signOut({

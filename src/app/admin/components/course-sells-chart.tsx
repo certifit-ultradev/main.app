@@ -6,7 +6,7 @@ import { ChartConfig, ChartContainer } from "@/components/ui/chart"
 import { useEffect, useState } from "react"
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CountVariation, PorcentialVariation} from "@/utils/types";
+import { CountVariation, PorcentialVariation } from "@/utils/types";
 
 const chartConfig = {
     desktop: {
@@ -34,7 +34,7 @@ export function CourseSellsChart() {
         <ChartContainer config={chartConfig} className={cn("min-h-[80px] w-full")}>
             <BarChart accessibilityLayer data={chartData}>
                 <XAxis
-                    dataKey="courseName"
+                    dataKey="course_name"
                     tickLine={false}
                     tickMargin={10}
                     axisLine={false}
@@ -106,7 +106,7 @@ export function LastMonthCharts() {
                     {/* Sección principal: cifra y flecha hacia arriba */}
                     <div className="flex items-center gap-2">
                         <span className="text-4xl font-bold">{courseStats.count}</span>
-                        {isUpCourses ? <ArrowUp className="w-5 h-5 text-green-400" /> : <ArrowDown className="w-5 h-5 text-red-500" />}    
+                        {isUpCourses ? <ArrowUp className="w-5 h-5 text-green-400" /> : <ArrowDown className="w-5 h-5 text-red-500" />}
                     </div>
 
                     {/* Texto descriptivo */}
@@ -120,7 +120,7 @@ export function LastMonthCharts() {
                     <h2 className="text-sm font-medium">Nuevos usuarios</h2>
                     <div className="flex items-center gap-2">
                         <span className="text-4xl font-bold text-red-500">{userStats.percentage}%</span>
-                        {isUpUsers ? <ArrowUp className="w-5 h-5 text-green-400" /> : <ArrowDown className="w-5 h-5 text-red-500" />}                        
+                        {isUpUsers ? <ArrowUp className="w-5 h-5 text-green-400" /> : <ArrowDown className="w-5 h-5 text-red-500" />}
                     </div>
                     <p className="text-sm text-gray-500">en el ultimo mes</p>
                 </CardContent>

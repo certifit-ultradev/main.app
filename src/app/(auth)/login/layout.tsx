@@ -4,7 +4,7 @@ import '../../globals.css';
 // These styles apply to every route in the application
 
 export const metadata: Metadata = {
-    title: 'Certifid',
+    title: 'Certifit',
     description: 'Certifit',
 }
 

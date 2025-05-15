@@ -68,9 +68,9 @@ export function CreateCourseDataTableColumns({ onActivate, onDeactivate }: Creat
                             <DropdownMenuItem className='hover:bg-gray-100' onClick={async () => {
                                 // Llamamos a la función onActivate pasada desde el padre
                                 if (!course.isActive) {
-                                    await onActivate(course.id);
+                                    await onActivate(course.id as number);
                                 } else {
-                                    await onDeactivate(course.id);                                    
+                                    await onDeactivate(course.id as number);                                    
                                 }
                             }}>{course.isActive ? 'Desactivar' : 'Activar'} curso</DropdownMenuItem>
                         </DropdownMenuContent>

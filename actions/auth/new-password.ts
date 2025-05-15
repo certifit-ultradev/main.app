@@ -9,6 +9,12 @@ import { NewPasswordSchema } from "@/utils/schemas";
 import { ServerActionResponse } from "@/utils/types";
 import { z } from "zod";
 
+/**
+ * 
+ * @param values 
+ * @param token 
+ * @returns 
+ */
 export const newPassword = async (
     values: z.infer<typeof NewPasswordSchema>,
     token?: string | null
@@ -40,14 +46,19 @@ export const newPassword = async (
             return { success: false, error: "El correo no existe!" };
         }
 
-        await editUserById(existingUser.id, { password });
-        await removePasswordResetToken(existingUser.id);
+        await editUserById(existingUser.id!, { password });
+        await removePasswordResetToken(existingUser.id!);
         return { success: true, message: "Contraseña actualizada!" };
     } catch (error) {
         return mapErrorToServerActionResponse(error);
     }
 }
 
+/**
+ * 
+ * @param values 
+ * @returns 
+ */
 export const newPasswordForLoggedUser = async (
     values: z.infer<typeof NewPasswordSchema>,
 ): Promise<ServerActionResponse<null>> => {

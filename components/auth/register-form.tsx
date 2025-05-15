@@ -42,7 +42,6 @@ export const RegistrationForm = ({ data, setData, nextStep }: RegisterFormProps)
         setError('');
         setSuccess('');
 
-        // Actualizamos los datos con el número de teléfono completo
         setData((prevDatos) => ({
             ...prevDatos,
             ...formData,

@@ -26,7 +26,8 @@ describe('User Register Action Tests', () => {
             lastName: "Test",
             email: "test@test.com",
             phoneNumber: "+571234567890",
-            emailVerified: true
+            emailVerified: new Date(),
+            isAdmin: false,
         });
 
         (registerUser as jest.Mock).mockResolvedValue(userCreated);

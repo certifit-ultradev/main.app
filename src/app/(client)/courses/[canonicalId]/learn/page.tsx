@@ -3,6 +3,7 @@ import { ClientCourseView } from "@/components/course/client/course-view";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
+// @ts-expect-error: params
 const LearnPage = async ({ params }) => {
     const { canonicalId } = await params;
     const response = await fetch(

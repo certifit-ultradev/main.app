@@ -7,6 +7,11 @@ const SIGNATURE_HEADER = 'X-Event-Checksum'
 
 const eventKey = process.env.WOMPI_EVENT_KEY;
 
+/**
+ * 
+ * @param req 
+ * @returns 
+ */
 export async function POST(req: NextRequest) {
     try {
         const request = await req.json();
@@ -26,6 +31,9 @@ export async function POST(req: NextRequest) {
         return Response.json(result);
     } catch (error) {
         console.error(mapErrorToAPIResponse(error));
-        return null;
+        return Response.json({
+            success: false,
+            message: "Error al procesar el evento"
+        });
     }
 }

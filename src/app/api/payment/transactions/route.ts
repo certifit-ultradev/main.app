@@ -2,6 +2,11 @@ import { mapErrorToAPIResponse } from '@/exceptions/error-encoder';
 import { createCoursePaymentTransaction } from '@/services/payments';
 import { NextRequest } from 'next/server';
 
+/**
+ * @param req 
+ * @param context 
+ * @returns 
+ */
 export async function POST(req: NextRequest) {
     try {
         const request = await req.json();

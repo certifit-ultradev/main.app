@@ -127,7 +127,7 @@ export const CategoryCreateEditForm = ({ data }: CategoryFormProps<CourseCategor
                 <SubmitButton disabled={!isDirty} isLoading={isLoading} label={!data.id ? 'Crear' : 'Editar'} />
             </form>
             <div>
-                <Modal open={isOpen} setOpen={handleModalClose}>
+                <Modal open={isOpen} setOpen={handleModalClose} closeButton={true}>
                     <div>
                         <div className={cn('sm:flex sm:items-start')}>
                             <div className={cn('text-center sm:text-left w-full')}>

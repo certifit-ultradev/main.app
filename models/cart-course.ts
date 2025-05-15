@@ -1,25 +1,27 @@
-export class CartCourse {
-	id: number
-	cartId: number
-	courseId: number
-	createdAt: Date
-	updatedAt: Date
-	deletedAt: Date
+export class Cart {
+	id?: number;
+	userId: string;
+	courseId: number;
+	createdAt: Date;
+	updatedAt?: Date | null;
+	deletedAt?: Date | null;
+
 	constructor(
 		data: {
 			id: number,
 			cartId: number,
+			userId: string,
 			courseId: number,
 			createdAt: Date,
-			updatedAt: Date,
-			deletedAt: Date
+			updatedAt?: Date | null,
+			deletedAt?: Date | null,
 		}
 	) {
-		this.id = data.id
-		this.cartId = data.cartId
-		this.courseId = data.courseId
-		this.createdAt = data.createdAt
-		this.updatedAt = data.updatedAt
-		this.deletedAt = data.deletedAt
+		this.id = data.id;
+		this.userId = data.userId;
+		this.courseId = data.courseId;
+		this.createdAt = data.createdAt || new Date();
+		this.updatedAt = data.updatedAt || null;
+		this.deletedAt = data.deletedAt || null;
 	}
 }

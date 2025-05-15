@@ -28,7 +28,7 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
                 <div className={cn('space-y-4')}>
                     {data.modules?.map((module, moduleIndex) => (
                         <div key={moduleIndex}>
-                            <h3 className={cn('font-semibold text-gray-700 mb-2')}>{module.name}</h3>
+                            <h3 className={cn('font-semibold text-gray-700 mb-2')}>{module.title}</h3>
                             {module.classes?.map((cls, classIndex) => {
                                 const isSelected =
                                     selectedClass &&
@@ -45,7 +45,7 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
                                         className={cn(`mb-5 block w-full text-left p-3 rounded-2xl ${isSelected ? 'bg-blue-100 border border-[#0BBBE7]' : 'bg-white border border-gray-300'
                                             }`)}
                                     >
-                                        <span className={cn('text-[#575B62]')}>{`Clase ${classIndex + 1}`}</span><p className={cn('text-xl')}>{cls.name}</p>
+                                        <span className={cn('text-[#575B62]')}>{`Clase ${classIndex + 1}`}</span><p className={cn('text-xl')}>{cls.title}</p>
                                     </button>
                                 );
                             })}
@@ -59,7 +59,7 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
                                     className={cn(`block w-full text-left p-3 rounded-2xl ${selectedQuiz && selectedQuiz.moduleIndex === moduleIndex && selectedQuiz.quizId === module.quiz.id ? 'bg-[#E7F1FF] border border-[#0BBBE7]' : 'bg-white border border-gray-300'
                                         }`)}
                                 >
-                                    <span className={cn('text-[#575B62]')}>{`Quiz # ${moduleIndex + 1}`}</span><p className={cn('text-xl')}>{module.quiz.name}</p>
+                                    <span className={cn('text-[#575B62]')}>{`Quiz # ${moduleIndex + 1}`}</span><p className={cn('text-xl')}>{module.quiz.title}</p>
                                 </button>
                             )}
                         </div>
@@ -72,14 +72,18 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
                     {selectedClassData && selectedClassData.video ? (
                         <div>
                             <Suspense>
-                                <video controls src={`${selectedClassData.video}`} className={cn('w-full rounded-md mb-4')} type='video/mp4'>
+                                <video controls className={cn('w-full rounded-md mb-4')}>
+                                    <source
+                                        src={typeof selectedClassData.video === 'string' ? selectedClassData.video: ""}
+                                        type="video/mp4"
+                                    />
                                     Tu navegador no soporta el formato de video
                                 </video>
 
-                                <h3 className={cn('text-2xl font-semibold mb-2')}>{selectedClassData.name}</h3>
+                                <h3 className={cn('text-2xl font-semibold mb-2')}>{selectedClassData.title}</h3>
                             </Suspense>
                         </div>
-                    ) : selectedQuizData && selectedQuizData.id ? (<QuizView quiz={selectedQuizData} minRequiredPoints={data.modules?.[selectedQuiz.moduleIndex].minRequiredPoints ?? 0} onQuizFinish={() => {}} />) : (<span>Seleccione un curso o un quiz</span>)
+                    ) : selectedQuiz && selectedQuizData && selectedQuizData.id ? (<QuizView quiz={selectedQuizData} minRequiredPoints={data.modules?.[selectedQuiz.moduleIndex].minRequiredPoints ?? 0} onQuizFinish={() => { }} />) : (<span>Seleccione un curso o un quiz</span>)
                     }
                 </div>
 
@@ -112,14 +116,14 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
                 <div className={cn('w-full border border-[#CCD2DB] rounded-2xl p-4 mb-4 lg:mb-0')}>
                     <h4 className={cn('text-xl font-semibold mb-4')}>Categoria</h4>
                     <div className={cn('mb-6')}>
-                        <p className={cn('text-gray-700')}>{data.category.name}</p>
+                        <p className={cn('text-gray-700')}>{data.category?.name}</p>
                     </div>
                 </div>
                 <div className={cn('flex w-full border border-[#CCD2DB] rounded-2xl p-4 mb-4 lg:mb-0')}>
                     <h4 className={cn('text-xl font-semibold mb-4')}>Imagen del curso</h4>
                     <div className={cn('mb-6')}>
                         {data.courseImage ? (<Image
-                            src={data.courseImage}
+                            src={typeof data.courseImage === "string" ? data.courseImage : ""}
                             width={500}
                             height={400}
                             alt="Imagen"

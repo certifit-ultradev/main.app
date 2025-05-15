@@ -1,9 +1,12 @@
 import { NextPage } from "next";
 import { LoginForm } from "@/components/auth/login-form";
+import { Suspense } from "react";
 
 const LoginPage: NextPage = async () => {
     return (
-        <LoginForm />
+        <Suspense>
+            <LoginForm />
+        </Suspense>
     );
 };
 

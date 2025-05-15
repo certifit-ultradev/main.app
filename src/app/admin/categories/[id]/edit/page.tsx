@@ -3,6 +3,7 @@ import { CategoryCreateEditForm } from '@/components/category/category-form';
 import { CourseCategoryData } from '@/utils/types';
 import { notFound } from 'next/navigation';
 
+// @ts-expect-error: params
 export default async function EditCategoryPage({ params }) {
     const { id } = await params;
     const response = await fetchCategoryById({

@@ -7,7 +7,7 @@ export function cleanData<T extends object>(data: Partial<T>): Partial<T> {
             continue;
         }
         if (value !== undefined && value !== null && value !== '') {
-            cleaned[key] = value;
+            cleaned[key] = value as T[Extract<keyof T, string>];
         }
     }
     return cleaned;

@@ -66,7 +66,7 @@ export const UserCreateEditForm = ({ data }: UserFormProps<UserCreateData>) => {
         initializeForm();
     }, [data, reset]);
 
-    const password = watch('password', '');
+    const password = watch('password', '') ?? "";
 
     const hasUppercase = /[A-Z]/.test(password ?? '');
     const hasNumber = /\d/.test(password ?? '');
@@ -77,10 +77,18 @@ export const UserCreateEditForm = ({ data }: UserFormProps<UserCreateData>) => {
         setError('');
         setSuccess('');
 
-        // Actualizamos los datos con el número de teléfono completo
         try {
             if (!data.id) {
-                createUser({data:{ ...formData }}).then((data) => {
+                const userDataForApi: UserCreateData = {
+                    name: formData.name as string,
+                    lastName: formData.lastName as string,
+                    email: formData.email as string,
+                    phoneNumber: formData.phoneNumber as string,
+                    password: formData.password as string,
+                    confirmPassword: formData.confirmPassword as string
+                };
+
+                createUser({data:{ ...userDataForApi }}).then((data) => {
                     setIsLoading(false);
                     if (data?.success) {
                         setSuccess(data.message);
@@ -276,7 +284,7 @@ export const UserCreateEditForm = ({ data }: UserFormProps<UserCreateData>) => {
                 <SubmitButton disabled={!isDirty} isLoading={isLoading} label={!data.id ? 'Crear' : 'Editar'} />
             </form>
             <div>
-                <Modal open={isOpen} setOpen={handleModalClose}>
+                <Modal open={isOpen} setOpen={handleModalClose} closeButton={true}>
                     <div>
                         <div className={cn('sm:flex sm:items-start')}>
                             <div className={cn('text-center sm:text-left w-full')}>

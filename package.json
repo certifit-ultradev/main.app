@@ -1,6 +1,6 @@
 {
   "name": "certifit",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "NODE_OPTIONS='--inspect' next dev",
@@ -8,10 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "ts-node prisma/seed.ts",
-    "test": "jest"
+    "test": "jest",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@auth/prisma-adapter": "^2.7.3",
+    "@auth/prisma-adapter": "^2.9.0",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
     "@headlessui/react": "^2.2.0",
@@ -20,7 +21,7 @@
     "@jest/globals": "^29.7.0",
     "@mui/icons-material": "^6.1.7",
     "@nextui-org/react": "^2.4.8",
-    "@prisma/client": "^6.5.0",
+    "@prisma/client": "^6.7.0",
     "@radix-ui/react-dropdown-menu": "^2.1.2",
     "@radix-ui/react-icons": "^1.3.1",
     "@radix-ui/react-slot": "^1.1.0",
@@ -70,7 +71,7 @@
     "jest-mock-extended": "^4.0.0-beta1",
     "nodemailer": "^6.9.16",
     "postcss": "^8.5.3",
-    "prisma": "^6.5.0",
+    "prisma": "^6.7.0",
     "tailwindcss": "^3.4.17",
     "ts-jest": "^29.2.5",
     "typescript": "^5"

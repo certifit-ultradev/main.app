@@ -16,6 +16,11 @@ interface QuizProps {
     onQuizFinish: (score: number, passed: boolean) => void;
 }
 
+type FetchedAnswer = {
+    questionId: number;
+    answer: string;
+};
+
 export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequiredPoints, onQuizFinish }: QuizProps) => {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [answers, setAnswers] = useState<{ [key: number]: string }>({});
@@ -30,11 +35,13 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
         fetch(`/api/courses/${courseCanonicalId}/quizzes/${quiz.id}`, {
             method: 'GET'
         }).then(async (response) => {
-            const answers = await response.json();
-            setAnswers(answers.reduce((acc, curr) => {
-                acc[curr.questionId] = curr.answer;
-                return acc;
-            }, {} as Record<number, string>));
+            const fetchedAnswers: FetchedAnswer[] = await response.json();
+            setAnswers(
+                fetchedAnswers.reduce((acc: Record<number, string>, curr: FetchedAnswer) => {
+                    acc[curr.questionId] = curr.answer;
+                    return acc;
+                }, {} as Record<number, string>)
+            );
             fetch(`/api/courses/${courseCanonicalId}/quizzes/${quiz.id}/last-result`, {
                 method: 'GET'
             }).then(async (response) => {
@@ -97,6 +104,10 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
     };
 
     const handleContinueCourse = () => {
+        if (!score) {
+            return;
+        }
+
         if (score.totalScore >= minRequiredPoints) {
             onQuizFinish(score.totalScore, score.pass);
         } else {
@@ -153,8 +164,8 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
                                             type='radio'
                                             name={`question-${currentQuestion.id}`}
                                             value={option.value}
-                                            checked={answers[currentQuestion.id] === option.value}
-                                            onChange={() => handleAnswerChange(currentQuestion.id, option.id, option.value)}
+                                            checked={answers[currentQuestion.id ?? 0] === option.value}
+                                            onChange={() => handleAnswerChange(currentQuestion.id ?? 0, option.id ?? 0, option.value)}
                                             className={cn('mr-2')}
                                         />
                                         {`${option.value} ${option.isCorrect ? ' - Esta es la respuesta correcta' : ''}`}
@@ -168,8 +179,11 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
                                     <span className={cn('flex items-center')}>Pregunta abierta <InfoOutlined width={20} height={20} className={cn('text-5xl text text-[#2A8940]')} /> </span>
                                 </div>
                                 <textarea
-                                    value={answers[currentQuestion.id] ?? ""}
-                                    onChange={(e) => handleAnswerChange(currentQuestion.id, currentQuestion.options[0].id, e.target.value)}
+                                    value={answers[currentQuestion.id ?? 0] ?? ""}
+                                    onChange={(e) => {
+                                        const optionId = currentQuestion.options?.[0]?.id ?? 0;
+                                        handleAnswerChange(currentQuestion.id ?? 0, optionId, e.target.value);
+                                    }}
                                     className={cn('w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0BBBE7]')}
                                     placeholder='Escribe tu respuesta aquí...'
                                 />
@@ -187,7 +201,7 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
                             <SubmitButton
                                 disabled={isLoading}
                                 isLoading={isLoading}
-                                label={currentQuestionIndex === quiz.questions?.length - 1 ? 'Finalizar' : 'Siguiente'}
+                                label={currentQuestionIndex === (quiz.questions?.length ?? 0) - 1 ? 'Finalizar' : 'Siguiente'}
                                 customClass={cn('bg-[#0BBBE7] text-white text-lg px-8 py-2 rounded-2xl hover:bg-[#009fdf] transition-colors')}
                                 onClick={handleNextQuestion}
                             />
@@ -196,9 +210,9 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
                 </div>
             )}
 
-            {isFinished && (
+            {isFinished && score && (
                 <>
-                    {score.totalScore >= minRequiredPoints ? (
+                    { score.totalScore >= minRequiredPoints ? (
                         <div className={cn('bg-gray-100 p-6 rounded-3xl mb-4')}>
                             <h2 className={cn('text-2xl font-bold mb-4')}>Quiz #{quiz.id} - {quiz.title}</h2>
                             <div className={cn('flex flex-col items-center bg-gray-200 p-6 rounded-3xl mb-6')}>

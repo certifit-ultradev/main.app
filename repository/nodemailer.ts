@@ -5,6 +5,11 @@ import { RequestCourseData } from "@/utils/types";
 
 const domain = process.env.NEXT_PUBLIC_APP_URL;
 
+/**
+ * 
+ * @param email 
+ * @param token 
+ */
 export const sendPasswordResetEmail = async (email: string, token: string) => {
     const resetLink = `${domain}/new-password?token=${token}`;
     console.log("confirmLink", resetLink);
@@ -22,6 +27,11 @@ export const sendPasswordResetEmail = async (email: string, token: string) => {
     });
 };
 
+/**
+ * 
+ * @param email 
+ * @param token 
+ */
 export const sendVerificationEmail = async (email: string, token: string) => {
     const confirmLink = `${domain}/verify-email?token=${token}`;
     console.log("confirmLink", confirmLink);
@@ -39,7 +49,11 @@ export const sendVerificationEmail = async (email: string, token: string) => {
     });
 };
 
-
+/**
+ * 
+ * @param email 
+ * @param token 
+ */
 export const dispatchEmailRequestCourse = async (data: RequestCourseData) => {
   await transporter.sendMail({
       from: process.env.FROM_EMAIL as string,

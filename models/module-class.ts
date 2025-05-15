@@ -6,8 +6,9 @@ export class ModuleClass {
     videoPath: string;
     videoSize: number;
     videoDuration: number;
-    createdAt: Date;
-    updatedAt: Date | null;
+    createdAt?: Date;
+    updatedAt?: Date | null;
+
     constructor(
         data: {
             id?: number;
@@ -17,6 +18,8 @@ export class ModuleClass {
             videoPath: string;
             videoSize: number;
             videoDuration: number;
+            createdAt?: Date;
+            updatedAt?: Date | null;
         }
     ) {
         this.id = data.id;
@@ -26,5 +29,7 @@ export class ModuleClass {
         this.videoPath = data.videoPath;
         this.videoSize = data.videoSize;
         this.videoDuration = data.videoDuration;
+        this.createdAt = data.createdAt || new Date();
+        this.updatedAt = data.updatedAt || null;
     }
 } 

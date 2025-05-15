@@ -32,7 +32,7 @@ export const QuizView = ({ quiz, minRequiredPoints, onQuizFinish }: QuizProps) =
         quiz.questions?.forEach((question) => {
             if (question.type === 'multiple') {
                 const correctOption = question.options?.find((option) => option.isCorrect);
-                if (correctOption && answers[question.id] === correctOption.value) {
+                if (correctOption && answers[question.id??0] === correctOption.value) {
                     correctAnswers += question.points;
                 }
             } else if (question.type === 'text') {
@@ -101,8 +101,8 @@ export const QuizView = ({ quiz, minRequiredPoints, onQuizFinish }: QuizProps) =
                                             type='radio'
                                             name={`question-${currentQuestion.id}`}
                                             value={option.value}
-                                            checked={answers[currentQuestion.id] === option.isCorrect}
-                                            onChange={() => handleAnswerChange(currentQuestion.id, option.value)}
+                                            checked={answers[currentQuestion.id ?? 0] === option.value}
+                                            onChange={() => handleAnswerChange(currentQuestion.id ?? 0, option.value)}
                                             className={cn('mr-2')}
                                         />
                                         {`${option.value} ${option.isCorrect ? ' - Esta es la respuesta correcta' : ''}`}
@@ -116,8 +116,8 @@ export const QuizView = ({ quiz, minRequiredPoints, onQuizFinish }: QuizProps) =
                                     <span className={cn('flex items-center')}>Pregunta abierta <InfoOutlined width={20} height={20} className={cn('text-5xl text text-[#2A8940]')} /> </span>
                                 </div>
                                 <textarea
-                                    value={`La respuesta es: ${currentQuestion.options[0].value}`}
-                                    onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                                    value={`La respuesta es: ${currentQuestion.options![0].value}`}
+                                    onChange={(e) => handleAnswerChange(currentQuestion.id ?? 0, e.target.value)}
                                     className={cn('w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0BBBE7]')}
                                     placeholder='Escribe tu respuesta aquí...'
                                 />
@@ -138,7 +138,7 @@ export const QuizView = ({ quiz, minRequiredPoints, onQuizFinish }: QuizProps) =
                             className={cn('bg-[#0BBBE7] text-white px-6 py-2 rounded-md hover:bg-[#009fdf] transition-colors')}
                             onClick={handleNextQuestion}
                         >
-                            {currentQuestionIndex === quiz.questions?.length - 1 ? 'Enviar' : 'Continuar'}
+                            {currentQuestionIndex === (quiz.questions?.length ?? 0) - 1 ? 'Enviar' : 'Continuar'}
                         </Button>
                     </div>
                 </div>

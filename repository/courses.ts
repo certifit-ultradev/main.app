@@ -12,11 +12,18 @@ import { UserQuizAnswer } from "@/models/user-quiz-answer";
 import { UserQuizState } from "@/models/user-quiz-state";
 import { UserModuleState } from "@/models/user_module_state";
 import { storeVideoBlobStorage } from "@/services/video";
+import { CourseChange } from "@/utils/change-types";
 import { mergeChangesByTypeAndId, toSnakeCase } from "@/utils/classes";
-import { Change } from "@/utils/diff";
+import { isCourseModule, isModuleClass, isOption, isQuestion } from "@/utils/type-guards";
 import { CourseData, CoursesMonthResult, ResultSalesCourse, UsersMonthResult } from "@/utils/types";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
+/**
+ * 
+ * @param page 
+ * @param pageSize 
+ * @returns 
+ */
 export const allCourses = async (page: number, pageSize: number): Promise<Course[]> => {
     if (page < 1) {
         page = 1;
@@ -42,10 +49,19 @@ export const allCourses = async (page: number, pageSize: number): Promise<Course
     })
 }
 
+/**
+ * @param id
+ * @returns
+ */
 export const countAllCourses = async (): Promise<number> => {
     return await prisma.course.count();
 }
 
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
 export const countAllActiveCourses = async (): Promise<number> => {
     return await prisma.course.count({
         where: {
@@ -54,6 +70,11 @@ export const countAllActiveCourses = async (): Promise<number> => {
     });
 }
 
+/**
+ * 
+ * @param userId 
+ * @returns 
+ */
 export const findThreeCoursesActives = async (userId?: string): Promise<Course[]> => {
     let query = {
         include: {
@@ -62,22 +83,21 @@ export const findThreeCoursesActives = async (userId?: string): Promise<Course[]
                 include: {
                     moduleClass: true
                 }
-            }
+            },
+            userCourse: {
+                where: {
+                    userId,
+                },
+            },
         },
         where: {
             isActive: true
         }
     };
 
-    if (userId) {
-        query.include.userCourse = {
-            where: {
-                userId,
-            },
-        }
+    if (!userId) {
+        delete (query.include as any).userCourse;
     }
-
-    console.dir(query, { depth: null });
 
     const activeCourses = await prisma.course.findMany(query);
     if (activeCourses.length == 0) {
@@ -89,6 +109,11 @@ export const findThreeCoursesActives = async (userId?: string): Promise<Course[]
     });
 }
 
+/**
+ * 
+ * @param userId 
+ * @returns 
+ */
 export const findUserCourses = async (userId?: string): Promise<UserCourse[]> => {
     const userCourses = await prisma.userCourse.findMany({
         where: {
@@ -124,6 +149,7 @@ export const findUserCourses = async (userId?: string): Promise<UserCourse[]> =>
             id: userCourse.id,
             userId: userCourse.userId,
             courseId: userCourse.courseId,
+            completedAt: userCourse.completedAt,
             createdAt: userCourse.createdAt,
             updatedAt: userCourse.updatedAt,
             course: new Course({ ...userCourse.course }),
@@ -133,6 +159,11 @@ export const findUserCourses = async (userId?: string): Promise<UserCourse[]> =>
     });
 }
 
+/**
+ * 
+ * @param courseId 
+ * @returns 
+ */
 export const findModulesByCourseId = async (courseId: number): Promise<CourseModules[]> => {
     const modules = await prisma.courseModules.findMany({
         where: { deleted: false, courseId }
@@ -147,6 +178,11 @@ export const findModulesByCourseId = async (courseId: number): Promise<CourseMod
     })
 }
 
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
 export const findCourseById = async (id: number): Promise<Course> => {
     const course = await prisma.course.findFirst({
         include: {
@@ -178,6 +214,12 @@ export const findCourseById = async (id: number): Promise<Course> => {
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @param userId 
+ * @returns 
+ */
 export const findCourseWithModulesByCanonicalId = async (id: string, userId: string): Promise<Course> => {
     const course = await prisma.course.findFirst({
         include: {
@@ -209,6 +251,12 @@ export const findCourseWithModulesByCanonicalId = async (id: string, userId: str
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @param userId 
+ * @returns 
+ */
 export const findCourseByCanonicalId = async (id: string, userId: string): Promise<Course> => {
     const course = await prisma.course.findFirst({
         where: { canonicalId: id }
@@ -223,6 +271,12 @@ export const findCourseByCanonicalId = async (id: string, userId: string): Promi
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @param userId 
+ * @returns 
+ */
 export const findUserCourseByCanonicalId = async (id: string, userId: string): Promise<Course> => {
     const course = await prisma.course.findFirst({
         include: {
@@ -255,6 +309,12 @@ export const findUserCourseByCanonicalId = async (id: string, userId: string): P
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @param userId 
+ * @returns 
+ */
 export const findUserCourseWithModulesByCanonicalId = async (id: string, userId: string): Promise<Course> => {
     const course = await prisma.course.findFirst({
         include: {
@@ -302,6 +362,12 @@ export const findUserCourseWithModulesByCanonicalId = async (id: string, userId:
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @param userId 
+ * @returns 
+ */
 export const findQuizAnswersByQuizId = async (userCourseId: number, quizId: number): Promise<UserQuizAnswer[]> => {
     const answers = await prisma.userQuizAnswer.findMany({
         where: {
@@ -329,6 +395,11 @@ export const findQuizAnswersByQuizId = async (userCourseId: number, quizId: numb
     })
 }
 
+/**
+ * 
+ * @param course 
+ * @returns 
+ */
 export const createFullCourse = async (course: CourseData): Promise<Course> => {
     const txCourse = await prisma.$transaction(async (tx) => {
         const createdCourse = await tx.course.create({
@@ -338,7 +409,7 @@ export const createFullCourse = async (course: CourseData): Promise<Course> => {
                 description: course.description,
                 price: Number(course.price),
                 courseImage: "",
-                categoryId: course.category.id || 0,
+                categoryId: course.category?.id || 0,
                 instructorName: course.instructorName,
                 instructorPhoto: "",
                 expiresAt: new Date(course.expiresAt),
@@ -410,20 +481,12 @@ export const createFullCourse = async (course: CourseData): Promise<Course> => {
         return createdCourse;
     });
 
-    /**
-     * ,
-        {
-            maxWait: 6000,
-            timeout: 20000,
-        }
-     */
-
     if (!txCourse) {
         throw new Error("No se pudo crear el curso");
     }
 
-    const courseImageUrl = await storeVideoBlobStorage(`/courses/${txCourse.id}/`, course.courseImage);
-    const instructorPhotoImageUrl = await storeVideoBlobStorage(`/courses/${txCourse.id}/`, course.instructorPhoto);
+    const courseImageUrl = await storeVideoBlobStorage(`/courses/${txCourse.id}/`, course.courseImage as File);
+    const instructorPhotoImageUrl = await storeVideoBlobStorage(`/courses/${txCourse.id}/`, course.instructorPhoto as File);
 
     await prisma.course.update({
         where: { id: txCourse.id },
@@ -438,6 +501,11 @@ export const createFullCourse = async (course: CourseData): Promise<Course> => {
     });
 }
 
+/**
+ * 
+ * @param userQuizState 
+ * @returns 
+ */
 export const createUserQuizState = async (userQuizState: UserQuizState): Promise<UserQuizState | null> => {
     const createdUserQuizState = await prisma.userQuizState.create({
         data: {
@@ -457,6 +525,12 @@ export const createUserQuizState = async (userQuizState: UserQuizState): Promise
     });
 }
 
+/**
+ * 
+ * @param quizId 
+ * @param userCourseId 
+ * @returns 
+ */
 export const findUserQuizState = async (quizId: number, userCourseId: number) => {
     const state = await prisma.userQuizState.findFirst({
         where: {
@@ -479,67 +553,77 @@ export const findUserQuizState = async (quizId: number, userCourseId: number) =>
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @param data 
+ * @returns 
+ */
 export const countCourseSales = async (): Promise<ResultSalesCourse[]> => {
     const results = await prisma.$queryRaw<ResultSalesCourse[]>`
-        SELECT CONCAT(c.id, " - ", c.title) AS courseName,
+        SELECT CONCAT(c.id, ' - ', c.title) AS course_name,
             COUNT(p.id) AS total
-        FROM Purchase p
-        INNER JOIN Cart cart ON cart.id = p.cart_id
-        INNER JOIN Course c ON c.id = cart.course_id
+        FROM "Purchase" p
+        INNER JOIN "Cart" cart ON cart.id = p.cart_id
+        INNER JOIN "Course" c ON c.id = cart.course_id
         GROUP BY c.id
     `;
 
     return results.map<ResultSalesCourse>((r) => {
         return {
-            courseName: r.courseName.substring(0, 20) + '...',
+            course_name: r.course_name.substring(0, 20) + '...',
             total: Number(r.total)
         }
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @param data 
+ * @returns 
+ */
 export const sumCourseSalesByLastMonth = async (): Promise<CoursesMonthResult> => {
-    const [result] = await prisma.$queryRaw<CoursesMonthResult>`
+    const [result] = await prisma.$queryRaw<CoursesMonthResult[]>(Prisma.sql`
         SELECT
-          SUM(
-            CASE WHEN MONTH(p.created_at) = MONTH(CURRENT_DATE())
-                 AND YEAR(created_at) = YEAR(CURRENT_DATE())
-            THEN 1 ELSE 0 END
-          ) AS currentMonthCount,
-          SUM(
-            CASE WHEN MONTH(created_at) = MONTH(CURRENT_DATE() - INTERVAL 1 MONTH)
-                 AND YEAR(created_at) = YEAR(CURRENT_DATE() - INTERVAL 1 MONTH)
-            THEN 1 ELSE 0 END
-          ) AS previousMonthCount
-        FROM Purchase p
+            COUNT(*) FILTER (
+                WHERE date_trunc('month', p.created_at) = date_trunc('month', CURRENT_DATE)
+            ) AS current_month_count,
+            COUNT(*) FILTER (
+                WHERE date_trunc('month', p.created_at) = date_trunc('month', CURRENT_DATE - interval '1 month')
+            ) AS previous_month_count
+        FROM "Purchase" p
         WHERE
-            p.status = 'APPROVED'
-    `;
+            p.status = 'APPROVED';`);
+
+    console.log("result sumCourseSalesByLastMonth", result);
 
     return {
-        currentMonthCount: Number(result.currentMonthCount),
-        previousMonthCount: Number(result.previousMonthCount),
-    };;
+        current_month_count: Number(result.current_month_count),
+        previous_month_count: Number(result.previous_month_count),
+    };
 }
 
+/**
+ * 
+ * @returns 
+ */
 export const sumUsersByLastMonth = async (): Promise<UsersMonthResult> => {
     const [result] = await prisma.$queryRaw<UsersMonthResult[]>`
         SELECT
-          SUM(
-            CASE WHEN MONTH(created_at) = MONTH(CURRENT_DATE())
-                 AND YEAR(created_at) = YEAR(CURRENT_DATE())
-            THEN 1 ELSE 0 END
-          ) AS currentMonthCount,
-          SUM(
-            CASE WHEN MONTH(created_at) = MONTH(CURRENT_DATE() - INTERVAL 1 MONTH)
-                 AND YEAR(created_at) = YEAR(CURRENT_DATE() - INTERVAL 1 MONTH)
-            THEN 1 ELSE 0 END
-          ) AS previousMonthCount
-        FROM User
+            COUNT(*) FILTER (
+                WHERE date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE)
+            ) AS currentMonthCount,
+            COUNT(*) FILTER (
+                WHERE date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE - interval '1 month')
+            ) AS previousMonthCount
+        FROM "User";
       `;
 
+    console.log("result sumUsersByLastMonth", result);
     return {
-        currentMonthCount: Number(result.currentMonthCount),
-        previousMonthCount: Number(result.previousMonthCount),
+        current_month_count: Number(result.current_month_count),
+        previous_month_count: Number(result.previous_month_count),
     };
 }
 
@@ -552,14 +636,29 @@ const modelMap: Record<string, keyof PrismaClient> = {
     option: 'possibleAnswerQuestion'
 };
 
-export const updateFullCourse = async (courseId: number, adds: Change[], updates: Change[], deletes: Change[]) => {
-    let courseImage;
-    let instructorPhoto;
+/**
+ * 
+ * @param courseId 
+ * @param adds 
+ * @param updates 
+ * @param deletes 
+ */
+export const updateFullCourse = async (
+    courseId: number,
+    adds: CourseChange[],
+    updates: CourseChange[],
+    deletes: CourseChange[]
+) => {
+    let courseImage: File | undefined;
+    let instructorPhoto: File | undefined;
 
     await prisma.$transaction(async (tx) => {
         for (const add of adds) {
             switch (add.type) {
                 case 'question':
+                    if (!isQuestion(add.data))
+                        throw new Error("Datos de pregunta incompletos");
+
                     const createdQuizQuestion = await tx.quizQuestion.create({
                         data: {
                             title: add.data.title,
@@ -573,6 +672,9 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                     }
 
                     for (const option of add.data.options ?? []) {
+                        if (!isOption(add.data))
+                            throw new Error("Datos de opción incompletos");
+
                         const createdQuestionOption = await tx.possibleAnswerQuestion.create({
                             data: {
                                 questionId: createdQuizQuestion.id,
@@ -586,6 +688,8 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                     }
                     break;
                 case 'option':
+                    if (!isOption(add.data))
+                        throw new Error("Datos de opción incompletos");
                     const createdQuestionOption = await tx.possibleAnswerQuestion.create({
                         data: {
                             questionId: Number(add.path.question),
@@ -598,14 +702,16 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                     }
                     break;
                 case 'class':
+                    if (!isModuleClass(add.data))
+                        throw new Error("Datos de clase incompletos");
                     const createdModuleClass = await tx.moduleClass.create({
                         data: {
                             title: add.data.title,
                             description: add.data.description,
                             courseModuleId: Number(add.path.module),
-                            videoPath: add.data.video,
+                            videoPath: add.data.video as string,
                             videoDuration: add.data.videoDuration,
-                            videoSize: add.data.video.size
+                            videoSize: add.data.videoSize 
                         }
                     });
                     if (!createdModuleClass) {
@@ -613,6 +719,9 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                     }
                     break;
                 case 'module':
+                    if (!isCourseModule(add.data))
+                        throw new Error("Datos de módulo incompletos");
+
                     const createdCourseModule = await tx.courseModules.create({
                         data: {
                             courseId: Number(add.path.course),
@@ -624,15 +733,15 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                         throw new Error("El modulo no pudo ser creado");
                     }
 
-                    for (const cls of add.data.classes) {
+                    for (const cls of add.data.classes ?? []) {
                         const createdModuleClass = await tx.moduleClass.create({
                             data: {
                                 title: cls.title,
                                 description: cls.description,
                                 courseModuleId: createdCourseModule.id,
-                                videoPath: cls.video,
+                                videoPath: cls.video as string,
                                 videoDuration: cls.videoDuration,
-                                videoSize: cls.video.size
+                                videoSize: cls.videoSize
                             }
                         });
                         if (!createdModuleClass) {
@@ -643,12 +752,12 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                     const createdQuiz = await tx.moduleQuiz.create({
                         data: {
                             courseModuleId: createdCourseModule.id,
-                            title: add.data.quiz.title,
-                            description: add.data.quiz.description
+                            title: add.data.quiz?.title as string,
+                            description: add.data.quiz?.description as string
                         }
                     });
 
-                    for (const question of add.data.quiz.questions) {
+                    for (const question of add.data.quiz?.questions ?? []) {
                         const createdQuizQuestion = await tx.quizQuestion.create({
                             data: {
                                 title: question.title,
@@ -661,7 +770,7 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                             throw new Error("La pregunta no pudo ser creada");
                         }
 
-                        for (const option of question.options) {
+                        for (const option of question.options ?? []) {
                             const createdQuestionOption = await tx.possibleAnswerQuestion.create({
                                 data: {
                                     questionId: createdQuizQuestion.id,
@@ -679,6 +788,7 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
         }
 
         const updatesGrouped = mergeChangesByTypeAndId(updates);
+        console.log("updatesGrouped", updatesGrouped);
         for (const type of Object.keys(updatesGrouped)) {
             // Resolvemos el nombre del modelo en Prisma
             const prismaModelName = modelMap[type];
@@ -696,10 +806,12 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
 
                 if (data.courseImage) {
                     courseImage = data.courseImage;
+                    delete data.courseImage;
                 }
 
                 if (data.instructorPhoto) {
                     instructorPhoto = data.instructorPhoto;
+                    delete data.instructorPhoto;
                 }
 
                 if (data.expiresAt) {
@@ -716,7 +828,8 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                 }
 
                 try {
-                    await tx[prismaModelName].update({
+                    const txModel = (tx as any)[prismaModelName];
+                    await txModel.update({
                         where: { id },
                         data,
                     });
@@ -761,21 +874,32 @@ export const updateFullCourse = async (courseId: number, adds: Change[], updates
                     });
                     break;
                 default:
-                    throw new Error(`Tipo desconocido para eliminar: ${dlt.type}`);
+                    throw new Error(`Tipo desconocido para eliminar: ${dlt}`);
             }
         }
     });
 
-
     if (courseImage) {
-        await storeVideoBlobStorage(`/courses/${courseId}/`, courseImage);
+        const url = await storeVideoBlobStorage(`/courses/${courseId}/`, courseImage);
+        await updateCourse(courseId, {
+            courseImage: url,
+        });
     }
 
     if (instructorPhoto) {
-        await storeVideoBlobStorage(`/courses/${courseId}/`, instructorPhoto);
+        const url = await storeVideoBlobStorage(`/courses/${courseId}/`, instructorPhoto);
+        await updateCourse(courseId, {
+            instructorPhoto: url
+        });
     }
 }
 
+/**
+ * 
+ * @param id 
+ * @param data 
+ * @returns 
+ */
 export const createCourseModule = async (module: CourseModules): Promise<CourseModules | null> => {
     const createdCourseModule = await prisma.courseModules.create({
         data: {
@@ -792,6 +916,11 @@ export const createCourseModule = async (module: CourseModules): Promise<CourseM
     });
 }
 
+/**
+ * 
+ * @param cls 
+ * @returns 
+ */
 export const createModuleClass = async (cls: ModuleClass): Promise<ModuleClass | null> => {
     const createdModuleClass = await prisma.moduleClass.create({
         data: cls
@@ -802,6 +931,11 @@ export const createModuleClass = async (cls: ModuleClass): Promise<ModuleClass |
     return new ModuleClass({ ...createdModuleClass });
 }
 
+/**
+ * 
+ * @param quiz 
+ * @returns 
+ */
 export const createModuleQuiz = async (quiz: ModuleQuiz): Promise<ModuleQuiz | null> => {
     const createdModuleQuiz = await prisma.moduleQuiz.create({
         data: {
@@ -818,6 +952,11 @@ export const createModuleQuiz = async (quiz: ModuleQuiz): Promise<ModuleQuiz | n
     });
 }
 
+/**
+ * 
+ * @param question 
+ * @returns 
+ */
 export const createQuizQuestion = async (question: QuizQuestion): Promise<QuizQuestion | null> => {
     const createdQuizQuestion = await prisma.quizQuestion.create({
         data: {
@@ -835,6 +974,11 @@ export const createQuizQuestion = async (question: QuizQuestion): Promise<QuizQu
     });
 }
 
+/**
+ * 
+ * @param option 
+ * @returns 
+ */
 export const createQuestionOption = async (option: PossibleAnswerQuestion): Promise<PossibleAnswerQuestion | null> => {
     const createdQuestionOption = await prisma.possibleAnswerQuestion.create({
         data: option
@@ -845,6 +989,11 @@ export const createQuestionOption = async (option: PossibleAnswerQuestion): Prom
     return new PossibleAnswerQuestion({ ...createdQuestionOption });
 }
 
+/**
+ * 
+ * @param state 
+ * @returns 
+ */
 export const createUserClassState = async (state: UserClassesState): Promise<UserClassesState | null> => {
     const existState = await prisma.userClassesState.findFirst({
         where: {
@@ -853,7 +1002,7 @@ export const createUserClassState = async (state: UserClassesState): Promise<Use
         }
     });
 
-    let userClassState = {};
+    let userClassState: UserClassesState | null = null;
     if (!existState) {
         userClassState = await prisma.userClassesState.create({
             data: {
@@ -882,6 +1031,11 @@ export const createUserClassState = async (state: UserClassesState): Promise<Use
     return new UserClassesState({ ...userClassState });
 }
 
+/**
+ * 
+ * @param state 
+ * @returns 
+ */
 export const createUserModuleFinishState = async (state: UserModuleState): Promise<UserModuleState | null> => {
     let userClassState = await prisma.userModuleState.findFirst({
         where: {
@@ -907,6 +1061,11 @@ export const createUserModuleFinishState = async (state: UserModuleState): Promi
     return new UserModuleState({ ...userClassState });
 }
 
+/**
+ * 
+ * @param answer 
+ * @returns 
+ */
 export const createQuestionAnswer = async (answer: UserQuizAnswer): Promise<UserQuizAnswer | null> => {
     const existAnswer = await prisma.userQuizAnswer.findFirst({
         where: {
@@ -916,7 +1075,7 @@ export const createQuestionAnswer = async (answer: UserQuizAnswer): Promise<User
         }
     });
 
-    let userQuestionAnswer = {};
+    let userQuestionAnswer: UserQuizAnswer | null = null;
     if (!existAnswer) {
         userQuestionAnswer = await prisma.userQuizAnswer.create({
             data: {
@@ -950,9 +1109,18 @@ export const createQuestionAnswer = async (answer: UserQuizAnswer): Promise<User
     return new UserQuizAnswer({ ...userQuestionAnswer });
 }
 
+/**
+ * 
+ * @param state 
+ * @returns 
+ */
 export const createUserModuleState = async (state: UserModuleState): Promise<UserModuleState | null> => {
     const userClassState = await prisma.userModuleState.create({
-        data: state
+        data: {
+            userCourseId: state.userCourseId,
+            moduleId: state.moduleId,
+            completed: state.completed,
+        }
     });
     if (!userClassState) {
         return null;
@@ -960,113 +1128,153 @@ export const createUserModuleState = async (state: UserModuleState): Promise<Use
     return new UserModuleState({ ...userClassState });
 }
 
+/**
+ * 
+ * @param state 
+ * @returns 
+ */
 export const updateCourse = async (courseId: number, data: Partial<Course>): Promise<Course> => {
+    const { category, courseModules, cart, userCourse, ...updateData } = data;
     const updatedCourse = await prisma.course.update({
         where: { id: courseId },
-        data: {
-            title: data.title,
-            description: data.description,
-            courseImage: data.courseImage,
-            isActive: data.isActive,
-            price: data.price,
-            instructorName: data.instructorName,
-            instructorPhoto: data.instructorPhoto,
-            expiresAt: data.expiresAt,
-            categoryId: data.category?.id
-        },
+        data: updateData,
     });
     return new Course({ ...updatedCourse });
 };
 
+/**
+ * 
+ * @param moduleId 
+ * @param data 
+ * @returns 
+ */
 export const updateModule = async (moduleId: number, data: Partial<CourseModules>): Promise<CourseModules> => {
+    const { moduleClass, moduleQuiz, ...updateData } = data;
     const updatedModule = await prisma.courseModules.update({
         where: { id: moduleId },
-        data: {
-            title: data.title,
-            minRequiredPoints: data.minRequiredPoints,
-        },
+        data: updateData,
     });
     return new CourseModules({ ...updatedModule });
 };
 
+/**
+ * 
+ * @param classId 
+ * @param data 
+ * @returns 
+ */
 export const updateClass = async (classId: number, data: Partial<ModuleClass>): Promise<ModuleClass> => {
     const updatedClass = await prisma.moduleClass.update({
         where: { id: classId },
-        data: {
-            title: data.title,
-            description: data.description,
-            videoPath: data.videoPath,
-            videoDuration: data.videoDuration,
-            videoSize: data.videoSize
-        },
+        data,
     });
     return new ModuleClass({ ...updatedClass });
 };
 
+/**
+ * 
+ * @param quizId 
+ * @param data 
+ * @returns 
+ */
 export const updateQuiz = async (quizId: number, data: Partial<ModuleQuiz>): Promise<ModuleQuiz> => {
+    const { quizQuestion, userQuizState, ...updateData } = data;
     const updatedQuiz = await prisma.moduleQuiz.update({
         where: { id: quizId },
-        data: {
-            title: data.title,
-            description: data.description,
-        },
+        data: updateData,
     });
     return new ModuleQuiz({ ...updatedQuiz });
 };
 
+/**
+ * 
+ * @param questionId 
+ * @param data 
+ * @returns 
+ */
 export const updateQuestion = async (questionId: number, data: Partial<QuizQuestion>): Promise<QuizQuestion> => {
+    const { possibleAnswerQuestion, ...updateData } = data;
     const updatedQuestion = await prisma.quizQuestion.update({
         where: { id: questionId },
-        data: {
-            title: data.title,
-            type: data.type,
-            points: data.points,
-        },
+        data: updateData,
     });
     return new QuizQuestion({ ...updatedQuestion });
 };
 
+/**
+ * 
+ * @param optionId 
+ * @param data 
+ * @returns 
+ */
 export const updateOption = async (optionId: number, data: Partial<PossibleAnswerQuestion>): Promise<PossibleAnswerQuestion> => {
     const updatedOption = await prisma.possibleAnswerQuestion.update({
         where: { id: optionId },
-        data: {
-            value: data.value,
-            isCorrect: data.isCorrect,
-        },
+        data: data,
     });
     return new PossibleAnswerQuestion({ ...updatedOption });
 };
 
+/**
+ * 
+ * @param courseId 
+ * @returns 
+ */
 export const deleteCourse = async (courseId: number): Promise<void> => {
     await prisma.course.delete({
         where: { id: courseId },
     });
 };
 
+/**
+ * 
+ * @param moduleId 
+ * @returns 
+ */
 export const deleteModule = async (moduleId: number): Promise<void> => {
     await prisma.courseModules.delete({
         where: { id: moduleId },
     });
 };
 
+/**
+ * 
+ * @param classId 
+ * @returns 
+ */
 export const deleteClass = async (classId: number): Promise<void> => {
     await prisma.moduleClass.delete({
         where: { id: classId },
     });
 };
 
+/**
+ * 
+ * @param quizId 
+ * @returns 
+ */
 export const deleteQuiz = async (quizId: number): Promise<void> => {
     await prisma.moduleQuiz.delete({
         where: { id: quizId },
     });
 };
 
+/**
+ * 
+ * @param questionId 
+ * @returns 
+ */
 export const deleteQuestion = async (questionId: number): Promise<void> => {
     await prisma.quizQuestion.delete({
         where: { id: questionId },
     });
 };
 
+/**
+ * 
+ * @param optionId 
+ * @returns 
+ */
 export const deleteOption = async (optionId: number): Promise<void> => {
     await prisma.possibleAnswerQuestion.delete({
         where: { id: optionId },
