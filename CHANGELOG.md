@@ -43,7 +43,7 @@
     - Auth login, logout, new-passwords, register, reset-password, verification-tokens
     - Category list, register
     - Courses activate, deactivate, list, register
-    - User exist, list, register, user-verified
+    - User exist, list, register, user-verified, activate, deactivate
 - Added the following API endpoints
     - GET courses/{canonicalId}/quizzes/{quizId}
     - GET courses/{canonicalId}/quizzes/{quizId}/last-result

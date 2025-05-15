@@ -3,7 +3,7 @@
 import { NextPage } from 'next';
 import { cn } from '@/lib/utils';
 import { useEffect, useRef, useState } from 'react';
-import { CourseData } from '@/utils/types';
+import { CourseCategoryData, CourseData } from '@/utils/types';
 import { CourseStepProgress } from '@/components/course/progress-form';
 import { CourseBasicForm } from '@/components/course/basic-form';
 import { CourseClassesForm } from '@/components/course/classes-form';
@@ -20,8 +20,8 @@ const IndexEditCoursesPage: NextPage = () => {
         category: { name: '' },
         description: '',
         expiresAt: '',
-        courseImage: undefined,
-        instructorPhoto: undefined,
+        courseImage: '',
+        instructorPhoto: '',
         modules: [{
             title: '',
             minRequiredPoints: 0,
@@ -45,7 +45,16 @@ const IndexEditCoursesPage: NextPage = () => {
                 if (response.success && response.payload) {
                     setData(() => {
                         return {
-                            ...response.payload
+                            id: response.payload?.id as number,
+                            title: response.payload?.title as string,
+                            price: response.payload?.price as number,
+                            courseImage: response.payload?.courseImage as string,
+                            instructorName: response.payload?.instructorName as string,
+                            instructorPhoto: response.payload?.instructorPhoto as string,
+                            category: response.payload?.category as CourseCategoryData,
+                            description: response.payload?.description as string,
+                            expiresAt: response.payload?.expiresAt as string,
+                            modules: response.payload?.modules
                         }
                     });
                     originalData.current = _.cloneDeep(response.payload);
@@ -53,7 +62,7 @@ const IndexEditCoursesPage: NextPage = () => {
             } catch (error) {
                 if (error instanceof Error) {
                     console.log(error.message);
-                   // notFound();
+                    // notFound();
                 }
             }
         }

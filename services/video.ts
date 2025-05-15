@@ -1,6 +1,11 @@
 import { logPrismaError } from "@/exceptions/error-encoder";
 import { saveVideoLocalStorage, saveVideoVercelBlobStorage } from "@/repository/video"
 
+/**
+ * 
+ * @param file 
+ * @returns 
+ */
 export const storeVideoLocalStorage = async (file: File): Promise<string> => {
     try {
         return await saveVideoLocalStorage(file);
@@ -10,6 +15,12 @@ export const storeVideoLocalStorage = async (file: File): Promise<string> => {
     }
 }
 
+/**
+ * 
+ * @param path 
+ * @param file 
+ * @returns 
+ */
 export const storeVideoBlobStorage = async (path: string, file: File): Promise<string> => {
     try {
         return await saveVideoVercelBlobStorage(path, file);

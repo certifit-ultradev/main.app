@@ -2,13 +2,8 @@ import { notFound } from 'next/navigation'
 import { UserCreateEditForm } from '@/components/user/user-form';
 import { fetchUserById } from '@/actions/user/exist';
 
-type EditUsersProps = {
-    params: {
-        id: string;
-    }
-};
-
-const EditUsersPage = async ({ params }: EditUsersProps) => {
+// @ts-expect-error: params
+const EditUsersPage = async ({ params }) => {
     const { id } = await params;
     const result = await fetchUserById({ data: { id } });
     if (!result.success && !result.payload) {
@@ -18,10 +13,10 @@ const EditUsersPage = async ({ params }: EditUsersProps) => {
     return (
         <UserCreateEditForm data={{
             id: result.payload?.id,
-            name: result.payload?.name,
-            lastName: result.payload?.lastName,
-            email: result.payload?.email,
-            phoneNumber: result.payload?.phoneNumber
+            name: result.payload?.name as string,
+            lastName: result.payload?.lastName as string,
+            email: result.payload?.email as string,
+            phoneNumber: result.payload?.phoneNumber as string,
         }} />
     );
 };

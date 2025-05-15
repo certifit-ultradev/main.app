@@ -3,6 +3,11 @@ import {  calculateQuizScore } from '@/services/courses';
 import { CalculateQuizScore} from '@/utils/schemas';
 import { NextRequest } from 'next/server';
 
+/**
+ * @param req 
+ * @param context 
+ * @returns 
+ */
 export async function POST(req: NextRequest) {
     try {
         const request = await req.json();

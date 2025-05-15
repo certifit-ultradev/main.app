@@ -153,7 +153,7 @@ export const CourseBasicInfoSchema = z.object({
         return value !== undefined
     }, 'La imagen es obligatoria'),
     description: z.string().min(1, 'La descripción es obligatoria'),
-    price: z.preprocess((value) => parseFloat(value), z.number().positive('El precio debe ser un número positivo')), // Updated to parse input value to number
+    price: z.preprocess((value) => parseFloat(value as string), z.number().positive('El precio debe ser un número positivo')), // Updated to parse input value to number
     instructorName: z.string().min(1, 'El nombre del instructor es obligatorio'),
     instructorPhoto: z.union([
         z.instanceof(File, { message: "Debes subir una imagen" }).optional(), // Permitir que sea un archivo o undefined
@@ -162,7 +162,7 @@ export const CourseBasicInfoSchema = z.object({
         return value !== undefined
     }, 'La imagen es obligatoria'),
     category: CourseCategorySchema, // La categoría ahora es un objeto
-    expiresAt: z.preprocess((value) => new Date(value), z.date().refine((date) => date > new Date(), 'La fecha de vencimiento debe ser mayor a la fecha actual')), // Updated to parse input value to Date and validate
+    expiresAt: z.preprocess((value) => new Date(value as string), z.date().refine((date) => date > new Date(), 'La fecha de vencimiento debe ser mayor a la fecha actual')), // Updated to parse input value to Date and validate
 })
 
 export const CourseModulesSchema = z.array(

@@ -2,14 +2,19 @@
 
 import { getAllCourses, getCourseById } from "@/services/courses";
 import { CourseData, CourseList, CourseModule, DataPaginated, FetchCourseByID, FetchPage, QuestionOption, QuizQuestions, ServerActionRequest, ServerActionResponse } from "@/utils/types";
-import { isAdmin } from "../middlewares/is-admin";
+import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
 import { Middlewares } from "../server-action-middleware";
 import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const listAll = async (request: ServerActionRequest<FetchPage>): Promise<ServerActionResponse<DataPaginated<CourseList>>> => {
     return await Middlewares<DataPaginated<CourseList>, FetchPage>(
         request,
-        [isAdmin],
+        [isAdmin, isEmailVerified],
         async (request: FetchPage) => {
             try {
                 const coursesPaged = await getAllCourses({ page: request.page });
@@ -43,10 +48,15 @@ export const listAll = async (request: ServerActionRequest<FetchPage>): Promise<
     );
 }
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const getCourseDataById = async (request: ServerActionRequest<FetchCourseByID>): Promise<ServerActionResponse<CourseData>> => {
     return await Middlewares<CourseData, FetchCourseByID>(
         request,
-        [isAdmin],
+        [isAdmin, isEmailVerified],
         async (request: FetchCourseByID) => {
             try {
                 const course = await getCourseById(request.id);

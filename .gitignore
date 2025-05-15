@@ -41,3 +41,7 @@ next-env.d.ts
 
 /uploads
 .env*.local
+
+# prisma generated files
+prisma/app/generated/prisma
+appmap.yml

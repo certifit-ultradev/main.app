@@ -17,7 +17,20 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const intervalRef = useRef<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null)
-    const [selectedClass, setSelectedClass] = useState<{ moduleIndex: number; classIndex: number; classId: number } | null>(null);
+    const [selectedClass, setSelectedClass] = useState<{ moduleIndex: number; classIndex: number; classId: number|undefined } | null>(() => {
+        if (data.classCompleted.length === 0) return null
+    
+        const lastId = data.classCompleted[data.classCompleted.length - 1].classId
+    
+        for (let m = 0; m < data.modules!.length; m++) {
+          const mod = data.modules![m]
+          const idx = mod.classes?.findIndex((cls) => cls.id === lastId)
+          if (idx != null && idx >= 0) {
+            return { moduleIndex: m, classIndex: idx, classId: lastId }
+          }
+        }
+        return null
+      });
     const [selectedQuiz, setSelectedQuiz] = useState<{ moduleIndex: number; moduleId: number; quizId: number } | null>(null);
     const [videoEnded, setVideoEnded] = useState(false);
 
@@ -26,7 +39,7 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
     const selectedClassData = selectedClass
         ? data.modules?.[selectedClass.moduleIndex]?.classes?.[selectedClass.classIndex]
         : null;
-    const selectedQuizData = selectedQuiz ? data.modules?.[selectedQuiz.moduleIndex].quiz : null;
+    const selectedQuizData = selectedQuiz ? data.modules?.[selectedQuiz.moduleIndex!].quiz : null;
 
     useEffect(() => {
         if (selectedClass) {
@@ -81,9 +94,9 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
     };
 
     // Cuando finaliza el video, limpia el intervalo, envía el estado completado y muestra el overlay
-    const handleVideoEnd = (e: React.SyntheticEvent<HTMLMediaElement>) => {
+    const handleVideoEnd = (e: React.SyntheticEvent<HTMLVideoElement>) => {
         clearVideoInterval();
-        storeClassState(e.target.currentTime, true);
+        storeClassState(e.currentTarget.currentTime, true);
         setVideoEnded(true);
     };
 
@@ -129,32 +142,14 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
             if (currentModule.quiz) {
                 setSelectedQuiz({
                     moduleIndex,
-                    moduleId: currentModule.id,
-                    quizId: currentModule.quiz.id,
+                    moduleId: currentModule.id ?? 0,
+                    quizId: currentModule.quiz.id ?? 0,
                 });
                 setSelectedClass(null);
             }
         }
         setVideoEnded(false);
     };
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => {
-        console.log("data?.classCompleted?.length === 0", data?.classCompleted?.length === 0);
-        console.log("data.modules", data.modules);
-        if (data?.classCompleted?.length === 0) {
-            return;
-        }
-        data.modules?.forEach((module, moduleIndex) => {
-            module.classes?.forEach((cls, clsIndex) => {
-                const lastCourseStatus = data.classCompleted[data.classCompleted.length - 1];
-                if (cls.id === lastCourseStatus.classId) {
-                    setSelectedClass({ moduleIndex, classIndex: clsIndex, classId: cls.id });
-                    return;
-                }
-            });
-        });
-    }, []);
 
     const storeModuleComplete = () => {
         const currentModuleId = selectedQuiz?.moduleId;
@@ -168,9 +163,9 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                 console.log("error, intent mas tarde");
                 return;
             }
-            const moduleIndex = data.modules?.findIndex((module) => module.id === currentModuleId)
-            if (data.modules?.length - 1 > moduleIndex) {
-                setSelectedClass({ moduleIndex: moduleIndex + 1, classIndex: 0, classId: data.modules[moduleIndex].classes[0].id });
+            const moduleIndex = data.modules!.findIndex((module) => module.id === currentModuleId)
+            if (data.modules!.length - 1 > moduleIndex!) {
+                setSelectedClass({ moduleIndex: moduleIndex! + 1, classIndex: 0, classId: data.modules![moduleIndex].classes![0].id });
                 setSelectedQuiz(null);
             } else {
                 console.log("acabaste");
@@ -250,7 +245,7 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                                         <button
                                             key={module.quiz.id}
                                             onClick={() => {
-                                                setSelectedQuiz({ moduleIndex, moduleId: module.id, quizId: module.quiz?.id ?? 0 });
+                                                setSelectedQuiz({ moduleIndex, moduleId: module.id ?? 0, quizId: module.quiz?.id ?? 0 });
                                                 setSelectedClass(null);
                                                 setVideoEnded(false);
                                             }}
@@ -329,10 +324,10 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                         ) : selectedQuizData && selectedQuizData.id ? (
                             <ClientQuizView
                                 quiz={selectedQuizData}
-                                quizIndex={selectedQuiz?.moduleIndex}
-                                lastResult={data.quizCompleted.find((quizCompleted) => quizCompleted.quizId === selectedQuizData.id)}
+                                quizIndex={selectedQuiz?.moduleIndex ?? 0}
+                               // lastResult={data.quizCompleted.find((quizCompleted) => quizCompleted.quizId === selectedQuizData.id)}
                                 courseCanonicalId={data.canonicalId}
-                                minRequiredPoints={data.modules?.[selectedQuiz.moduleIndex].minRequiredPoints ?? 0}
+                                minRequiredPoints={data.modules?.[selectedQuiz?.moduleIndex ?? 0].minRequiredPoints ?? 0}
                                 onQuizFinish={(moduleIndex: number, passed: boolean) => {
                                     if (passed) {
                                         // Lógica para almacenar el estado del módulo

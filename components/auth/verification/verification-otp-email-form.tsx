@@ -43,8 +43,6 @@ export const VerificationOtpEmailForm = ({ data }: VerificationOtpEmailProps) =>
     }, [data.email]);
 
     useEffect(() => {
-        let intervalId: NodeJS.Timeout;
-
         const checkActivationStatus = async () => {
             try {
                 const result = await checkIfUserIsActive(data.email);
@@ -59,14 +57,14 @@ export const VerificationOtpEmailForm = ({ data }: VerificationOtpEmailProps) =>
             }
         }
 
-        intervalId = setInterval(checkActivationStatus, 5000);
+        const intervalId = setInterval(checkActivationStatus, 5000);
 
         return () => {
             clearInterval(intervalId);
         };
-    }, [data.email])
+    }, [data.email]);
 
-    const onClick = async (e) => {
+    const onClick = async (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
         e.preventDefault();
         await sendVerificationToken(data.email);
     }
@@ -119,7 +117,7 @@ export const VerificationOtpEmailForm = ({ data }: VerificationOtpEmailProps) =>
                 </div>
             </div>
             <div>
-                <Modal open={isOpen} setOpen={handleModalClose}>
+                <Modal open={isOpen} setOpen={handleModalClose} closeButton={true}>
                     <div>
                         <div className={cn('sm:flex sm:items-start')}>
                             <div className={cn('text-center sm:text-left w-full')}>

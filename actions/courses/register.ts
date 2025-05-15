@@ -4,12 +4,17 @@ import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 import { editCourse, registerCourse, updateClassVideoPath } from "@/services/courses";
 import { CourseData, CourseModule, EditClassVideo, EditCourseData, QuestionOption, QuizQuestions, ServerActionRequest, ServerActionResponse } from "@/utils/types";
 import { Middlewares } from "../server-action-middleware";
-import { isAdmin } from "../middlewares/is-admin";
+import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const register = async (request: ServerActionRequest<CourseData>): Promise<ServerActionResponse<CourseData | null>> => {
     return await Middlewares<CourseData | null, CourseData>(
         request,
-        [isAdmin],
+        [isAdmin, isEmailVerified],
         async (courseData: CourseData) => {
             try {
                 const course = await registerCourse(courseData);
@@ -20,12 +25,12 @@ export const register = async (request: ServerActionRequest<CourseData>): Promis
                 const modules = course.courseModules?.map((courseModule): CourseModule => ({
                     id: courseModule.id,
                     courseId: courseModule.courseId,
-                    name: courseModule.title,
+                    title: courseModule.title,
                     minRequiredPoints: courseModule.minRequiredPoints,
                     classes: courseModule.moduleClass?.map((cls) => ({
                         id: cls.id,
                         courseModuleId: cls.courseModuleId,
-                        name: cls.title,
+                        title: cls.title,
                         description: cls.description,
                         video: cls.videoPath,
                     })),
@@ -70,13 +75,17 @@ export const register = async (request: ServerActionRequest<CourseData>): Promis
         });
 }
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const edit = async (request: ServerActionRequest<EditCourseData>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, EditCourseData>(
         request,
-        [isAdmin],
+        [isAdmin, isEmailVerified],
         async (courseData: EditCourseData) => {
             try {
-                console.dir(courseData, { depth: null })
                 await editCourse(courseData.originalCourseData, courseData.newCourseData);
 
                 return { success: true, message: "Curso editado correctamente." }
@@ -86,10 +95,15 @@ export const edit = async (request: ServerActionRequest<EditCourseData>): Promis
         });
 }
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const editClassVideoPath = async (request: ServerActionRequest<EditClassVideo>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, EditClassVideo>(
         request,
-        [isAdmin],
+        [isAdmin, isEmailVerified],
         async (classVideoData: EditClassVideo) => {
             try {
                 const resultEditedClass = await updateClassVideoPath(classVideoData.clsId, classVideoData.videoPath, classVideoData.videoSize);

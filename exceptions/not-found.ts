@@ -1,3 +1,6 @@
+/**
+ * NotFoundError class
+ */
 export class NotFoundError {
     cause: string;
     constructor(cause: string) {

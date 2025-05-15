@@ -13,12 +13,20 @@ import {
 import { NextURL } from "next/dist/server/web/next-url";
 
 const { auth } = NextAuth(authConfig);
+
+/**
+ * 
+ */
 export default auth((req: { auth?: Session |null; nextUrl?: NextURL; headers: Headers }) => {
     const { nextUrl } = req;
     const isLoggedIn = !!req.auth;
 
     if (!nextUrl) {
         return;
+    }
+
+    if (isLoggedIn && !req.auth?.user?.emailVerified) {
+        return Response.redirect(new URL('/verify-email', nextUrl));
     }
 
     const isApiAuthRoute = nextUrl.pathname.startsWith(apiRoute);
@@ -29,8 +37,6 @@ export default auth((req: { auth?: Session |null; nextUrl?: NextURL; headers: He
     if (isApiAuthRoute) {
         return;
     }
-
-    console.log("req.auth?.user", req.auth?.user);
 
     const isAdmin = req.auth?.user?.isAdmin;
     if (isVideoRoute) {

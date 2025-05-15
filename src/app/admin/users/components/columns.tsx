@@ -8,7 +8,12 @@ import { ColumnDef } from '@tanstack/react-table'
 import { MoreVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation'
 
-export const UserDataTableColumns = (): ColumnDef<UserList>[] => {
+interface CreateUserColumnsProps {
+    onActivate: (id: string) => Promise<void>;
+    onDeactivate: (id: string) => Promise<void>;
+}
+
+export const UserDataTableColumns = ({ onActivate, onDeactivate }: CreateUserColumnsProps): ColumnDef<UserList>[] => {
     const router = useRouter();
     return [
         {
@@ -40,7 +45,7 @@ export const UserDataTableColumns = (): ColumnDef<UserList>[] => {
             header: 'Estado',
             cell: ({ row }) => {
                 let status = <span className={cn('box-decoration-slice p-1 rounded-lg bg-[#CACAD0]')}>Email No Verificado</span>
-                if (row.getValue('emailVerified') === true) {
+                if (row.getValue('emailVerified')) {
                     status = <span className={cn('text-white p-1 rounded-lg box-decoration-slice bg-[#2A8940]')}>Email Verificado</span>
                 }
 
@@ -52,7 +57,7 @@ export const UserDataTableColumns = (): ColumnDef<UserList>[] => {
             id: 'actions',
             enableHiding: false,
             cell: ({ row }) => {
-                const course = row.original
+                const user = row.original;
                 return (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -66,7 +71,7 @@ export const UserDataTableColumns = (): ColumnDef<UserList>[] => {
                             <DropdownMenuItem
                                 className='hover:bg-gray-100'
                                 onClick={() => {
-                                    router.push(`/admin/users/${course.id}/edit`);
+                                    router.push(`/admin/users/${user.id}/edit`);
                                 }}
                             >
                                 Editar usuario
@@ -74,17 +79,21 @@ export const UserDataTableColumns = (): ColumnDef<UserList>[] => {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                                 className='hover:bg-gray-100'
-                                onClick={() => {
-                                    router.push(`/admin/users/${course.id}/activate`);
+                                onClick={async () => {
+                                    if (!user.emailVerified) {
+                                        await onActivate(user.id as string);
+                                    } else {
+                                        await onDeactivate(user.id as string);
+                                    }
                                 }}
                             >
-                                Activar usuario
+                                {!user.emailVerified ? 'Activar' : 'Desactivar'} usuario
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                                 className='hover:bg-gray-100'
                                 onClick={() => {
-                                    router.push(`/admin/users/${course.id}/view`);
+                                    router.push(`/admin/users/${user.id}/view`);
                                 }}
                             >Ver usuario</DropdownMenuItem>
                         </DropdownMenuContent>

@@ -2,14 +2,19 @@
 
 import { getUserByEmail, getUserById } from "@/services/user"
 import { FetchUserByEmail, FetchUserByID, ServerActionRequest, ServerActionResponse, UserList } from "@/utils/types";
-import { isAdmin } from "../middlewares/is-admin";
+import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
 import { Middlewares } from "../server-action-middleware";
 import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const fetchUserByEmail = async (request: ServerActionRequest<FetchUserByEmail>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, FetchUserByEmail>(
         request,
-        [isAdmin],
+        [isAdmin, isEmailVerified],
         async (data: FetchUserByEmail) => {
             try {
                 const existingUser = await getUserByEmail(data.email);
@@ -32,10 +37,15 @@ export const fetchUserByEmail = async (request: ServerActionRequest<FetchUserByE
     );
 }
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const fetchUserById = async (request: ServerActionRequest<FetchUserByID>): Promise<ServerActionResponse<UserList>> => {
     return await Middlewares<UserList, FetchUserByID>(
         request,
-        [isAdmin],
+        [isAdmin, isEmailVerified],
         async (data: FetchUserByID) => {
             try {
                 const existingUser = await getUserById(data.id);
@@ -54,7 +64,7 @@ export const fetchUserById = async (request: ServerActionRequest<FetchUserByID>)
                         email: existingUser.email,
                         phoneNumber: existingUser.phoneNumber,
                         isAdmin: existingUser.isAdmin,
-                        emailVerified: existingUser.emailVerified ? existingUser.emailVerified : false,
+                        emailVerified: existingUser.emailVerified,
                         createdAt: existingUser.createdAt,
                         updatedAt: existingUser.updatedAt
                     }

@@ -29,7 +29,7 @@ export function CourseProgressCard({ course, index }: CourseProgressCardProps) {
             >
                 <div>
                     <span className="text-[#0BBBE7] text-sm font-medium mb-2 inline-block">
-                        {course.category.name}
+                        {course.category?.name || 'Sin categoría'}
                     </span>
                     <h3 className="text-xl font-semibold mb-4">
                         {course.title}
@@ -42,10 +42,6 @@ export function CourseProgressCard({ course, index }: CourseProgressCardProps) {
                         <div className={cn('flex items-center space-x-4 mb-4')}>
                             <div className={cn("flex-1 mr-4")}>
                                 {course.visibleClasses.map((cls: RemapedClass) => {
-                                    // Determina si es la "actual" real en el contexto global
-                                    // (idx + offset vs. currentIndex). Como 'visibleClasses' es un slice,
-                                    // comprobamos si `cls.id` coincide con la 'currentIndex' global o algo similar.
-                                    // Aquí haremos un check simplificado:
                                     const isCurrentGlobal = course.classesWithCompletion.findIndex((c) => c.id === cls.id) === course.currentIndex;
 
                                     return (
@@ -115,7 +111,7 @@ export function EmptyCourseProgressCard({ course, index }: CourseProgressCardPro
                     </div>
                 </div>
                 <span className={cn("text-[#0BBBE7] text-sm font-medium mb-2 inline-block")}>
-                    {course.category.name}
+                    {course.category?.name ?? 'Sin categoría'}
                 </span>
                 <h3 className={cn("text-lg font-semibold mb-4")}>
                     {course.title}

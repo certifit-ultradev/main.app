@@ -42,10 +42,6 @@ export default function CertifitCheckoutComponent({ courseCanonicalId }: Certifi
                         signature: trx.signature,
                         publicKey: trx.publicKey
                     });
-                    const currentOpenFunc = widget.open;
-                    console.log(widget, currentOpenFunc);
-
-
                     widget.open(async (result) => {
                         const response = await fetch('/api/payment/transactions', {
                             method: 'POST',

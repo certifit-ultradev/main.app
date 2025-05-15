@@ -6,6 +6,11 @@ import { sendPasswordResetEmail } from "@/repository/nodemailer";
 import { deleteVerificationToken } from "@/repository/verification-token";
 import { logPrismaError } from "@/exceptions/error-encoder";
 
+/**
+ * 
+ * @param email 
+ * @returns 
+ */
 export const generatePasswordResetTokenByEmail = async (email: string): Promise<PasswordResetToken | null> => {
     try {
         const { expires, token } = generateExpirationToken();
@@ -16,6 +21,11 @@ export const generatePasswordResetTokenByEmail = async (email: string): Promise<
     }
 }
 
+/**
+ * 
+ * @param email 
+ * @returns 
+ */
 export const sendPasswordResetEmailWithToken = async (email: string): Promise<ResetPasswordTokenResult> => {
     try {
         const passwordResetToken = await generatePasswordResetTokenByEmail(email);
@@ -32,6 +42,11 @@ export const sendPasswordResetEmailWithToken = async (email: string): Promise<Re
     }
 }
 
+/**
+ * 
+ * @param token 
+ * @returns 
+ */
 export const getPasswordResetTokenByToken = async (token: string): Promise<PasswordResetToken | null> => {
     try {
         if (token === "") {
@@ -45,6 +60,11 @@ export const getPasswordResetTokenByToken = async (token: string): Promise<Passw
     }
 }
 
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
 export const removePasswordResetToken = async (id: string): Promise<ResetPasswordTokenResult> => {
     try {
         const passwordResetToken = await deleteVerificationToken(id);

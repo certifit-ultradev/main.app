@@ -56,7 +56,7 @@ export const TopThreeCourses = () => {
         setIsOpen(false);
     };
 
-    const handleBuyCourse = (course) => {
+    const handleBuyCourse = (course: CoursePlainData) => {
         setIsOpen(true);
         setSelectedCourse(course);
     }
@@ -82,7 +82,7 @@ export const TopThreeCourses = () => {
                                 {course.courseDuration}
                             </div>
                         </div>
-                        <span className={cn('text-[#0BBBE7] text-xs font-medium block mb-1')}>{course.category.name}</span>
+                        <span className={cn('text-[#0BBBE7] text-xs font-medium block mb-1')}>{course.category?.name}</span>
                         <div className={cn('flex items-center justify-between')}>
                             <h3 className={cn('text-lg font-semibold text-black flex ')}>
                                 {course.title}
@@ -153,6 +153,8 @@ const ModalCourseDetail = ({ course, isOpen, setOpen }: ModalCourseDetailProp) =
                                 <Image
                                     src={course.courseImage}
                                     alt={course.title}
+                                    width={500}
+                                    height={300}
                                     className={cn("w-full h-auto rounded-md object-cover")}
                                 />
                             </div>

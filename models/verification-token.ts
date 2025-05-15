@@ -1,8 +1,9 @@
 export class VerificationToken {
-	id?: string
-	email: string
-	token: string
-	expires: Date
+	id?: string;
+	email: string;
+	token: string;
+	expires: Date;
+
 	constructor(
 		data: {
 			id?: string,

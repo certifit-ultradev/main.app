@@ -2,6 +2,11 @@ import { NotFoundError } from "@/exceptions/not-found";
 import { prisma } from "../lib/prisma";
 import { PasswordResetToken } from "../models/password-reset-token";
 
+/**
+ * 
+ * @param token 
+ * @returns 
+ */
 export const findPasswordResetTokenByToken = async (token: string) => {
     const passwordResetToken = await prisma.passwordResetToken.findUnique({
         where: { token },
@@ -14,6 +19,11 @@ export const findPasswordResetTokenByToken = async (token: string) => {
     return new PasswordResetToken(passwordResetToken);
 }
 
+/**
+ * 
+ * @param email 
+ * @returns 
+ */
 export const findPasswordResetTokenByPhoneNumber = async (email: string) => {
     const passwordResetToken = await prisma.passwordResetToken.findFirst({
         where: { email },
@@ -26,6 +36,11 @@ export const findPasswordResetTokenByPhoneNumber = async (email: string) => {
     return new PasswordResetToken(passwordResetToken);
 }
 
+/**
+ * 
+ * @param email 
+ * @returns 
+ */
 export const findPasswordResetTokenByEmail = async (email: string): Promise<PasswordResetToken | null> => {
     const passwordResetToken = await prisma.passwordResetToken.findFirst({
         where: { email },
@@ -38,6 +53,13 @@ export const findPasswordResetTokenByEmail = async (email: string): Promise<Pass
     return new PasswordResetToken(passwordResetToken);
 }
 
+/**
+ * 
+ * @param email 
+ * @param token 
+ * @param expires 
+ * @returns 
+ */
 export const createPasswordResetToken = async ({ email, token, expires }: PasswordResetToken): Promise<PasswordResetToken | null> => {
     if (!email) {
         throw new Error("No se pudo crear un token de verificación, el correo es invalido");
@@ -66,6 +88,11 @@ export const createPasswordResetToken = async ({ email, token, expires }: Passwo
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
 export const deletePasswordResetToken = async (id: string) => {
     return await prisma.passwordResetToken.delete({
         where: { id },

@@ -1,45 +1,11 @@
+import { Change } from "./diff";
 import { ClassViewed, CourseModule, ModuleClass, RemapedClass, RemapedCourse } from "./types";
 
-/**
- * Retorna el último registro de cada classId,
- * pero si en la lista de registros de esa clase
- * hay alguno con completed = true, se fuerza completed = true.
- *
- * @param {Array} records - Array de objetos con {classId, completed, createdAt, ...}
- * @returns {Array} - Un arreglo con un objeto final por cada classId
- */
-export function getLastRecordByClass(records) {
-    // 1. Agrupamos los registros por classId
-    const grouped = {};
-    for (const rec of records) {
-        const cId = rec.classId;
-        if (!grouped[cId]) grouped[cId] = [];
-        grouped[cId].push(rec);
-    }
-    // 2. Para cada grupo (classId), hallamos el "último" registro
-    //    según la fecha (createdAt o updatedAt).
-    //    Si hay al menos un `completed = true`, se lo establecemos al último registro.
-    const result = [];
-    for (const classId of Object.keys(grouped)) {
-        let group = grouped[classId];
-
-        // Ordena asc por la fecha, o updatedAt si prefieres
-        group.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-        // Tomamos el último
-        const last = { ...group[group.length - 1] };
-        // Si ANY en la clase está completado => forzamos last.completed = true
-        if (group.some((item) => item.isCompleted)) {
-            last.isCompleted = true;
-        }
-
-        // Agregamos al resultado final
-        result.push(last);
-    }
-
-    return result;
+type PathKey = {    
+    [key: string]: string | undefined;
 }
 
-const typeToPathKey = {
+const typeToPathKey: PathKey = {
     course: 'course',
     category: 'category',
     module: 'module',
@@ -49,10 +15,9 @@ const typeToPathKey = {
     option: 'option'
 };
 
-
-export function mergeChangesByTypeAndId(changes) {
+export function mergeChangesByTypeAndId(changes: Change[]) {
     // Objeto de resultado
-    const grouped = {};
+    const grouped: Record<string, Record<string, any>> = {};
 
     for (const item of changes) {
         const { type, path, data } = item;
@@ -108,7 +73,7 @@ export function getCourseProgress(course: RemapedCourse) {
     const classesWithCompletion = allClasses.map<RemapedClass>((cls: ModuleClass|undefined) => {
         return {
             id: cls?.id,
-            title: cls?.title,
+            title: cls?.title as string,
             completed: viewedMap.get(cls?.id) || false,
         }
     });
@@ -139,8 +104,6 @@ export function getCourseProgress(course: RemapedCourse) {
         // actual no es la última => actual + siguiente
         visibleClasses = classesWithCompletion.slice(currentIndex, currentIndex + 2);
     }
-
-    console.log(classesWithCompletion);
 
     return {
         classesWithCompletion, // Todas las clases (para cálculo de %)

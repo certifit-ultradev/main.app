@@ -2,7 +2,7 @@ import { CourseModule } from "./types";
 
 export const calculateTotalVideoSize = (modules: CourseModule[]) => {
     return (modules?.reduce((total, module) => {
-        return total + module.classes.reduce((classTotal, cls) => {
+        return total + module.classes!.reduce((classTotal, cls) => {
             let videoSize: number = 0;
             if (cls.video instanceof File) {
                 videoSize = cls.video.size;
@@ -15,12 +15,12 @@ export const calculateTotalVideoSize = (modules: CourseModule[]) => {
 };
 
 export const formatVideoSize = (size: number): string => {
-    return (size /(1024 * 1024 * 1024)).toFixed(4);
+    return (size / (1024 * 1024 * 1024)).toFixed(4);
 }
 
 export const calculateTotalVideoDuration = (modules: CourseModule[]) => {
     return (modules?.reduce((total, module) => {
-        return total + module.classes.reduce((classTotal, cls) => {
+        return total + module.classes!.reduce((classTotal, cls) => {
             return classTotal + (cls.videoDuration ?? 0);
         }, 0);
     }, 0));

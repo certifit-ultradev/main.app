@@ -18,12 +18,22 @@ import { logPrismaError } from "@/exceptions/error-encoder";
 const pubKey = process.env.WOMPI_PUB_KEY;
 const sigData = process.env.WOMPI_SIG_DATA;
 
+/**
+ * 
+ * @param courseCanonicalId 
+ * @returns 
+ */
 export const quoteCoursePaymentTransaction = async (courseCanonicalId: string) => {
     try {
         const session = await auth();
         const userId = session?.user.id;
         if (!userId) {
             throw new UserNotLoggedError("El usuario debe loguearse");
+        }
+        console.log("session", session.user);
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
         }
         const course = await getCourseByCanonicalId(courseCanonicalId);
         if (!course) {
@@ -41,10 +51,11 @@ export const quoteCoursePaymentTransaction = async (courseCanonicalId: string) =
 
         let currentPurchase: Purchase | null = null;
         try {
-            currentPurchase = await findLastCoursePendingPurchase(course.id, userId);
+            currentPurchase = await findLastCoursePendingPurchase(course.id as number, userId);
         } catch (error) {
             if (error instanceof NotFoundError) {
-                currentPurchase = await storeCoursePaymentTransaction(course.id, userId, new Purchase({
+                currentPurchase = await storeCoursePaymentTransaction(course.id as number, userId, new Purchase({
+                    cartId: 0,
                     trxId: "",
                     reference: uuidv4(),
                     paymentMethod: "",
@@ -62,25 +73,36 @@ export const quoteCoursePaymentTransaction = async (courseCanonicalId: string) =
         return {
             purchaseId: currentPurchase?.id,
             currency: 'COP',
-            amountInCents: currentPurchase?.total * 100,
+            amountInCents: (currentPurchase?.total as number) * 100,
             reference: currentPurchase?.reference,
             publicKey: pubKey,
             redirectUrl: getPaymentReviewUrl(),
-            signature: { integrity: await generateSignature(currentPurchase?.reference, currentPurchase?.total * 100, sigData) },
+            signature: { integrity: await generateSignature(currentPurchase?.reference as string, (currentPurchase?.total as number) * 100, sigData as string) },
             expirationTime: Date.now()
         };
     } catch (error) {
+        console.log("error", error);
         logPrismaError(error);
         throw error;
     }
 }
 
+/**
+ * 
+ * @param purchaseId 
+ * @param trxId 
+ * @returns 
+ */
 export const createCoursePaymentTransaction = async (purchaseId: number, trxId: string) => {
     try {
         const session = await auth();
         const userId = session?.user.id;
         if (!userId) {
             throw new UserNotLoggedError("El usuario debe loguearse");
+        }
+        const isEmailVerified = session?.user.emailVerified;
+        if (!isEmailVerified) {
+            throw new UserNotLoggedError("El usuario debe verificar su email");
         }
 
         const purchase = await findUserPurchaseById(purchaseId, userId);
@@ -106,7 +128,7 @@ export const createCoursePaymentTransaction = async (purchaseId: number, trxId: 
         });
 
         if (trxData.status == 'APPROVED' && updatedPurchase) {
-            const userCourse = await assignCourse(userId, purchase.cart?.courseId);
+            const userCourse = await assignCourse(userId, purchase.cart?.courseId as number);
             if (!userCourse) {
                 throw new TransactionError(`El pago no se pudo completar correctamente. trxId - ${trxId}`);
             }
@@ -126,6 +148,11 @@ export const createCoursePaymentTransaction = async (purchaseId: number, trxId: 
     }
 }
 
+/**
+ * 
+ * @param trxData 
+ * @returns 
+ */
 export const updateCoursePaymentTransaction = async (trxData: TransactionEventUpdate) => {
     try {
         const purchase = await findUserPurchaseByReference(trxData.reference);
@@ -133,16 +160,16 @@ export const updateCoursePaymentTransaction = async (trxData: TransactionEventUp
             throw new NotFoundError("La compra no existe");
         }
 
-        const updatedPurchase = await updatePurchaseById(purchase.id, {
+        const updatedPurchase = await updatePurchaseById(purchase.id as number, {
             trxId: trxData?.id,
             reference: trxData.reference,
-            paymentMethodType: trxData.paymentMethodType,
+            paymentMethod: trxData.paymentMethodType,
             trxCreationDate: trxData.createdAt,
             status: trxData.status
         });
 
         if (trxData.status == 'APPROVED' && updatedPurchase) {
-            const userCourse = await assignCourse(purchase.cart?.userId, purchase.cart?.courseId);
+            const userCourse = await assignCourse(purchase.cart?.userId as string, purchase.cart?.courseId as number);
             if (!userCourse) {
                 throw new TransactionError(`La actualización del pago no se pudo completar correctamente. trxId - ${trxData.id}`);
             }

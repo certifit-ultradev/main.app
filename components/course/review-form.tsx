@@ -10,10 +10,11 @@ import { uploadFile } from '@/utils/upload-file-blob';
 import SubmitButton from '../submitButton';
 import { Button } from '@nextui-org/react';
 import { FormError } from '../form/form-error';
+import { diffCourses } from '@/utils/diff';
 
 interface CourseReviewFormProps {
     data: CourseData;
-    originalData?: CourseData;
+    originalData: CourseData;
     nextStep: () => void;
     previousStep: () => void;
 };
@@ -44,6 +45,7 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                         return module;
                     });
                     result = await register({ data: dataWithOutFiles });
+                    console.log("result", result);
                     if (!result.success) {
                         setIsLoading(false);
                         setError(result.error ?? 'Error al crear el curso');
@@ -55,11 +57,22 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                 const uploadPromises: Promise<void>[] = [];
                 data.modules?.forEach((module, mIndex) => {
                     module.classes?.forEach((cls, clsIndex) => {
-                        const file: File = cls.video;
+                        const file: File = cls.video as File;
                         if (file) {
                             const uploadPromise = uploadFile(`/courses/${!finalCourseId ? courseId.current : finalCourseId}/`, file)
                                 .then(async (putBlobResult) => {
-                                    const clsCreatedId = result.payload.modules[mIndex].classes[clsIndex].id;
+                                    console.log("putBlobResult", putBlobResult);
+                                    const clsCreatedId = result?.payload?.modules?.[mIndex]?.classes?.[clsIndex]?.id;
+                                    if (!clsCreatedId) {
+                                        setIsLoading(false);
+                                        setError('fallo la creación de la clase');
+                                        return;
+                                    }
+
+                                    console.log("clsCreatedId", clsCreatedId);
+                                    console.log("putBlobResult.url", putBlobResult.url);
+                                    console.log("file.size", file.size);
+
                                     await editClassVideoPath({
                                         data: {
                                             clsId: clsCreatedId, videoPath: putBlobResult.url, videoSize: file.size
@@ -92,11 +105,24 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                 const uploadPromises: Promise<void>[] = [];
                 data.modules?.forEach((module, mIndex) => {
                     module.classes?.forEach((cls, clsIndex) => {
-                        const file = cls.video;
+                        const file = cls.video;                        
                         if (file instanceof File) {
+                            console.log("file", file.size);
                             const uploadPromise = uploadFile(`/courses/${data.id}/`, file)
                                 .then(async (putBlobResult) => {
-                                    dataWithOutFiles.modules[mIndex].classes[clsIndex].video = putBlobResult.url;
+                                    console.log("putBlobResult", putBlobResult);
+                                    console.log("file size", file.size);
+                                    if (dataWithOutFiles.modules &&
+                                        dataWithOutFiles.modules[mIndex] &&
+                                        dataWithOutFiles.modules[mIndex].classes &&
+                                        dataWithOutFiles.modules[mIndex].classes[clsIndex])
+                                    {
+                                        dataWithOutFiles.modules[mIndex].classes[clsIndex].video = putBlobResult.url;
+                                        dataWithOutFiles.modules[mIndex].classes[clsIndex].videoSize = file.size;
+                                    } else {
+                                        setError("La estructura en dataWithOutFiles no existe para actualizar la URL del video.");
+                                        console.error("La estructura en dataWithOutFiles no existe para actualizar la URL del video.", { mIndex, clsIndex });
+                                    }
                                 })
                                 .catch((err) => {
                                     console.error("Error subiendo archivo:", err);
@@ -108,6 +134,11 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                 });
 
                 await Promise.all(uploadPromises);
+
+                console.log("dataWithOutFiles", dataWithOutFiles);
+                
+                console.log("diff", diffCourses(originalData, dataWithOutFiles));
+
                 const editResult = await edit({ data: { originalCourseData: originalData, newCourseData: dataWithOutFiles } });
                 setIsLoading(false);
                 if (editResult.success) {
@@ -140,7 +171,7 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                 <p className={cn('mb-2')}>Nombre del curso: <strong>{data.title}</strong></p>
                 <p className={cn('mb-2')}>Precio: ${data.price}</p>
                 <p className={cn('mb-2')}>Instructor: <strong>{data.instructorName}</strong></p>
-                <p className={cn('mb-2')}>Categoría: <strong>{data.category.name}</strong></p>
+                <p className={cn('mb-2')}>Categoría: <strong>{data.category?.name}</strong></p>
                 <p className={cn('mb-2')}>Peso del curso: {formatVideoSize(calculateTotalVideoSize(data.modules ?? []))} GB</p>
                 <p className={cn('mb-2')}>Duración del curso: {formatVideoDuration(calculateTotalVideoDuration(data.modules ?? []))}</p>
                 <p className={cn('mb-4')}>
@@ -156,11 +187,11 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                         <p className={cn('text-gray-500')}>Módulos</p>
                     </div>
                     <div className={cn('text-center')}>
-                        <h4 className={cn('text-2xl font-bold')}>{data.modules?.reduce((total, module) => total + module.classes.length, 0)}</h4>
+                        <h4 className={cn('text-2xl font-bold')}>{data.modules?.reduce((total, module) => total + (module?.classes?.length ?? 0), 0)}</h4>
                         <p className={cn('text-gray-500')}>Clases</p>
                     </div>
                     <div className={cn('text-center')}>
-                        <h4 className={cn('text-2xl font-bold')}>{data.modules?.reduce((total, module) => total + (module?.quiz.questions.length > 0 ? 1 : 0), 0)}</h4>
+                        <h4 className={cn('text-2xl font-bold')}>{data.modules?.reduce((total, module) => total + ((module?.quiz?.questions?.length ?? 0) > 0 ? 1 : 0), 0)}</h4>
                         <p className={cn('text-gray-500')}>Evaluaciones</p>
                     </div>
                 </div>

@@ -8,6 +8,11 @@ import { ResetSchema } from "@/utils/schemas";
 import { ServerActionResponse } from "@/utils/types";
 import { z } from "zod";
 
+/**
+ * 
+ * @param values 
+ * @returns 
+ */
 export const resetPassword = async (values: z.infer<typeof ResetSchema>): Promise<ServerActionResponse<null>> => {
     try {
         const validatedFields = ResetSchema.safeParse(values);

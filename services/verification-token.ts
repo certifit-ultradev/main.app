@@ -5,6 +5,11 @@ import { VerificationTokenResult } from "@/utils/types";
 import { sendVerificationEmail } from "@/repository/nodemailer";
 import { logPrismaError } from "@/exceptions/error-encoder";
 
+/**
+ * 
+ * @param email 
+ * @returns 
+ */
 export const generateVerificationTokenByEmail = async (email: string): Promise<VerificationToken | null> => {
     try {
         const { expires, token } = generateExpirationToken();
@@ -16,6 +21,11 @@ export const generateVerificationTokenByEmail = async (email: string): Promise<V
     }
 }
 
+/**
+ * 
+ * @param token 
+ * @returns 
+ */
 export const getVerificationTokenByToken = async (token: string): Promise<VerificationToken | null> => {
     try {
         if (token === "") {
@@ -29,6 +39,11 @@ export const getVerificationTokenByToken = async (token: string): Promise<Verifi
     }
 }
 
+/**
+ * 
+ * @param email 
+ * @returns 
+ */
 export const sendVerificationEmailWithToken = async (email: string): Promise<VerificationTokenResult> => {
     try {
         const verificationToken = await generateVerificationTokenByEmail(email);
@@ -45,6 +60,11 @@ export const sendVerificationEmailWithToken = async (email: string): Promise<Ver
     }
 }
 
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
 export const removeVerificationToken = async (id: string): Promise<VerificationTokenResult> => {
     try {
         const verificationToken = await deleteVerificationToken(id);
