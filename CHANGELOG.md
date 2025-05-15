@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### Changed
+
+- Adjust Prisma import on error-encoder
+
 ## 1.0.0
 
 ### Added

@@ -5,8 +5,8 @@ import { NotFoundError } from "./not-found";
 import { TransactionError } from "./transaction-error";
 import { UserNotLoggedError } from "./user-not-logged";
 import { UserExistError } from "./user-exist";
-import { Prisma } from "@prisma/client";
 import { AuthError } from "next-auth";
+import { Prisma } from "@/prisma/app/generated/prisma/client";
 
 /**
  * mapErrorToAPIResponse
