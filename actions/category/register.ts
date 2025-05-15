@@ -6,6 +6,11 @@ import { Middlewares } from "../server-action-middleware";
 import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
 import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const register = async (request: ServerActionRequest<CourseCategoryData>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, CourseCategoryData>(
         request,
@@ -25,6 +30,11 @@ export const register = async (request: ServerActionRequest<CourseCategoryData>)
     );
 }
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const edit = async (request: ServerActionRequest<Partial<CourseCategoryData>>) => {
     return await Middlewares<null, Partial<CourseCategoryData>>(
         request,

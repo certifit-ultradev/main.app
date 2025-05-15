@@ -3,6 +3,11 @@
 import { getUserByEmail } from "@/services/user";
 import { ServerActionResponse } from "@/utils/types";
 
+/**
+ * 
+ * @param email 
+ * @returns 
+ */
 export const checkIfUserIsActive = async (email: string): Promise<ServerActionResponse<null>> => {
     try {
         const user = await getUserByEmail(email);

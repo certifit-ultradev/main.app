@@ -6,6 +6,11 @@ import { CourseData, CourseModule, EditClassVideo, EditCourseData, QuestionOptio
 import { Middlewares } from "../server-action-middleware";
 import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const register = async (request: ServerActionRequest<CourseData>): Promise<ServerActionResponse<CourseData | null>> => {
     return await Middlewares<CourseData | null, CourseData>(
         request,
@@ -70,13 +75,17 @@ export const register = async (request: ServerActionRequest<CourseData>): Promis
         });
 }
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const edit = async (request: ServerActionRequest<EditCourseData>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, EditCourseData>(
         request,
         [isAdmin, isEmailVerified],
         async (courseData: EditCourseData) => {
             try {
-                //console.dir(courseData, { depth: null })
                 await editCourse(courseData.originalCourseData, courseData.newCourseData);
 
                 return { success: true, message: "Curso editado correctamente." }
@@ -86,6 +95,11 @@ export const edit = async (request: ServerActionRequest<EditCourseData>): Promis
         });
 }
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const editClassVideoPath = async (request: ServerActionRequest<EditClassVideo>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, EditClassVideo>(
         request,

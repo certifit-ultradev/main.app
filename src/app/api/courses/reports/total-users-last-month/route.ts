@@ -1,6 +1,9 @@
 import { mapErrorToAPIResponse } from '@/exceptions/error-encoder';
 import { calculateUsersRegisteredByMonth } from '@/services/courses';
 
+/**
+ * @returns 
+ */
 export async function GET(): Promise<Response> {
     try {
         const result = await calculateUsersRegisteredByMonth();

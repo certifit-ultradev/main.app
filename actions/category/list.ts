@@ -6,6 +6,11 @@ import { Middlewares } from "../server-action-middleware";
 import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
 import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const listAllCourseCategories = async (): Promise<ServerActionResponse<CourseCategoryData[]>> => {
     return await Middlewares<CourseCategoryData[], null>(
         { data: null },
@@ -32,6 +37,11 @@ export const listAllCourseCategories = async (): Promise<ServerActionResponse<Co
         });
 }
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export async function fetchCategoryById(
     request: ServerActionRequest<FetchCategory>
 ): Promise<ServerActionResponse<CourseCategoryData>> {

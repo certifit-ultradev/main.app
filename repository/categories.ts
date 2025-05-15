@@ -2,7 +2,10 @@ import { CourseCategory } from "@/models/course-category";
 import { prisma } from "@/lib/prisma";
 import { NotFoundError } from "@/exceptions/not-found";
 
-
+/**
+ * This repository is responsible for managing the course categories in the database.
+ * It provides methods to create, update, delete and find course categories.
+ */
 export const allCategories = async (): Promise<CourseCategory[]> => {
     const categories = await prisma.courseCategory.findMany();
     if (categories.length == 0) {

@@ -1,8 +1,8 @@
 import { Course } from "@/models/course";
 import { CourseModules } from "@/models/course-modules";
 import { allCourses, countAllActiveCourses, countAllCourses, countCourseSales, createFullCourse, createQuestionAnswer, createUserClassState, createUserModuleFinishState, createUserQuizState, findCourseByCanonicalId, findCourseById, findModulesByCourseId, findQuizAnswersByQuizId, findThreeCoursesActives, findUserCourseByCanonicalId, findUserCourses, findUserCourseWithModulesByCanonicalId, findUserQuizState, sumCourseSalesByLastMonth, sumUsersByLastMonth, updateClass, updateCourse, updateFullCourse } from "@/repository/courses";
-import { CalculateQuizScore, CourseData, CourseModule, CoursePlainData, CoursePublicData, CoursePublicDataWithOutCompletion, CoursesMonthResult, CreateQuestionAnswer, DataPaginated, RemapedClass, RemapedCourse, RequestDataPaginated, ResultQuizScore, ResultSalesCourse, UsersMonthResult } from "@/utils/types";
-import { QuizQuestion as ModuleQuizQuestion, QuizQuestion } from "@/models/quiz-question";
+import { CalculateQuizScore, CourseData, CourseModule, CoursePlainData, CoursePublicDataWithOutCompletion, CoursesMonthResult, CreateQuestionAnswer, DataPaginated, RemapedCourse, RequestDataPaginated, ResultQuizScore, ResultSalesCourse, UsersMonthResult } from "@/utils/types";
+import { QuizQuestion } from "@/models/quiz-question";
 import { diffCourses } from "@/utils/diff";
 import { PossibleAnswerQuestion } from "@/models/possible-answer-question";
 import { calculateTotalVideoDuration, formatVideoDuration } from "@/utils/video";
@@ -16,11 +16,15 @@ import { logPrismaError } from "@/exceptions/error-encoder";
 import { getCourseProgress } from "@/utils/classes";
 import { UserQuizState } from "@/models/user-quiz-state";
 import { NotFoundError } from "@/exceptions/not-found";
-import { number } from "zod";
 import { CourseChange } from "@/utils/change-types";
 
 export const COURSES_PAGE_SIZE = 10;
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const getAllCourses = async (request: RequestDataPaginated): Promise<DataPaginated<Course>> => {
     try {
         const pagedCourses = await allCourses(request.page, COURSES_PAGE_SIZE);
@@ -39,6 +43,11 @@ export const getAllCourses = async (request: RequestDataPaginated): Promise<Data
     }
 }
 
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
 export const getCourseById = async (id: number): Promise<Course> => {
     try {
         return await findCourseById(id);
@@ -48,6 +57,11 @@ export const getCourseById = async (id: number): Promise<Course> => {
     }
 }
 
+/**
+ * 
+ * @param courseId 
+ * @returns 
+ */
 export const getModulesByCourseId = async (courseId: number): Promise<CourseModules[]> => {
     try {
         return await findModulesByCourseId(courseId);
@@ -57,6 +71,11 @@ export const getModulesByCourseId = async (courseId: number): Promise<CourseModu
     }
 }
 
+/**
+ * 
+ * @param canonicalId 
+ * @returns 
+ */
 export const getUserCourseWithModulesByCanonicalId = async (canonicalId: string): Promise<Course> => {
     try {
         const session = await auth();
@@ -106,6 +125,12 @@ export const getUserCourseWithModulesByCanonicalId = async (canonicalId: string)
     }
 }
 
+/**
+ * 
+ * @param canonicalId 
+ * @param quizId 
+ * @returns 
+ */
 export const getUserCourseQuizAnswers = async (canonicalId: string, quizId: number): Promise<UserQuizAnswer[]> => {
     try {
         const session = await auth();
@@ -131,6 +156,11 @@ export const getUserCourseQuizAnswers = async (canonicalId: string, quizId: numb
     }
 }
 
+/**
+ * 
+ * @param canonicalId 
+ * @returns 
+ */
 export const getUserCourseByCanonicalId = async (canonicalId: string): Promise<Course> => {
     try {
         const session = await auth();
@@ -150,6 +180,11 @@ export const getUserCourseByCanonicalId = async (canonicalId: string): Promise<C
     }
 }
 
+/**
+ * 
+ * @param canonicalId 
+ * @returns 
+ */
 export const getCourseByCanonicalId = async (canonicalId: string): Promise<Course> => {
     try {
         const session = await auth();
@@ -169,6 +204,10 @@ export const getCourseByCanonicalId = async (canonicalId: string): Promise<Cours
     }
 }
 
+/**
+ * 
+ * @returns 
+ */
 export const getTopThreeCourses = async (): Promise<CoursePlainData[]> => {
     try {
         const session = await auth();
@@ -217,6 +256,10 @@ export const getTopThreeCourses = async (): Promise<CoursePlainData[]> => {
     }
 }
 
+/**
+ * 
+ * @returns 
+ */
 export const getUserCourses = async (): Promise<CoursePublicDataWithOutCompletion[]> => {
     try {
         const session = await auth();
@@ -282,6 +325,11 @@ export const getUserCourses = async (): Promise<CoursePublicDataWithOutCompletio
     }
 }
 
+/**
+ * 
+ * @param course 
+ * @returns 
+ */
 export const registerCourse = async (course: CourseData): Promise<Course> => {
     try {
         return await createFullCourse(course);
@@ -291,6 +339,12 @@ export const registerCourse = async (course: CourseData): Promise<Course> => {
     }
 }
 
+/**
+ * 
+ * @param courseId 
+ * @param course 
+ * @returns 
+ */
 export const editCourse = async (originalCourseData: CourseData, newCourseData: CourseData) => {
     try {
         if (!originalCourseData.id) {
@@ -317,6 +371,13 @@ export const editCourse = async (originalCourseData: CourseData, newCourseData: 
     }
 }
 
+/**
+ * 
+ * @param courseId 
+ * @param videoPath 
+ * @param videoSize 
+ * @returns 
+ */
 export const updateClassVideoPath = async (clsId: number, videoPath: string, videoSize: number) => {
     try {
         const result = await updateClass(clsId, {
@@ -331,6 +392,11 @@ export const updateClassVideoPath = async (clsId: number, videoPath: string, vid
     }
 }
 
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
 export const activateCourse = async (id: number) => {
     try {
         const countActiveCourses = await countAllActiveCourses();
@@ -350,6 +416,11 @@ export const activateCourse = async (id: number) => {
     }
 }
 
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
 export const deactivateCourse = async (id: number) => {
     try {
         const updateResult = await updateCourse(id, { isActive: false });
@@ -364,6 +435,14 @@ export const deactivateCourse = async (id: number) => {
     }
 }
 
+/**
+ * 
+ * @param courseId 
+ * @param classId 
+ * @param currentVideoTime 
+ * @param isCompleted 
+ * @returns 
+ */
 export const registerClassCurrentState = async (courseId: string, classId: number, currentVideoTime: number, isCompleted: boolean) => {
     try {
         const session = await auth();
@@ -399,6 +478,12 @@ export const registerClassCurrentState = async (courseId: string, classId: numbe
     }
 }
 
+/**
+ * 
+ * @param courseId 
+ * @param moduleId 
+ * @returns 
+ */
 export const registerModuleFinishtState = async (courseId: string, moduleId: number) => {
     try {
         const session = await auth();
@@ -433,6 +518,11 @@ export const registerModuleFinishtState = async (courseId: string, moduleId: num
     }
 }
 
+/**
+ * 
+ * @param data 
+ * @returns 
+ */
 export const registerQuestionAnswer = async (data: CreateQuestionAnswer) => {
     try {
         const session = await auth();
@@ -504,6 +594,11 @@ export const registerQuestionAnswer = async (data: CreateQuestionAnswer) => {
     }
 }
 
+/**
+ * 
+ * @param data 
+ * @returns 
+ */
 export const calculateQuizScore = async (data: CalculateQuizScore): Promise<ResultQuizScore | null> => {
     try {
         const session = await auth();
@@ -575,6 +670,12 @@ export const calculateQuizScore = async (data: CalculateQuizScore): Promise<Resu
     }
 }
 
+/**
+ * 
+ * @param canonicalId 
+ * @param quizId 
+ * @returns 
+ */
 export const getUserQuizState = async (canonicalId: string, quizId: number): Promise<UserQuizState> => {
     try {
         const session = await auth();
@@ -599,6 +700,11 @@ export const getUserQuizState = async (canonicalId: string, quizId: number): Pro
     }
 }
 
+/**
+ * 
+ * @param canonicalId 
+ * @returns 
+ */
 export const calculateTotalSalesPerCourse = async (): Promise<ResultSalesCourse[]> => {
     try {
         const session = await auth();
@@ -617,6 +723,10 @@ export const calculateTotalSalesPerCourse = async (): Promise<ResultSalesCourse[
     }
 }
 
+/**
+ * 
+ * @returns 
+ */
 export const calculateTotalSalesByMonth = async (): Promise<CoursesMonthResult> => {
     try {
         const session = await auth();
@@ -632,6 +742,10 @@ export const calculateTotalSalesByMonth = async (): Promise<CoursesMonthResult> 
     }
 }
 
+/**
+ * 
+ * @returns 
+ */
 export const calculateUsersRegisteredByMonth = async (): Promise<UsersMonthResult> => {
     try {
         const session = await auth();

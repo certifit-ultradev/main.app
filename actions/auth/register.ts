@@ -3,6 +3,11 @@
 import { registerUser } from "@/services/user";
 import { ServerActionResponse, UserCreateData } from "@/utils/types"
 
+/**
+ * 
+ * @param data 
+ * @returns 
+ */
 export const register = async (data: UserCreateData): Promise<ServerActionResponse<null>> => {
     try {
         const user = await registerUser({

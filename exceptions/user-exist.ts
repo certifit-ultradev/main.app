@@ -1,3 +1,6 @@
+/**
+ * UserExistError class
+ */
 export class UserExistError {
     cause: string;
     constructor(cause: string) {

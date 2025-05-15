@@ -13,6 +13,10 @@ import {
 import { NextURL } from "next/dist/server/web/next-url";
 
 const { auth } = NextAuth(authConfig);
+
+/**
+ * 
+ */
 export default auth((req: { auth?: Session |null; nextUrl?: NextURL; headers: Headers }) => {
     const { nextUrl } = req;
     const isLoggedIn = !!req.auth;

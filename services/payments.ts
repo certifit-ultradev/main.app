@@ -18,6 +18,11 @@ import { logPrismaError } from "@/exceptions/error-encoder";
 const pubKey = process.env.WOMPI_PUB_KEY;
 const sigData = process.env.WOMPI_SIG_DATA;
 
+/**
+ * 
+ * @param courseCanonicalId 
+ * @returns 
+ */
 export const quoteCoursePaymentTransaction = async (courseCanonicalId: string) => {
     try {
         const session = await auth();
@@ -82,6 +87,12 @@ export const quoteCoursePaymentTransaction = async (courseCanonicalId: string) =
     }
 }
 
+/**
+ * 
+ * @param purchaseId 
+ * @param trxId 
+ * @returns 
+ */
 export const createCoursePaymentTransaction = async (purchaseId: number, trxId: string) => {
     try {
         const session = await auth();
@@ -137,6 +148,11 @@ export const createCoursePaymentTransaction = async (purchaseId: number, trxId: 
     }
 }
 
+/**
+ * 
+ * @param trxData 
+ * @returns 
+ */
 export const updateCoursePaymentTransaction = async (trxData: TransactionEventUpdate) => {
     try {
         const purchase = await findUserPurchaseByReference(trxData.reference);

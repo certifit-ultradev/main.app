@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { CertifitError } from "./certifit-error";
 import { CourseAlreadyPurchasedError } from "./course-already-purchased";
 import { CourseInvalidStateError } from "./course-invalid-state";
 import { NotFoundError } from "./not-found";
@@ -9,6 +8,12 @@ import { UserExistError } from "./user-exist";
 import { Prisma } from "@prisma/client";
 import { AuthError } from "next-auth";
 
+/**
+ * mapErrorToAPIResponse
+ * This function maps the error to a response object that can be returned to the client.
+ * @param error - The error to map.
+ * @returns A response object with the error message and status code.
+ */
 export function mapErrorToAPIResponse(error: unknown) {
     switch (true) {
         case error instanceof CourseAlreadyPurchasedError:
@@ -41,6 +46,12 @@ export function mapErrorToAPIResponse(error: unknown) {
     }
 }
 
+/**
+ * mapErrorToServerActionResponse
+ * This function maps the error to a response object that can be returned to the admin client.
+ * @param error - The error to map.
+ * @returns A response object with the error message and status code.
+ */
 export function mapErrorToServerActionResponse(error: unknown) {
     switch (true) {
         case error instanceof CourseAlreadyPurchasedError:
@@ -99,6 +110,11 @@ export function mapErrorToServerActionResponse(error: unknown) {
     }
 }
 
+/**
+ * logPrismaError
+ * This function logs the Prisma error to the console.
+ * @param error - The error to log.
+ */
 export function logPrismaError(error: unknown) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
         console.log(`Error conocido de Prisma (código ${error.code}): ${error.message}`);

@@ -1,3 +1,6 @@
+/**
+ * CertifitError class
+ */
 export class CertifitError {
     errorCode: string;
     constructor(errorCode: string) {

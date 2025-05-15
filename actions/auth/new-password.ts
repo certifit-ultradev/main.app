@@ -9,6 +9,12 @@ import { NewPasswordSchema } from "@/utils/schemas";
 import { ServerActionResponse } from "@/utils/types";
 import { z } from "zod";
 
+/**
+ * 
+ * @param values 
+ * @param token 
+ * @returns 
+ */
 export const newPassword = async (
     values: z.infer<typeof NewPasswordSchema>,
     token?: string | null
@@ -48,6 +54,11 @@ export const newPassword = async (
     }
 }
 
+/**
+ * 
+ * @param values 
+ * @returns 
+ */
 export const newPasswordForLoggedUser = async (
     values: z.infer<typeof NewPasswordSchema>,
 ): Promise<ServerActionResponse<null>> => {

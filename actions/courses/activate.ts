@@ -6,6 +6,11 @@ import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
 import { Middlewares } from "../server-action-middleware";
 import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const activate = async (request: ServerActionRequest<ActivateOrDeactivateCourse>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, ActivateOrDeactivateCourse>(
         request,

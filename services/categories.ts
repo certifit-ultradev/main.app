@@ -3,6 +3,10 @@ import { CourseCategory } from "@/models/course-category";
 import { allCategories, createCourseCategory, deleteCourseCategory, findCategoryById, updateCourseCategory } from "@/repository/categories";
 import { CourseCategoryData } from "@/utils/types";
 
+/**
+ * 
+ * @returns 
+ */
 export const getAllCourseCategories = async (): Promise<CourseCategory[]> => {
     try {
         return await allCategories();
@@ -12,6 +16,11 @@ export const getAllCourseCategories = async (): Promise<CourseCategory[]> => {
     }
 }
 
+/**
+ * 
+ * @param data 
+ * @returns 
+ */
 export const registerCourseCategory = async (data: CourseCategoryData): Promise<CourseCategory | null> => {
     try {
         return await createCourseCategory(new CourseCategory({
@@ -23,6 +32,11 @@ export const registerCourseCategory = async (data: CourseCategoryData): Promise<
     }
 }
 
+/**
+ * 
+ * @param data 
+ * @returns 
+ */
 export const changeCourseCategory = async (data: Partial<CourseCategoryData>): Promise<CourseCategory | null> => {
     try {
         return await updateCourseCategory(new CourseCategory({
@@ -35,6 +49,11 @@ export const changeCourseCategory = async (data: Partial<CourseCategoryData>): P
     }
 }
 
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
 export const removeCourseCategory = async (id: number) => {
     try {
         await deleteCourseCategory(id);
@@ -44,6 +63,11 @@ export const removeCourseCategory = async (id: number) => {
     }
 }
 
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
 export const getCategoryById = async (id: number): Promise<CourseCategory> => {
     try {
         return await findCategoryById(id);

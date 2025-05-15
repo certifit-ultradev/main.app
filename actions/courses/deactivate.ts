@@ -1,11 +1,16 @@
 "use server"
 
-import { activateCourse, deactivateCourse } from "@/services/courses";
+import { deactivateCourse } from "@/services/courses";
 import { ActivateOrDeactivateCourse, ServerActionRequest, ServerActionResponse } from "@/utils/types"
 import { Middlewares } from "../server-action-middleware";
 import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
 import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const deactivate = async (request: ServerActionRequest<ActivateOrDeactivateCourse>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, ActivateOrDeactivateCourse>(
         request,

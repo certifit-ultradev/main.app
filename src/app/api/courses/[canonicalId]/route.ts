@@ -3,6 +3,11 @@ import { getUserCourseWithModulesByCanonicalId } from '@/services/courses';
 import { CourseModule, QuestionOption, QuizQuestions } from '@/utils/types';
 import { NextRequest } from 'next/server';
 
+/**
+ * @param req 
+ * @param context 
+ * @returns 
+ */
 // @ts-expect-error: context
 export async function GET(req: NextRequest, context) {
     try {

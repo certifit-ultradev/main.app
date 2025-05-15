@@ -6,6 +6,11 @@ import { Middlewares } from "../server-action-middleware";
 import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
 import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const listAll = async (request: ServerActionRequest<FetchPage>): Promise<ServerActionResponse<DataPaginated<UserList>>> => {
     return await Middlewares<DataPaginated<UserList>, FetchPage>(
         request,

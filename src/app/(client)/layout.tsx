@@ -5,7 +5,7 @@ import '../globals.css';
 import { auth } from "@/auth";
 
 export const metadata: Metadata = {
-    title: 'Certifid',
+    title: 'Certifit',
     description: 'Certifit',
 }
 

@@ -7,6 +7,11 @@ import { Middlewares } from "../server-action-middleware";
 import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
 import { cleanData } from "@/utils/filter-data";
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const register = async (request: ServerActionRequest<UserCreateData>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, UserCreateData>(
         request,
@@ -25,6 +30,11 @@ export const register = async (request: ServerActionRequest<UserCreateData>): Pr
         });
 }
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const edit = async (request: ServerActionRequest<EditUserData>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, EditUserData>(
         request,
@@ -49,6 +59,11 @@ export const edit = async (request: ServerActionRequest<EditUserData>): Promise<
         });
 }
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const activate = async (request: ServerActionRequest<{ id: string }>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, { id: string }>(
         request,
@@ -66,6 +81,11 @@ export const activate = async (request: ServerActionRequest<{ id: string }>): Pr
         });
 }
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const deactivate = async (request: ServerActionRequest<{ id: string }>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, { id: string }>(
         request,

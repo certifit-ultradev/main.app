@@ -5,7 +5,11 @@ import { editUserById, getUserByEmail } from "@/services/user";
 import { getVerificationTokenByToken, removeVerificationToken, sendVerificationEmailWithToken } from "@/services/verification-token";
 import { ServerActionResponse } from "@/utils/types"
 
-
+/**
+ * 
+ * @param email 
+ * @returns 
+ */
 export const sendVerificationToken = async (email: string): Promise<ServerActionResponse<null>> => {
     try {
         const verifyToken = await sendVerificationEmailWithToken(email);
@@ -25,6 +29,11 @@ export const sendVerificationToken = async (email: string): Promise<ServerAction
     }
 }
 
+/**
+ * 
+ * @param token 
+ * @returns 
+ */
 export const verifyEmail = async (token: string): Promise<ServerActionResponse<null>> => {
     try {
         const existingToken = await getVerificationTokenByToken(token);

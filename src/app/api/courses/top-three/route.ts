@@ -1,6 +1,10 @@
 import { mapErrorToAPIResponse } from '@/exceptions/error-encoder';
 import { getTopThreeCourses } from '@/services/courses';
 
+/**
+ * 
+ * @returns 
+ */
 export async function GET() {
     try {
         const activeCourses = await getTopThreeCourses();

@@ -14,11 +14,16 @@ import { UserModuleState } from "@/models/user_module_state";
 import { storeVideoBlobStorage } from "@/services/video";
 import { CourseChange } from "@/utils/change-types";
 import { mergeChangesByTypeAndId, toSnakeCase } from "@/utils/classes";
-import { Change } from "@/utils/diff";
 import { isCourseModule, isModuleClass, isOption, isQuestion } from "@/utils/type-guards";
 import { CourseData, CoursesMonthResult, ResultSalesCourse, UsersMonthResult } from "@/utils/types";
 import { Prisma, PrismaClient } from "@prisma/client";
 
+/**
+ * 
+ * @param page 
+ * @param pageSize 
+ * @returns 
+ */
 export const allCourses = async (page: number, pageSize: number): Promise<Course[]> => {
     if (page < 1) {
         page = 1;
@@ -44,10 +49,19 @@ export const allCourses = async (page: number, pageSize: number): Promise<Course
     })
 }
 
+/**
+ * @param id
+ * @returns
+ */
 export const countAllCourses = async (): Promise<number> => {
     return await prisma.course.count();
 }
 
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
 export const countAllActiveCourses = async (): Promise<number> => {
     return await prisma.course.count({
         where: {
@@ -56,6 +70,11 @@ export const countAllActiveCourses = async (): Promise<number> => {
     });
 }
 
+/**
+ * 
+ * @param userId 
+ * @returns 
+ */
 export const findThreeCoursesActives = async (userId?: string): Promise<Course[]> => {
     let query = {
         include: {
@@ -80,8 +99,6 @@ export const findThreeCoursesActives = async (userId?: string): Promise<Course[]
         delete (query.include as any).userCourse;
     }
 
-    console.dir(query, { depth: null });
-
     const activeCourses = await prisma.course.findMany(query);
     if (activeCourses.length == 0) {
         return [];
@@ -92,6 +109,11 @@ export const findThreeCoursesActives = async (userId?: string): Promise<Course[]
     });
 }
 
+/**
+ * 
+ * @param userId 
+ * @returns 
+ */
 export const findUserCourses = async (userId?: string): Promise<UserCourse[]> => {
     const userCourses = await prisma.userCourse.findMany({
         where: {
@@ -137,6 +159,11 @@ export const findUserCourses = async (userId?: string): Promise<UserCourse[]> =>
     });
 }
 
+/**
+ * 
+ * @param courseId 
+ * @returns 
+ */
 export const findModulesByCourseId = async (courseId: number): Promise<CourseModules[]> => {
     const modules = await prisma.courseModules.findMany({
         where: { deleted: false, courseId }
@@ -151,6 +178,11 @@ export const findModulesByCourseId = async (courseId: number): Promise<CourseMod
     })
 }
 
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
 export const findCourseById = async (id: number): Promise<Course> => {
     const course = await prisma.course.findFirst({
         include: {
@@ -182,6 +214,12 @@ export const findCourseById = async (id: number): Promise<Course> => {
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @param userId 
+ * @returns 
+ */
 export const findCourseWithModulesByCanonicalId = async (id: string, userId: string): Promise<Course> => {
     const course = await prisma.course.findFirst({
         include: {
@@ -213,6 +251,12 @@ export const findCourseWithModulesByCanonicalId = async (id: string, userId: str
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @param userId 
+ * @returns 
+ */
 export const findCourseByCanonicalId = async (id: string, userId: string): Promise<Course> => {
     const course = await prisma.course.findFirst({
         where: { canonicalId: id }
@@ -227,6 +271,12 @@ export const findCourseByCanonicalId = async (id: string, userId: string): Promi
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @param userId 
+ * @returns 
+ */
 export const findUserCourseByCanonicalId = async (id: string, userId: string): Promise<Course> => {
     const course = await prisma.course.findFirst({
         include: {
@@ -259,6 +309,12 @@ export const findUserCourseByCanonicalId = async (id: string, userId: string): P
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @param userId 
+ * @returns 
+ */
 export const findUserCourseWithModulesByCanonicalId = async (id: string, userId: string): Promise<Course> => {
     const course = await prisma.course.findFirst({
         include: {
@@ -306,6 +362,12 @@ export const findUserCourseWithModulesByCanonicalId = async (id: string, userId:
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @param userId 
+ * @returns 
+ */
 export const findQuizAnswersByQuizId = async (userCourseId: number, quizId: number): Promise<UserQuizAnswer[]> => {
     const answers = await prisma.userQuizAnswer.findMany({
         where: {
@@ -333,6 +395,11 @@ export const findQuizAnswersByQuizId = async (userCourseId: number, quizId: numb
     })
 }
 
+/**
+ * 
+ * @param course 
+ * @returns 
+ */
 export const createFullCourse = async (course: CourseData): Promise<Course> => {
     const txCourse = await prisma.$transaction(async (tx) => {
         const createdCourse = await tx.course.create({
@@ -414,14 +481,6 @@ export const createFullCourse = async (course: CourseData): Promise<Course> => {
         return createdCourse;
     });
 
-    /**
-     * ,
-        {
-            maxWait: 6000,
-            timeout: 20000,
-        }
-     */
-
     if (!txCourse) {
         throw new Error("No se pudo crear el curso");
     }
@@ -442,6 +501,11 @@ export const createFullCourse = async (course: CourseData): Promise<Course> => {
     });
 }
 
+/**
+ * 
+ * @param userQuizState 
+ * @returns 
+ */
 export const createUserQuizState = async (userQuizState: UserQuizState): Promise<UserQuizState | null> => {
     const createdUserQuizState = await prisma.userQuizState.create({
         data: {
@@ -461,6 +525,12 @@ export const createUserQuizState = async (userQuizState: UserQuizState): Promise
     });
 }
 
+/**
+ * 
+ * @param quizId 
+ * @param userCourseId 
+ * @returns 
+ */
 export const findUserQuizState = async (quizId: number, userCourseId: number) => {
     const state = await prisma.userQuizState.findFirst({
         where: {
@@ -483,6 +553,12 @@ export const findUserQuizState = async (quizId: number, userCourseId: number) =>
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @param data 
+ * @returns 
+ */
 export const countCourseSales = async (): Promise<ResultSalesCourse[]> => {
     const results = await prisma.$queryRaw<ResultSalesCourse[]>`
         SELECT CONCAT(c.id, ' - ', c.title) AS course_name,
@@ -501,6 +577,12 @@ export const countCourseSales = async (): Promise<ResultSalesCourse[]> => {
     });
 }
 
+/**
+ * 
+ * @param id 
+ * @param data 
+ * @returns 
+ */
 export const sumCourseSalesByLastMonth = async (): Promise<CoursesMonthResult> => {
     const [result] = await prisma.$queryRaw<CoursesMonthResult[]>(Prisma.sql`
         SELECT
@@ -519,9 +601,13 @@ export const sumCourseSalesByLastMonth = async (): Promise<CoursesMonthResult> =
     return {
         current_month_count: Number(result.current_month_count),
         previous_month_count: Number(result.previous_month_count),
-    };;
+    };
 }
 
+/**
+ * 
+ * @returns 
+ */
 export const sumUsersByLastMonth = async (): Promise<UsersMonthResult> => {
     const [result] = await prisma.$queryRaw<UsersMonthResult[]>`
         SELECT
@@ -550,6 +636,13 @@ const modelMap: Record<string, keyof PrismaClient> = {
     option: 'possibleAnswerQuestion'
 };
 
+/**
+ * 
+ * @param courseId 
+ * @param adds 
+ * @param updates 
+ * @param deletes 
+ */
 export const updateFullCourse = async (
     courseId: number,
     adds: CourseChange[],
@@ -801,6 +894,12 @@ export const updateFullCourse = async (
     }
 }
 
+/**
+ * 
+ * @param id 
+ * @param data 
+ * @returns 
+ */
 export const createCourseModule = async (module: CourseModules): Promise<CourseModules | null> => {
     const createdCourseModule = await prisma.courseModules.create({
         data: {
@@ -817,6 +916,11 @@ export const createCourseModule = async (module: CourseModules): Promise<CourseM
     });
 }
 
+/**
+ * 
+ * @param cls 
+ * @returns 
+ */
 export const createModuleClass = async (cls: ModuleClass): Promise<ModuleClass | null> => {
     const createdModuleClass = await prisma.moduleClass.create({
         data: cls
@@ -827,6 +931,11 @@ export const createModuleClass = async (cls: ModuleClass): Promise<ModuleClass |
     return new ModuleClass({ ...createdModuleClass });
 }
 
+/**
+ * 
+ * @param quiz 
+ * @returns 
+ */
 export const createModuleQuiz = async (quiz: ModuleQuiz): Promise<ModuleQuiz | null> => {
     const createdModuleQuiz = await prisma.moduleQuiz.create({
         data: {
@@ -843,6 +952,11 @@ export const createModuleQuiz = async (quiz: ModuleQuiz): Promise<ModuleQuiz | n
     });
 }
 
+/**
+ * 
+ * @param question 
+ * @returns 
+ */
 export const createQuizQuestion = async (question: QuizQuestion): Promise<QuizQuestion | null> => {
     const createdQuizQuestion = await prisma.quizQuestion.create({
         data: {
@@ -860,6 +974,11 @@ export const createQuizQuestion = async (question: QuizQuestion): Promise<QuizQu
     });
 }
 
+/**
+ * 
+ * @param option 
+ * @returns 
+ */
 export const createQuestionOption = async (option: PossibleAnswerQuestion): Promise<PossibleAnswerQuestion | null> => {
     const createdQuestionOption = await prisma.possibleAnswerQuestion.create({
         data: option
@@ -870,6 +989,11 @@ export const createQuestionOption = async (option: PossibleAnswerQuestion): Prom
     return new PossibleAnswerQuestion({ ...createdQuestionOption });
 }
 
+/**
+ * 
+ * @param state 
+ * @returns 
+ */
 export const createUserClassState = async (state: UserClassesState): Promise<UserClassesState | null> => {
     const existState = await prisma.userClassesState.findFirst({
         where: {
@@ -907,6 +1031,11 @@ export const createUserClassState = async (state: UserClassesState): Promise<Use
     return new UserClassesState({ ...userClassState });
 }
 
+/**
+ * 
+ * @param state 
+ * @returns 
+ */
 export const createUserModuleFinishState = async (state: UserModuleState): Promise<UserModuleState | null> => {
     let userClassState = await prisma.userModuleState.findFirst({
         where: {
@@ -932,6 +1061,11 @@ export const createUserModuleFinishState = async (state: UserModuleState): Promi
     return new UserModuleState({ ...userClassState });
 }
 
+/**
+ * 
+ * @param answer 
+ * @returns 
+ */
 export const createQuestionAnswer = async (answer: UserQuizAnswer): Promise<UserQuizAnswer | null> => {
     const existAnswer = await prisma.userQuizAnswer.findFirst({
         where: {
@@ -975,6 +1109,11 @@ export const createQuestionAnswer = async (answer: UserQuizAnswer): Promise<User
     return new UserQuizAnswer({ ...userQuestionAnswer });
 }
 
+/**
+ * 
+ * @param state 
+ * @returns 
+ */
 export const createUserModuleState = async (state: UserModuleState): Promise<UserModuleState | null> => {
     const userClassState = await prisma.userModuleState.create({
         data: {
@@ -989,6 +1128,11 @@ export const createUserModuleState = async (state: UserModuleState): Promise<Use
     return new UserModuleState({ ...userClassState });
 }
 
+/**
+ * 
+ * @param state 
+ * @returns 
+ */
 export const updateCourse = async (courseId: number, data: Partial<Course>): Promise<Course> => {
     const { category, courseModules, cart, userCourse, ...updateData } = data;
     const updatedCourse = await prisma.course.update({
@@ -998,6 +1142,12 @@ export const updateCourse = async (courseId: number, data: Partial<Course>): Pro
     return new Course({ ...updatedCourse });
 };
 
+/**
+ * 
+ * @param moduleId 
+ * @param data 
+ * @returns 
+ */
 export const updateModule = async (moduleId: number, data: Partial<CourseModules>): Promise<CourseModules> => {
     const { moduleClass, moduleQuiz, ...updateData } = data;
     const updatedModule = await prisma.courseModules.update({
@@ -1007,6 +1157,12 @@ export const updateModule = async (moduleId: number, data: Partial<CourseModules
     return new CourseModules({ ...updatedModule });
 };
 
+/**
+ * 
+ * @param classId 
+ * @param data 
+ * @returns 
+ */
 export const updateClass = async (classId: number, data: Partial<ModuleClass>): Promise<ModuleClass> => {
     const updatedClass = await prisma.moduleClass.update({
         where: { id: classId },
@@ -1015,6 +1171,12 @@ export const updateClass = async (classId: number, data: Partial<ModuleClass>): 
     return new ModuleClass({ ...updatedClass });
 };
 
+/**
+ * 
+ * @param quizId 
+ * @param data 
+ * @returns 
+ */
 export const updateQuiz = async (quizId: number, data: Partial<ModuleQuiz>): Promise<ModuleQuiz> => {
     const { quizQuestion, userQuizState, ...updateData } = data;
     const updatedQuiz = await prisma.moduleQuiz.update({
@@ -1024,6 +1186,12 @@ export const updateQuiz = async (quizId: number, data: Partial<ModuleQuiz>): Pro
     return new ModuleQuiz({ ...updatedQuiz });
 };
 
+/**
+ * 
+ * @param questionId 
+ * @param data 
+ * @returns 
+ */
 export const updateQuestion = async (questionId: number, data: Partial<QuizQuestion>): Promise<QuizQuestion> => {
     const { possibleAnswerQuestion, ...updateData } = data;
     const updatedQuestion = await prisma.quizQuestion.update({
@@ -1033,6 +1201,12 @@ export const updateQuestion = async (questionId: number, data: Partial<QuizQuest
     return new QuizQuestion({ ...updatedQuestion });
 };
 
+/**
+ * 
+ * @param optionId 
+ * @param data 
+ * @returns 
+ */
 export const updateOption = async (optionId: number, data: Partial<PossibleAnswerQuestion>): Promise<PossibleAnswerQuestion> => {
     const updatedOption = await prisma.possibleAnswerQuestion.update({
         where: { id: optionId },
@@ -1041,36 +1215,66 @@ export const updateOption = async (optionId: number, data: Partial<PossibleAnswe
     return new PossibleAnswerQuestion({ ...updatedOption });
 };
 
+/**
+ * 
+ * @param courseId 
+ * @returns 
+ */
 export const deleteCourse = async (courseId: number): Promise<void> => {
     await prisma.course.delete({
         where: { id: courseId },
     });
 };
 
+/**
+ * 
+ * @param moduleId 
+ * @returns 
+ */
 export const deleteModule = async (moduleId: number): Promise<void> => {
     await prisma.courseModules.delete({
         where: { id: moduleId },
     });
 };
 
+/**
+ * 
+ * @param classId 
+ * @returns 
+ */
 export const deleteClass = async (classId: number): Promise<void> => {
     await prisma.moduleClass.delete({
         where: { id: classId },
     });
 };
 
+/**
+ * 
+ * @param quizId 
+ * @returns 
+ */
 export const deleteQuiz = async (quizId: number): Promise<void> => {
     await prisma.moduleQuiz.delete({
         where: { id: quizId },
     });
 };
 
+/**
+ * 
+ * @param questionId 
+ * @returns 
+ */
 export const deleteQuestion = async (questionId: number): Promise<void> => {
     await prisma.quizQuestion.delete({
         where: { id: questionId },
     });
 };
 
+/**
+ * 
+ * @param optionId 
+ * @returns 
+ */
 export const deleteOption = async (optionId: number): Promise<void> => {
     await prisma.possibleAnswerQuestion.delete({
         where: { id: optionId },

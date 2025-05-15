@@ -1,11 +1,15 @@
 import { DataPaginated, RegisterUser, RequestDataPaginated, UserCreateData } from "@/utils/types"
 import { User } from "@/models/user"
 import { allUsers, countAllUsers, createUser, findUserByEmail, findUserById, findUserByPhoneNumber, updateUserById } from "@/repository/users"
-import { cleanData } from "@/utils/filter-data";
 import { logPrismaError } from "@/exceptions/error-encoder";
 
 export const USERS_PAGE_SIZE = 10;
 
+/**
+ * 
+ * @param page 
+ * @returns 
+ */
 export const getAllUsers = async (request: RequestDataPaginated): Promise<DataPaginated<User>> => {
     try {
         const pagedUsers = await allUsers(request.page, USERS_PAGE_SIZE);
@@ -29,6 +33,11 @@ export const getAllUsers = async (request: RequestDataPaginated): Promise<DataPa
     }
 }
 
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
 export const getUserByEmail = async (email: string): Promise<User | null> => {
     try {
         return await findUserByEmail(email)
@@ -38,6 +47,11 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
     }
 }
 
+/**
+ * 
+ * @param phoneNumber 
+ * @returns 
+ */
 export const getUserByPhoneNumber = async (phoneNumber: string): Promise<User | null> => {
     try {
         return await findUserByPhoneNumber(phoneNumber);
@@ -47,6 +61,11 @@ export const getUserByPhoneNumber = async (phoneNumber: string): Promise<User | 
     }
 }
 
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
 export const getUserById = async (id: string): Promise<User | null> => {
     try {
         return await findUserById(id);
@@ -56,6 +75,11 @@ export const getUserById = async (id: string): Promise<User | null> => {
     }
 }
 
+/**
+ * 
+ * @param userInfo 
+ * @returns 
+ */
 export const registerUser = async (userInfo: RegisterUser | UserCreateData): Promise<User | null> => {
     try {
         return await createUser(new User({
@@ -73,6 +97,12 @@ export const registerUser = async (userInfo: RegisterUser | UserCreateData): Pro
     }
 }
 
+/**
+ * 
+ * @param id 
+ * @param userInfo 
+ * @returns 
+ */
 export const editUserById = async (id: string, userInfo: Partial<User>): Promise<User> => {
     try {
         return await updateUserById(id, userInfo);

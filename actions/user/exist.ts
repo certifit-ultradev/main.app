@@ -6,6 +6,11 @@ import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
 import { Middlewares } from "../server-action-middleware";
 import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const fetchUserByEmail = async (request: ServerActionRequest<FetchUserByEmail>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, FetchUserByEmail>(
         request,
@@ -32,6 +37,11 @@ export const fetchUserByEmail = async (request: ServerActionRequest<FetchUserByE
     );
 }
 
+/**
+ * 
+ * @param request 
+ * @returns 
+ */
 export const fetchUserById = async (request: ServerActionRequest<FetchUserByID>): Promise<ServerActionResponse<UserList>> => {
     return await Middlewares<UserList, FetchUserByID>(
         request,

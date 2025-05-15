@@ -44,3 +44,4 @@ next-env.d.ts
 
 # prisma generated files
 prisma/app/generated/prisma
+appmap.yml
