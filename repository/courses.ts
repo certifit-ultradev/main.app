@@ -262,7 +262,7 @@ export const findCourseByCanonicalId = async (id: string, userId: string): Promi
         where: { canonicalId: id }
     });
 
-    if (!course) {
+    if (course === null) {
         throw new NotFoundError('Curso no encontrado');
     }
 
@@ -353,7 +353,8 @@ export const findUserCourseWithModulesByCanonicalId = async (id: string, userId:
         where: { canonicalId: id }
     });
 
-    if (!course) {
+     if (course === null) {
+        console.log("findUserCourseWithModulesByCanonicalId");
         throw new NotFoundError('Curso no encontrado');
     }
 
