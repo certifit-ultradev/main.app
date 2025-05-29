@@ -148,7 +148,7 @@ export const CourseBasicInfoSchema = z.object({
     title: z.string().min(1, 'El título es obligatorio'),
     courseImage: z.union([
         z.instanceof(File, { message: "Debes subir una imagen" }).optional(), // Permitir que sea un archivo o undefined
-        z.string().url("La url de la imagen no es válida").optional(), // Permitir URL si ya está cargado
+        z.string().url("Debes subir una imagen").optional(), // Permitir URL si ya está cargado
     ]).refine((value) => {
         return value !== undefined
     }, 'La imagen es obligatoria'),
@@ -157,7 +157,7 @@ export const CourseBasicInfoSchema = z.object({
     instructorName: z.string().min(1, 'El nombre del instructor es obligatorio'),
     instructorPhoto: z.union([
         z.instanceof(File, { message: "Debes subir una imagen" }).optional(), // Permitir que sea un archivo o undefined
-        z.string().url("La url de la imagen no es válida").optional(), // Permitir URL si ya está cargado
+        z.string().url("Debes subir una imagen").optional(), // Permitir URL si ya está cargado
     ]).refine((value) => {
         return value !== undefined
     }, 'La imagen es obligatoria'),

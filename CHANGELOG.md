@@ -2,6 +2,14 @@
 
 ## [unreleased]
 
+## 1.1.1
+
+### Fixed
+
+- Add fallback code on prisma error-encoder if the error is not valid instance.
+- Adjust validation schemas messages
+- Add delete categories action
+
 ## 1.1.0
 
 ### Changed

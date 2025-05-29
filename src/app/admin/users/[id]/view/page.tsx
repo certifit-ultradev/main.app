@@ -13,7 +13,7 @@ const UserViewPage = async ({ params }) => {
 
     const user = result.payload;
     return (
-        <div className={cn('p-6 w-[110rem] my-4 mx-auto bg-white rounded-xl shadow-md space-y-4')}>
+        <div className={cn('p-6 w-[70rem] my-4 mx-auto bg-white rounded-xl shadow-md space-y-4')}>
             <h2 className={cn('text-2xl font-semibold')}>Detalles del Usuario</h2>
             <div className={cn('space-y-2')}>
                 <div className={cn('flex justify-between')}>

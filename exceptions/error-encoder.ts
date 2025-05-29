@@ -71,28 +71,72 @@ export function mapErrorToServerActionResponse(error: unknown) {
                 default:
                     return { success: false, error: "Algo ha pasado, intenta mas tarde!" };
             }
-        
+
         case error instanceof Prisma.PrismaClientRustPanicError:
+            console.error("PrismaClientRustPanicError:", error);
+            return {
+                success: false,
+                message: "ocurrio un error, contacte soporte",
+            };
         case error instanceof Prisma.PrismaClientInitializationError:
+            console.error("PrismaClientInitializationError:", error);
+            return {
+                success: false,
+                message: "ocurrio un error, intente mas tarde",
+            };
         case error instanceof Prisma.PrismaClientKnownRequestError:
-        case error instanceof Prisma.PrismaClientValidationError:
-            if (error instanceof Prisma.PrismaClientKnownRequestError) {
-                console.log(`Error conocido de Prisma (código ${error.code}): ${error.message}`);
-                // Errores conocidos de Prisma
-                if (error.code === 'P2002') {
+            // Errores conocidos de Prisma
+            console.log(`Error conocido de Prisma (código ${error.code}): ${error.message}`);
+            switch (error.code) {
+                case 'P2002':
                     return {
                         success: false,
                         message: "El correo electrónico ya está en uso.",
-                    }
-                } else {
+                    };
+                case 'P2003':
+                    return {
+                        success: false,
+                        message: "Se encuentra en uso por otro registro.",
+                    };
+                case 'P2025':
+                    return {
+                        success: false,
+                        message: "No se encontró el registro solicitado.",
+                    };
+                default:
                     console.log(`Error conocido de Prisma (código ${error.code}): ${error.message}`);
-                }
             }
+        case error instanceof Prisma.PrismaClientValidationError:
+            console.error("PrismaClientValidationError:", error);
             return {
                 success: false,
                 message: "ocurrio un error, intente mas tarde",
             };
         case error instanceof Error:
+            if ((error as object).constructor.name == "PrismaClientKnownRequestError") {
+                const code = (error as Prisma.PrismaClientKnownRequestError).code;
+                console.log(`Error conocido de Prisma (código ${code}): ${(error as Prisma.PrismaClientKnownRequestError).message}`);
+
+                switch (code) {
+                    case 'P2002':
+                        return {
+                            success: false,
+                            message: "El correo electrónico ya está en uso.",
+                        };
+                    case 'P2003':
+                        return {
+                            success: false,
+                            message: "Se encuentra en uso por otro registro.",
+                        };
+                    case 'P2025':
+                        return {
+                            success: false,
+                            message: "No se encontró el registro solicitado.",
+                        };
+                    default:
+                        console.log(`Error conocido de Prisma: ${error.message}`);
+                }
+            }
             return {
                 success: false,
                 message: "ocurrio un error, intente mas tarde",
@@ -133,8 +177,8 @@ export function logPrismaError(error: unknown) {
     } else if (error instanceof Prisma.PrismaClientRustPanicError) {
         // Errores de pánico en Rust
         console.log('Error crítico en el motor de Prisma:', error.message);
-    } else if (error instanceof Error){
+    } else if (error instanceof Error) {
         // Otros errores
-        console.log('Error desconocido:', error.message);
+        console.log('Error desconocido:', error.name);
     }
 }
