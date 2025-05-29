@@ -217,7 +217,14 @@ export const getTopThreeCourses = async (): Promise<CoursePlainData[]> => {
         const session = await auth();
         const userID = session?.user.id;
         const activeCourses = await findThreeCoursesActives(userID);
-        return activeCourses.map<CoursePlainData>((course: Course) => {
+
+        // filter active courses by expiresAt
+        const now = new Date();
+        const filteredActiveCourses = activeCourses.filter((course: Course) => {
+            return course.expiresAt > now;
+        });
+
+        return filteredActiveCourses.map<CoursePlainData>((course: Course) => {
             const modules = course.courseModules?.map((courseModule): CourseModule => ({
                 id: courseModule.id,
                 courseId: courseModule.courseId,

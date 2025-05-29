@@ -40,12 +40,12 @@ export const TopThreeCourses = () => {
                 const response = await fetch('/api/courses/top-three');
                 const activeCourses = await response.json();
                 // Asigna cursos
-               setCourses(activeCourses);
+                setCourses(activeCourses);
             } catch (error) {
                 console.error(error);
             } finally {
                 // Quita el loading
-               setIsLoading(false);
+                setIsLoading(false);
             }
         };
 
@@ -65,48 +65,50 @@ export const TopThreeCourses = () => {
         router.push(`/courses/${course.canonicalId}/learn`);
     }
 
+    const coursesElements = courses.map((course, index) => (
+        <div key={index} className={cn(
+            "bg-white rounded-xl snap-center flex-shrink-0 w-full sm:w-auto border",
+            "text-center px-4 py-2"
+        )} style={{ scrollSnapAlign: "center" }}>
+            <div className={cn('relative mb-4')}>
+                <Image src={course.courseImage} alt={`Curso ${index + 1}`} className={cn('w-full h-full rounded-lg')} width={310} height={212} />
+                <div className={cn('absolute top-2 right-2 bg-[#ababab] bg-opacity-60 text-white text-xs px-2 py-1 rounded-full')}>
+                    {course.courseDuration}
+                </div>
+            </div>
+            <span className={cn('text-[#0BBBE7] text-xs font-medium block mb-1')}>{course.category?.name}</span>
+            <div className={cn('flex items-center justify-between')}>
+                <h3 className={cn('text-lg font-semibold text-black flex ')}>
+                    {course.title}
+                </h3>
+                {!course.alreadyPurchased ? (<Button onClick={() => {
+                    setIsOpen(true);
+                    setSelectedCourse(course);
+                }} className={cn('text-white border-none shadow-none text-base')}> <ArrowTopLeftIcon className={cn('text-white')} width={10} height={10} /></Button>) : <></>}
+            </div>
+            <p className={cn('text-gray-400 text-sm mt-2 mb-4 leading-relaxed')}>
+                {course.description.substring(0, 30)}...
+            </p>
+            <div className={cn('flex items-center justify-between text-sm flex-col space-x-3 lg:flex-row')}>
+                <div className={cn('flex items-center space-x-2')}>
+                    <Image src={course.instructorPhoto} alt="Instructor" className={cn('w-6 h-6 rounded-full')} width={40} height={40} />
+                    <div className={cn('items-center justify-between text-sm')}>
+                        <p className={cn('text-[#101828] font-bold')}>{course.instructorName}</p>
+                        <p className={cn('text-gray-500 text-xs')}>Entrenador</p>
+                    </div>
+                </div>
+                {!course.alreadyPurchased ? (<span className={cn('text-[#0BBBE7] font-semibold')}>${course.price}</span>) : (<Button onClick={() => course.alreadyPurchased ? handleStartCourse(course) : handleBuyCourse(course)} className={cn('mt-6 lg:mt-0 px-6 py-3 bg-[#0BBBE7] hover:bg-[#009fdf] font-semibold rounded-full transition-colors text-white')}> Ver curso</Button>)}
+            </div>
+        </div>
+    ));
+
     return (
         <>
             <div className={cn(
                 "relative flex overflow-x-auto snap-x snap-mandatory gap-4",
                 "md:grid md:grid-cols-3 md:gap-8 md:overflow-hidden"
             )}>
-                {isLoading ? (<Loading/>) : courses.map((course, index) => (
-                    <div key={index} className={cn(
-                        "bg-white rounded-xl snap-center flex-shrink-0 w-full sm:w-auto border",
-                        "text-center px-4 py-2"
-                    )} style={{ scrollSnapAlign: "center" }}>
-                        <div className={cn('relative mb-4')}>
-                            <Image src={course.courseImage} alt={`Curso ${index + 1}`} className={cn('w-full h-full rounded-lg')} width={310} height={212} />
-                            <div className={cn('absolute top-2 right-2 bg-[#ababab] bg-opacity-60 text-white text-xs px-2 py-1 rounded-full')}>
-                                {course.courseDuration}
-                            </div>
-                        </div>
-                        <span className={cn('text-[#0BBBE7] text-xs font-medium block mb-1')}>{course.category?.name}</span>
-                        <div className={cn('flex items-center justify-between')}>
-                            <h3 className={cn('text-lg font-semibold text-black flex ')}>
-                                {course.title}
-                            </h3>
-                            {!course.alreadyPurchased ? (<Button onClick={() => {
-                                setIsOpen(true);
-                                setSelectedCourse(course);
-                            }} className={cn('text-white border-none shadow-none text-base')}> <ArrowTopLeftIcon className={cn('text-white')} width={10} height={10} /></Button>) : <></>}
-                        </div>
-                        <p className={cn('text-gray-400 text-sm mt-2 mb-4 leading-relaxed')}>
-                            {course.description.substring(0, 30)}...
-                        </p>
-                        <div className={cn('flex items-center justify-between text-sm flex-col space-x-3 lg:flex-row')}>
-                            <div className={cn('flex items-center space-x-2')}>
-                                <Image src={course.instructorPhoto} alt="Instructor" className={cn('w-6 h-6 rounded-full')} width={40} height={40} />
-                                <div className={cn('items-center justify-between text-sm')}>
-                                    <p className={cn('text-[#101828] font-bold')}>{course.instructorName}</p>
-                                    <p className={cn('text-gray-500 text-xs')}>Entrenador</p>
-                                </div>
-                            </div>
-                            {!course.alreadyPurchased ? (<span className={cn('text-[#0BBBE7] font-semibold')}>${course.price}</span>) : (<Button onClick={() => course.alreadyPurchased ? handleStartCourse(course) : handleBuyCourse(course)} className={cn('mt-6 lg:mt-0 px-6 py-3 bg-[#0BBBE7] hover:bg-[#009fdf] font-semibold rounded-full transition-colors text-white')}> Ver curso</Button>)}
-                        </div>
-                    </div>
-                ))}
+                {isLoading ? (<Loading />) : coursesElements.length > 0 ? coursesElements : EmptyCourse()}
             </div>
             <div>
                 <ModalCourseDetail course={selectedCourse} isOpen={isOpen} setOpen={handleModalClose} />
@@ -119,6 +121,14 @@ type ModalCourseDetailProp = {
     course: CoursePlainData
     isOpen: boolean;
     setOpen: () => void;
+}
+
+const EmptyCourse = () => {
+    return (
+        <div className={cn('col-start-2')}>
+            <p className={cn('text-gray-500')}>No hay cursos disponibles</p>
+        </div>
+    );
 }
 
 const ModalCourseDetail = ({ course, isOpen, setOpen }: ModalCourseDetailProp) => {

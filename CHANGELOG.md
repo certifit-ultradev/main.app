@@ -9,6 +9,8 @@
 - Add fallback code on prisma error-encoder if the error is not valid instance.
 - Adjust validation schemas messages
 - Add delete categories action
+- Add message error on contact-form submit
+- Add empty courses message when dont exist courses on top-courses and user-courses component rendering
 
 ## 1.1.0
 
