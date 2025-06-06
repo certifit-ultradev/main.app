@@ -6,9 +6,10 @@ import { notFound } from "next/navigation";
 // @ts-expect-error: params
 const LearnPage = async ({ params }) => {
     const { canonicalId } = await params;
+    const rqHeaders = await headers();
     const response = await fetch(
         process.env.NEXT_PUBLIC_APP_URL + `/api/courses/${canonicalId}`,
-        { method: 'GET', headers: await headers() }
+        { method: 'GET', headers: new Headers(rqHeaders) }
     );
 
     let courseData = null;
