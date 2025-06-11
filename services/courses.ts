@@ -17,6 +17,7 @@ import { getCourseProgress } from "@/utils/classes";
 import { UserQuizState } from "@/models/user-quiz-state";
 import { NotFoundError } from "@/exceptions/not-found";
 import { CourseChange } from "@/utils/change-types";
+import { CourseNotPurchasedError } from "@/exceptions/course-not-purchased";
 
 export const COURSES_PAGE_SIZE = 10;
 
@@ -90,11 +91,11 @@ export const getUserCourseWithModulesByCanonicalId = async (canonicalId: string)
 
         let course = await findUserCourseWithModulesByCanonicalId(canonicalId, userID);
         if (!course.courseModules) {
-            throw new Error("El curso no puede ser visto, intente mas tarde.");
+            throw new CourseNotPurchasedError("El curso no puede ser visto, intente mas tarde.");
         }
 
         if (course.userCourse?.length == 0) {
-            throw new Error("El curso no puede ser visto, no te pertenece");
+            throw new CourseNotPurchasedError("El curso no puede ser visto, no te pertenece");
         }
 
         course.courseModules = course.courseModules?.map((courseModule): CourseModules => ({

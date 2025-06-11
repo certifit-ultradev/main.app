@@ -7,6 +7,7 @@ import { UserNotLoggedError } from "./user-not-logged";
 import { UserExistError } from "./user-exist";
 import { AuthError } from "next-auth";
 import { Prisma } from "@/prisma/app/generated/prisma/client";
+import { CourseNotPurchasedError } from "./course-not-purchased";
 
 /**
  * mapErrorToAPIResponse
@@ -20,6 +21,7 @@ export function mapErrorToAPIResponse(error: unknown) {
         case error instanceof TransactionError:
         case error instanceof UserNotLoggedError:
         case error instanceof CourseInvalidStateError:
+        case error instanceof CourseNotPurchasedError:
             return Response.json({
                 success: false,
                 message: error.cause,

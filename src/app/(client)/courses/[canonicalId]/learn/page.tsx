@@ -1,5 +1,7 @@
 
 import { ClientCourseView } from "@/components/course/client/course-view";
+import { CourseNotPurchasedError } from "@/exceptions/course-not-purchased";
+import { NotFoundError } from "@/exceptions/not-found";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
@@ -15,9 +17,32 @@ const LearnPage = async ({ params }) => {
     let courseData = null;
     try {
         courseData = await response.json();
+        console.log("response received:", courseData);
+        if (!response.ok) {
+            console.log("response not ok:", response.status);
+            switch (response.status) {
+                case 404:
+                    throw new NotFoundError(courseData.message);
+                case 400:
+                    throw new CourseNotPurchasedError(courseData.message);
+                default:
+                    throw new Error(`Error inesperado: ${response.statusText}`);
+            }
+        }
     } catch (e) {
-        console.error(e);
-        notFound();
+        if (e && typeof e === 'object') {
+            switch (e.constructor) {
+                case CourseNotPurchasedError:
+                    throw new Error((e as CourseNotPurchasedError).cause);
+                case Error:
+                    throw e;
+                case NotFoundError:
+                    notFound();
+                default:
+                    throw new Error(`${e}, intente mas tarde`);
+            }
+        }
+
     }
 
     return (
