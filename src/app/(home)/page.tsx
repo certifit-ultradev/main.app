@@ -16,6 +16,7 @@ import { z } from "zod";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import PhoneInput from "react-phone-input-2";
+import { FormError } from "@/components/form/form-error";
 
 // Esquema de validación con Zod
 const EmailDataSchema = z.object({
@@ -46,6 +47,7 @@ export default function Home() {
     } = useForm<EmailDataFormValues>({
         resolver: zodResolver(EmailDataSchema),
     });
+    const [error, setError] = useState<string>('');
     const [courses, setCourses] = useState<CourseOption[]>([]);
 
     useEffect(() => {
@@ -74,9 +76,12 @@ export default function Home() {
                 body: JSON.stringify(formData),
             });
             const result = await res.json();
+            if (result.success === false) {
+                setError(result.message || "Ocurrió un error al enviar el formulario, intente mas tard");
+            }
             console.log("Respuesta de la API:", result);
-            // Aquí puedes agregar lógica de feedback, redirección, etc.
         } catch (error) {
+            setError("Ocurrió un error al enviar el formulario, intente mas tarde");
             console.error("Error al enviar el formulario:", error);
         }
     };
@@ -252,6 +257,9 @@ export default function Home() {
                     </div>
                     {/* Formulario a la derecha */}
                     <div className={cn("w-full md:w-1/2 rounded-xl p-8 space-y-6")}>
+                        <div className={cn('relative mb-4 text-white')}>
+                            <FormError error={error} />
+                        </div>
                         <form onSubmit={handleSubmit(onSubmit)} className={cn("space-y-6")} encType="multipart/form-data">
                             <div className={cn("grid grid-cols-1 sm:grid-cols-2 gap-4")}>
                                 <div className={cn("flex flex-col")}>

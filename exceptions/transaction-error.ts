@@ -1,9 +1,13 @@
 /**
  * TransactionError class
  */
-export class TransactionError {
+export class TransactionError extends Error {
     cause: string;
+    message: string;
     constructor(cause: string) {
-        this.cause = cause
+        super(`Error en la transacción: ${cause}`);
+        this.cause = cause;
+        this.name = 'TransactionError';
+        this.message = `Error en la transacción: ${cause}`;
     }
 }

@@ -405,7 +405,7 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                                         )}
                                         <div className={cn('mb-4')}>
                                             <label className={cn('block text-sm font-medium text-gray-700 mb-2')} htmlFor={`${moduleIndex}-classes-${classIndex}-video`}>
-                                                Subir video (MP4, 5MB max)
+                                                Subir video (MP4, 900MB max)
                                             </label>
                                             <div className={cn('border-dashed border-2 border-gray-300 rounded-md p-4')}>
                                                 <input

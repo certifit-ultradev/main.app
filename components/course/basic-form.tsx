@@ -92,6 +92,8 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
         }
     };
 
+    console.log("errors", errors);
+
     return (
         <div className={cn('w-full lg:w-3/4')}>
             <div className={cn('mb-6')}>
@@ -132,7 +134,7 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
                     <label className={cn('block text-sm font-medium text-gray-700 mb-2"')} htmlFor="courseImage">
                         Imagen del curso
                     </label>
-                    <input type="file" id="courseImage" placeholder="[Imagen del curso]" onChange={(e) => handleFileBasicDataChange('courseImage', e)}
+                    <input type="file" id="courseImage" placeholder="[Imagen del curso]" onChange={(e) => handleFileBasicDataChange('courseImage', e)} accept="image/png"
                         className={cn('block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:bg-blue-50 file:text-[#0BBBE7] hover:file:bg-blue-100')}
                     />
                     <ErrorMessage
@@ -229,14 +231,7 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
                     </select>
                     <ErrorMessage
                         errors={errors}
-                        name="category.id"
-                        render={({ message }) => (
-                            <p className={cn('text-red-500 text-sm text-left w-full')}>{message}</p>
-                        )}
-                    />
-                    <ErrorMessage
-                        errors={errors}
-                        name="category.name"
+                        name="category-id"
                         render={({ message }) => (
                             <p className={cn('text-red-500 text-sm text-left w-full')}>{message}</p>
                         )}
@@ -263,7 +258,7 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
 
                 <div>
                     <label className={cn('block text-sm font-medium text-gray-700 mb-2"')} htmlFor="expiresAt">
-                        Selecciona el rango de fecha en que este curso estará activo *
+                        Fechah de expiración del Curso  *
                     </label>
                     <div className={cn('relative')}>
                         <input type="date" id="expiresAt" onChange={(e) => handleBasicDataChange('expiresAt', e.target.value)} value={data.expiresAt}

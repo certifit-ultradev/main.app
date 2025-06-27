@@ -122,8 +122,6 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
         setIsStarted(true)
     }
 
-    console.log("quiz state ", isStarted, isFinished, score);
-
     return (
         <div>
             {!isStarted && !isFinished && !score && (
@@ -140,7 +138,7 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
                     </div>
                     <div className={cn('flex flex-col mb-4 items-center w-full')}>
                         <SubmitButton
-                            label={!score ? 'Volver a intentar' : 'Empezar'}
+                            label={score ? 'Volver a intentar' : 'Empezar'}
                             customClass={cn('bg-[#0BBBE7] text-white text-lg px-8 py-2 rounded-2xl hover:bg-[#009fdf] transition-colors')}
                             onClick={() => setIsStarted(true)}
                         />

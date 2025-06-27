@@ -14,7 +14,7 @@ import { NextRequest } from 'next/server';
 export async function POST(req: NextRequest, context) {
     try {
         // Obtener el canonicalId desde los parámetros de la URL
-        const { canonicalId } = context.params;
+        const { canonicalId } = await context.params;
 
         // Leer los datos del form (JSON) enviado en la request
         const requestData = await req.json();

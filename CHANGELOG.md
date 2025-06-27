@@ -2,6 +2,21 @@
 
 ## [unreleased]
 
+## 1.1.1
+
+### Fixed
+
+- Add fallback code on prisma error-encoder if the error is not valid instance.
+- Adjust validation schemas messages.
+- Add delete categories action.
+- Add message error on contact-form submit.
+- Add empty courses message when dont exist courses on top-courses and user-courses component rendering.
+- Add exception control on course learn page.
+- Adjust condition race over transaction notification and update when the modal still open after receive the notification.
+- Add not found page on root directory.
+- Add error page on client, admin and home group directories.
+- Add new vercel blob url to config.
+
 ## 1.1.0
 
 ### Changed

@@ -30,19 +30,22 @@ export const quoteCoursePaymentTransaction = async (courseCanonicalId: string) =
         if (!userId) {
             throw new UserNotLoggedError("El usuario debe loguearse");
         }
-        console.log("session", session.user);
         const isEmailVerified = session?.user.emailVerified;
         if (!isEmailVerified) {
             throw new UserNotLoggedError("El usuario debe verificar su email");
         }
+
         const course = await getCourseByCanonicalId(courseCanonicalId);
         if (course === null) {
-            console.log("course", "course === null");
             throw new NotFoundError("Curso no encontrado");
         }
 
         if (!course.isActive) {
             throw new CourseInvalidStateError("El curso no esta activo");
+        }
+
+        if (course.expiresAt < new Date()) {
+            throw new CourseInvalidStateError("El curso ha expirado");
         }
 
         const alreadyPurchased = await getUserCourseByCanonicalId(course.canonicalId);
@@ -110,6 +113,26 @@ export const createCoursePaymentTransaction = async (purchaseId: number, trxId: 
         if (!purchase) {
             throw new NotFoundError("La compra no existe");
         }
+
+        // here exist an condition race, this method is called when the wompi modal is closed, but the notification from wompi is already received
+        // so the purchase can be already approved, so we check if the purchase is already approved
+        // check if the purchase is already approved and if last update is recently (5 minutes)
+        console.log("purchase.updatedAt", purchase.updatedAt);
+        console.log("currentTime", new Date());
+        console.log("purchase.updatedAt.getTime", new Date(purchase.updatedAt ?? new Date()).getTime());
+        console.log("currentTime", new Date().getTime());
+
+        console.log("5 minutes", 5 * 60 * 1000);
+        console.log("lastUpdate", (new Date().getTime() - new Date(purchase.updatedAt ?? new Date()).getTime()) < 5 * 60 * 1000);
+        console.log("purchase.status", purchase.status);
+        const lastUpdate = purchase.updatedAt;
+        if (lastUpdate && (new Date().getTime() - new Date(lastUpdate).getTime()) < 5 * 60 * 1000 && purchase.status == 'APPROVED') {
+            console.log("Se presento condicion de carrera, el pago ya fue realizado", purchase.status, "lastUpdate", lastUpdate, "currentTime", new Date());            return {
+                success: true,
+                message: "Pago registrado correctamente."
+            };
+        }
+
 
         if (purchase.status == 'APPROVED') {
             throw new TransactionError("El pago ya fue realizado");

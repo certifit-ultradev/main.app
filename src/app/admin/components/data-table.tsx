@@ -56,7 +56,6 @@ export function CourseListDataTable() {
             } finally {
                 setIsLoading(false); // Fin de la carga
             }
-
         };
 
         fetchData();
