@@ -8,7 +8,12 @@ import { ColumnDef } from '@tanstack/react-table'
 import { MoreVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation'
 
-export const CategoriesDataTableColumns = (): ColumnDef<CourseCategoryData>[] => {
+interface CategoriesColumnsProps {
+    onDelete: (id: number) => Promise<void>;
+}
+
+
+export const CategoriesDataTableColumns = ({onDelete}:CategoriesColumnsProps): ColumnDef<CourseCategoryData>[] => {
     const router = useRouter();
     return [
         {
@@ -24,7 +29,7 @@ export const CategoriesDataTableColumns = (): ColumnDef<CourseCategoryData>[] =>
             id: 'actions',
             enableHiding: false,
             cell: ({ row }) => {
-                const course = row.original
+                const category = row.original
                 return (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -38,10 +43,18 @@ export const CategoriesDataTableColumns = (): ColumnDef<CourseCategoryData>[] =>
                             <DropdownMenuItem
                                 className='hover:bg-gray-100'
                                 onClick={() => {
-                                    router.push(`/admin/categories/${course.id}/edit`);
+                                    router.push(`/admin/categories/${category.id}/edit`);
                                 }}
                             >
                                 Editar categoria
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                className='hover:bg-gray-100'
+                                onClick={async () => {
+                                    await onDelete(category.id as number);
+                                }}
+                            >
+                                Eliminar categoria
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

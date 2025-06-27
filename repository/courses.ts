@@ -354,7 +354,6 @@ export const findUserCourseWithModulesByCanonicalId = async (id: string, userId:
     });
 
      if (course === null) {
-        console.log("findUserCourseWithModulesByCanonicalId");
         throw new NotFoundError('Curso no encontrado');
     }
 

@@ -73,18 +73,18 @@ export default function CertifitCheckoutComponent({ courseCanonicalId }: Certifi
                     setIsLoading(false);
                     setIsOpen(true);
                 }
-                console.error(error);
             }
         };
         startTrx();
 
         setInterval(() => {
             setIsLoading(false);
-        }, 2000);
+        }, 5000);
     };
 
     const handleModalClose = () => {
         setIsOpen(false);
+        window.location.reload();
     };
 
     return (
@@ -99,7 +99,8 @@ export default function CertifitCheckoutComponent({ courseCanonicalId }: Certifi
         </>
     );
 }
-
+// userCourse 2
+// card 10
 type ModalPurchaseResultProp = {
     result: {
         success: boolean,

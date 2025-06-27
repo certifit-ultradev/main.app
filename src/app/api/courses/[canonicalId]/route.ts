@@ -1,4 +1,6 @@
+import { CourseNotPurchasedError } from '@/exceptions/course-not-purchased';
 import { mapErrorToAPIResponse } from '@/exceptions/error-encoder';
+import { NotFoundError } from '@/exceptions/not-found';
 import { getUserCourseWithModulesByCanonicalId } from '@/services/courses';
 import { CourseModule, QuestionOption, QuizQuestions } from '@/utils/types';
 import { NextRequest } from 'next/server';
@@ -15,7 +17,7 @@ export async function GET(req: NextRequest, context) {
         const { canonicalId } = params;
         const course = await getUserCourseWithModulesByCanonicalId(canonicalId);
         if (!course) {
-            throw new Error("El curso no existe");
+            throw new NotFoundError("El curso no existe");
         }
 
         const modules = course.courseModules?.map((courseModule): CourseModule => ({
@@ -54,7 +56,7 @@ export async function GET(req: NextRequest, context) {
         }));
 
         if (!course.userCourse) {
-            throw Error("El curso no le pertenece al usuario");
+            throw new CourseNotPurchasedError("El curso no le pertenece al usuario");
         }
 
         return Response.json({
