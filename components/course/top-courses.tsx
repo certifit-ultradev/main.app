@@ -125,7 +125,7 @@ type ModalCourseDetailProp = {
 
 const EmptyCourse = () => {
     return (
-        <div className={cn('col-start-2')}>
+        <div className={cn('flex col-start-2 justify-center')}>
             <p className={cn('text-gray-500')}>No hay cursos disponibles</p>
         </div>
     );
