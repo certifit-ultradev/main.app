@@ -2,6 +2,11 @@
 
 ## [unreleased]
 
+## 1.1.2
+
+- Now the quote payment dont store the course price.
+
+
 ## 1.1.1
 
 ### Fixed

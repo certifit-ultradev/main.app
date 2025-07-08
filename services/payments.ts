@@ -64,8 +64,8 @@ export const quoteCoursePaymentTransaction = async (courseCanonicalId: string) =
                     reference: uuidv4(),
                     paymentMethod: "",
                     trxCreationDate: new Date(),
-                    total: course?.price,
-                    subtotal: course?.price,
+                    total: 0,
+                    subtotal: 0,
                     status: "PENDING"
                 }));
                 if (!currentPurchase) {
@@ -74,10 +74,11 @@ export const quoteCoursePaymentTransaction = async (courseCanonicalId: string) =
             }
         }
 
+
         return {
             purchaseId: currentPurchase?.id,
             currency: 'COP',
-            amountInCents: (currentPurchase?.total as number) * 100,
+            amountInCents: course?.price * 100,
             reference: currentPurchase?.reference,
             publicKey: pubKey,
             redirectUrl: getPaymentReviewUrl(),
