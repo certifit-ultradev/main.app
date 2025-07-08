@@ -82,7 +82,7 @@ export const quoteCoursePaymentTransaction = async (courseCanonicalId: string) =
             reference: currentPurchase?.reference,
             publicKey: pubKey,
             redirectUrl: getPaymentReviewUrl(),
-            signature: { integrity: await generateSignature(currentPurchase?.reference as string, (currentPurchase?.total as number) * 100, sigData as string) },
+            signature: { integrity: await generateSignature(currentPurchase?.reference as string, course?.price * 100, sigData as string) },
             expirationTime: Date.now()
         };
     } catch (error) {
