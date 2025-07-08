@@ -5,7 +5,7 @@
 ## 1.1.2
 
 - Now the quote payment dont store the course price.
-
+- Replace trainer image.
 
 ## 1.1.1
 
