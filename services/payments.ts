@@ -8,7 +8,7 @@ import { Purchase } from "@/models/purchase";
 import { NotFoundError } from "@/exceptions/not-found";
 import { CourseAlreadyPurchasedError } from "@/exceptions/course-already-purchased";
 import { TransactionEventUpdate } from "@/utils/types";
-import { assignCourse } from "@/repository/users";
+import { assignCourse, removeCourseFromUser } from "@/repository/users";
 import { getPaymentReviewUrl } from "@/utils/url";
 import { UserNotLoggedError } from "@/exceptions/user-not-logged";
 import { CourseInvalidStateError } from "@/exceptions/course-invalid-state";
@@ -198,6 +198,10 @@ export const updateCoursePaymentTransaction = async (trxData: TransactionEventUp
             if (!userCourse) {
                 throw new TransactionError(`La actualización del pago no se pudo completar correctamente. trxId - ${trxData.id}`);
             }
+        }
+
+        if (trxData.status == 'VOIDED' && updatedPurchase) {
+            await removeCourseFromUser(purchase.cart?.userId as string, purchase.cart?.courseId as number);
         }
 
         if (!updatedPurchase) {
