@@ -6,6 +6,13 @@
 
 ### Fixed
 
+- Delete all console.logs from code.
+- add color filter to image.
+
+### 1.1.4
+
+## Fixed
+
 - Delete console.log from error.tsx
 
 ## 1.1.3

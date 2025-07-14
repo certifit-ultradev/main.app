@@ -65,7 +65,6 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
         }).then(async (response) => {
             const result = await response.json();
             if (!result.success) {
-                console.log("error, intente mas tarde");
                 return;
             }
             router.refresh();
@@ -160,15 +159,12 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
         }).then(async (response) => {
             const result = await response.json();
             if (!result.success) {
-                console.log("error, intent mas tarde");
                 return;
             }
             const moduleIndex = data.modules!.findIndex((module) => module.id === currentModuleId)
             if (data.modules!.length - 1 > moduleIndex!) {
                 setSelectedClass({ moduleIndex: moduleIndex! + 1, classIndex: 0, classId: data.modules![moduleIndex].classes![0].id });
                 setSelectedQuiz(null);
-            } else {
-                console.log("acabaste");
             }
         });
     }

@@ -40,8 +40,6 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
         }
     }
 
-
-
     const validateBasicData = () => {
         try {
             CourseBasicInfoSchema.parse(data);
@@ -91,8 +89,6 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
             });
         }
     };
-
-    console.log("errors", errors);
 
     return (
         <div className={cn('w-full lg:w-3/4')}>
