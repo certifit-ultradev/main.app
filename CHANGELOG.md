@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+### 1.1.4
+
+### Fixed
+
+- Delete console.log from error.tsx
+
 ## 1.1.3
 
 ### Fixed
