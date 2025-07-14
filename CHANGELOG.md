@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## 1.1.3
+
+### Fixed
+
+- Adjust notification API when is VOID type.
+
 ## 1.1.2
 
 - Now the quote payment dont store the course price.

@@ -146,3 +146,22 @@ export const assignCourse = async (userId: string, courseId: number): Promise<Us
         ...createdUserAssignation
     });
 }
+
+export const removeCourseFromUser = async (userId: string, courseId: number): Promise<void> => {
+    const userCourse = await prisma.userCourse.findFirst({
+        where: {
+            userId,
+            courseId
+        }
+    });
+
+    if (!userCourse) {
+        throw new NotFoundError('Asignación de curso no encontrada');
+    }
+
+    await prisma.userCourse.delete({
+        where: {
+            id: userCourse.id
+        }
+    });
+}
