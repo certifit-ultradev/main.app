@@ -203,7 +203,6 @@ export const getCourseByCanonicalId = async (canonicalId: string): Promise<Cours
 
         return await findCourseByCanonicalId(canonicalId, userID);
     } catch (error) {
-        console.log("course error", error);
         logPrismaError(error);
         throw error;
     }
@@ -262,7 +261,6 @@ export const getTopThreeCourses = async (): Promise<CoursePlainData[]> => {
             }
         });
     } catch (error) {
-        console.log("error", error);
         logPrismaError(error);
         return [];
     }
@@ -748,8 +746,7 @@ export const calculateTotalSalesByMonth = async (): Promise<CoursesMonthResult> 
         }
         return await sumCourseSalesByLastMonth();
     } catch (error) {
-        console.log("error", error);
-        //logPrismaError(error);
+        logPrismaError(error);
         throw error;
     }
 }

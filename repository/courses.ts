@@ -596,8 +596,6 @@ export const sumCourseSalesByLastMonth = async (): Promise<CoursesMonthResult> =
         WHERE
             p.status = 'APPROVED';`);
 
-    console.log("result sumCourseSalesByLastMonth", result);
-
     return {
         current_month_count: Number(result.current_month_count),
         previous_month_count: Number(result.previous_month_count),
@@ -620,7 +618,6 @@ export const sumUsersByLastMonth = async (): Promise<UsersMonthResult> => {
         FROM "User";
       `;
 
-    console.log("result sumUsersByLastMonth", result);
     return {
         current_month_count: Number(result.current_month_count),
         previous_month_count: Number(result.previous_month_count),
@@ -788,7 +785,6 @@ export const updateFullCourse = async (
         }
 
         const updatesGrouped = mergeChangesByTypeAndId(updates);
-        console.log("updatesGrouped", updatesGrouped);
         for (const type of Object.keys(updatesGrouped)) {
             // Resolvemos el nombre del modelo en Prisma
             const prismaModelName = modelMap[type];
@@ -834,7 +830,6 @@ export const updateFullCourse = async (
                         data,
                     });
                 } catch (error) {
-                    console.log(`Error updating ${type} (id=${id}):`);
                     throw error;
                 }
             }

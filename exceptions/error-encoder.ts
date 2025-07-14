@@ -88,7 +88,6 @@ export function mapErrorToServerActionResponse(error: unknown) {
             };
         case error instanceof Prisma.PrismaClientKnownRequestError:
             // Errores conocidos de Prisma
-            console.log(`Error conocido de Prisma (código ${error.code}): ${error.message}`);
             switch (error.code) {
                 case 'P2002':
                     return {
@@ -117,7 +116,6 @@ export function mapErrorToServerActionResponse(error: unknown) {
         case error instanceof Error:
             if ((error as object).constructor.name == "PrismaClientKnownRequestError") {
                 const code = (error as Prisma.PrismaClientKnownRequestError).code;
-                console.log(`Error conocido de Prisma (código ${code}): ${(error as Prisma.PrismaClientKnownRequestError).message}`);
 
                 switch (code) {
                     case 'P2002':

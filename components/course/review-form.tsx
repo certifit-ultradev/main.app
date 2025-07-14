@@ -10,7 +10,6 @@ import { uploadFile } from '@/utils/upload-file-blob';
 import SubmitButton from '../submitButton';
 import { Button } from '@nextui-org/react';
 import { FormError } from '../form/form-error';
-import { diffCourses } from '@/utils/diff';
 
 interface CourseReviewFormProps {
     data: CourseData;
@@ -45,7 +44,6 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                         return module;
                     });
                     result = await register({ data: dataWithOutFiles });
-                    console.log("result", result);
                     if (!result.success) {
                         setIsLoading(false);
                         setError(result.error ?? 'Error al crear el curso');
@@ -61,17 +59,12 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                         if (file) {
                             const uploadPromise = uploadFile(`/courses/${!finalCourseId ? courseId.current : finalCourseId}/`, file)
                                 .then(async (putBlobResult) => {
-                                    console.log("putBlobResult", putBlobResult);
                                     const clsCreatedId = result?.payload?.modules?.[mIndex]?.classes?.[clsIndex]?.id;
                                     if (!clsCreatedId) {
                                         setIsLoading(false);
                                         setError('fallo la creación de la clase');
                                         return;
                                     }
-
-                                    console.log("clsCreatedId", clsCreatedId);
-                                    console.log("putBlobResult.url", putBlobResult.url);
-                                    console.log("file.size", file.size);
 
                                     await editClassVideoPath({
                                         data: {
@@ -107,11 +100,8 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                     module.classes?.forEach((cls, clsIndex) => {
                         const file = cls.video;                        
                         if (file instanceof File) {
-                            console.log("file", file.size);
                             const uploadPromise = uploadFile(`/courses/${data.id}/`, file)
                                 .then(async (putBlobResult) => {
-                                    console.log("putBlobResult", putBlobResult);
-                                    console.log("file size", file.size);
                                     if (dataWithOutFiles.modules &&
                                         dataWithOutFiles.modules[mIndex] &&
                                         dataWithOutFiles.modules[mIndex].classes &&
@@ -134,11 +124,6 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                 });
 
                 await Promise.all(uploadPromises);
-
-                console.log("dataWithOutFiles", dataWithOutFiles);
-                
-                console.log("diff", diffCourses(originalData, dataWithOutFiles));
-
                 const editResult = await edit({ data: { originalCourseData: originalData, newCourseData: dataWithOutFiles } });
                 setIsLoading(false);
                 if (editResult.success) {

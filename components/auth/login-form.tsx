@@ -151,7 +151,7 @@ export const LoginForm = () => {
             <div className={cn('relative w-full md:w-1/2 lg:w-1/2 mt-10 md:mt-0 flex justify-center md:justify-center flex-col items-center bg-gray-900 text-white')}>
                 <div className={cn('relative w-[30rem] h-[30rem]')}>
                     <div className={cn('absolute inset-0 rounded-full border-[16px] border-gray-800')}></div>
-                    <Image src="https://vnruzfzvnvdhb848.public.blob.vercel-storage.com/public/trainer_1-3XsmrTsq0RrcTtYZpXgf2EcVP4cyw6.png"
+                    <Image src="https://vnruzfzvnvdhb848.public.blob.vercel-storage.com/public/photo_2025-06-28_19-35-28-xUXu6rhRG33roSpBwnSV8Yqoh7jjLE-6UiYLISzss0WJn5Mz4YXvUFjuxTkeJ.jpg"
                         width={500}
                         height={500}
                         alt="Entrenador"

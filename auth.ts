@@ -31,7 +31,6 @@ export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
 
                         if (passwordsMatch) return user;
                     } catch (error) {
-                        console.log("error", error);
                         return null;
                     }
                 }

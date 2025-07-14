@@ -17,9 +17,7 @@ const LearnPage = async ({ params }) => {
     let courseData = null;
     try {
         courseData = await response.json();
-        console.log("response received:", courseData);
         if (!response.ok) {
-            console.log("response not ok:", response.status);
             switch (response.status) {
                 case 404:
                     throw new NotFoundError(courseData.message);

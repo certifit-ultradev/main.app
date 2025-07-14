@@ -100,7 +100,6 @@ export const UserCreateEditForm = ({ data }: UserFormProps<UserCreateData>) => {
             } else {
                 editUser({data:{id:data.id, userData:{ ...formData }}}).then((data) => {
                     setIsLoading(false);
-                    console.log("edit", data);
                     if (data?.success) {
                         setSuccess(data.message);
                         setIsOpen(true);
