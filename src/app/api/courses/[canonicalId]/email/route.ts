@@ -20,7 +20,7 @@ export async function POST(req: NextRequest, context) {
         const requestData = await req.json();
 
         // Mapear los datos y enviarlos a la función sendEmailCourseRequestInfo
-        const result = await sendEmailCourseRequestInfo({
+        await sendEmailCourseRequestInfo({
             canonicalId,
             nombre: requestData.nombre,
             empresa: requestData.empresa,
@@ -31,8 +31,12 @@ export async function POST(req: NextRequest, context) {
             terminos: requestData.terminos,
         });
 
-        return Response.json(result);
+        return Response.json({
+            success: true,  
+            message: 'Correo electrónico enviado correctamente.',
+        });
     } catch (error) {
+        console.error('Error al enviar el correo electrónico:', error);
         return mapErrorToAPIResponse(error);
     }
 }

@@ -2,6 +2,10 @@
 
 ## [unreleased]
 
+### 1.1.5
+
+- Adjust email send with OAuth2 and googleapi.
+
 ### 1.1.4
 
 ### Fixed
