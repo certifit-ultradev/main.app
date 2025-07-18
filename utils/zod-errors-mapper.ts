@@ -10,7 +10,6 @@ export function mapZodErrors(e: z.ZodError) {
         };
         return acc;
     }, {});
-    console.log("mappedErrors", mappedErrors);
     return mappedErrors;
 }
 

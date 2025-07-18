@@ -90,7 +90,6 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
             video.addEventListener("loadedmetadata", () => {
                 const vidDuration = video.duration;
                 setModules((prevModules) => {
-                    console.log("prevModules addEventListener", prevModules);
                     const newModules = _.cloneDeep(prevModules);
                     newModules[moduleIndex].classes![classIndex]['videoDuration'] = vidDuration;
                     return newModules;

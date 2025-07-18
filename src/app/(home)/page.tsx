@@ -55,7 +55,6 @@ export default function Home() {
             try {
                 const res = await fetch("/api/courses/top-three");
                 const data = await res.json();
-                console.log("res", data);
                 setCourses(data);
             } catch (error) {
                 console.error("Error al cargar cursos:", error);
@@ -79,7 +78,6 @@ export default function Home() {
             if (result.success === false) {
                 setError(result.message || "Ocurrió un error al enviar el formulario, intente mas tard");
             }
-            console.log("Respuesta de la API:", result);
         } catch (error) {
             setError("Ocurrió un error al enviar el formulario, intente mas tarde");
             console.error("Error al enviar el formulario:", error);
@@ -113,7 +111,7 @@ export default function Home() {
                     <div className={cn('relative w-full md:w-1/2 lg:w-1/2 mt-10 md:mt-0 flex justify-center md:justify-center nn:mb-10')}>
                         <div className={cn('relative')}>
                             <div className={cn('absolute inset-0 rounded-full border-[16px] border-gray-800')}></div>
-                            <Image src="https://vnruzfzvnvdhb848.public.blob.vercel-storage.com/public/trainer_1-3XsmrTsq0RrcTtYZpXgf2EcVP4cyw6.png"
+                            <Image src="https://vnruzfzvnvdhb848.public.blob.vercel-storage.com/public/photo_2025-06-28_19-35-28-xUXu6rhRG33roSpBwnSV8Yqoh7jjLE-6UiYLISzss0WJn5Mz4YXvUFjuxTkeJ.jpg"
                                 width={446}
                                 height={447}
                                 alt="Entrenador"

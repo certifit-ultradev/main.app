@@ -61,7 +61,7 @@ const IndexEditCoursesPage: NextPage = () => {
                 }
             } catch (error) {
                 if (error instanceof Error) {
-                    console.log(error.message);
+                    console.error(error);
                     // notFound();
                 }
             }

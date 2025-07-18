@@ -1,6 +1,6 @@
 // services/emailService.ts
 
-import { transporter } from '@/lib/nodemailer';
+import { createTransporter } from "@/lib/nodemailer";
 import { RequestCourseData } from "@/utils/types";
 
 const domain = process.env.NEXT_PUBLIC_APP_URL;
@@ -11,20 +11,22 @@ const domain = process.env.NEXT_PUBLIC_APP_URL;
  * @param token 
  */
 export const sendPasswordResetEmail = async (email: string, token: string) => {
-    const resetLink = `${domain}/new-password?token=${token}`;
-    console.log("confirmLink", resetLink);
-    await transporter.sendMail({
-        from: process.env.FROM_EMAIL as string,
-        to: email,
-        subject: 'Restablece tu contraseña',
-        html: `
+  const resetLink = `${domain}/new-password?token=${token}`;
+  console.log("confirmLink", resetLink);
+  const transporter = await createTransporter();
+
+  await transporter.sendMail({
+    from: process.env.FROM_EMAIL as string,
+    to: email,
+    subject: 'Restablece tu contraseña',
+    html: `
         <p>Hola,</p>
         <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:</p>
         <p><a href="${resetLink}">Restablecer contraseña</a></p>
         <p>Si no solicitaste este cambio, ignora este correo.</p>
         <p>Saludos,<br/>El equipo de Certifit</p>
       `,
-    });
+  });
 };
 
 /**
@@ -33,20 +35,21 @@ export const sendPasswordResetEmail = async (email: string, token: string) => {
  * @param token 
  */
 export const sendVerificationEmail = async (email: string, token: string) => {
-    const confirmLink = `${domain}/verify-email?token=${token}`;
-    console.log("confirmLink", confirmLink);
-    await transporter.sendMail({
-        from: process.env.FROM_EMAIL as string,
-        to: email,
-        subject: 'Confirma tu correo electrónico',
-        html: `
+  const confirmLink = `${domain}/verify-email?token=${token}`;
+  console.log("confirmLink", confirmLink);
+  const transporter = await createTransporter();
+  await transporter.sendMail({
+    from: process.env.FROM_EMAIL as string,
+    to: email,
+    subject: 'Confirma tu correo electrónico',
+    html: `
         <p>Hola,</p>
         <p>Gracias por registrarte en Certifit. Por favor, confirma tu correo electrónico haciendo clic en el siguiente enlace:</p>
         <p><a href="${confirmLink}">Confirmar correo electrónico</a></p>
         <p>Si no creaste una cuenta, ignora este correo.</p>
         <p>Saludos,<br/>El equipo de Certifit</p>
       `,
-    });
+  });
 };
 
 /**
@@ -55,11 +58,12 @@ export const sendVerificationEmail = async (email: string, token: string) => {
  * @param token 
  */
 export const dispatchEmailRequestCourse = async (data: RequestCourseData) => {
+  const transporter = await createTransporter();
   await transporter.sendMail({
-      from: process.env.FROM_EMAIL as string,
-      to: "certifit.ultra@gmail.com",
-      subject: 'Información sobre el curso',
-      html: `<!DOCTYPE html>
+    from: process.env.FROM_EMAIL as string,
+    to: "certifit.ultra@gmail.com",
+    subject: 'Información sobre el curso',
+    html: `<!DOCTYPE html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />

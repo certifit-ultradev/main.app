@@ -26,10 +26,8 @@ async function user() {
                 updatedAt: new Date()
             },
         });
-
-        console.log('Usuario creado con éxito.');
     } catch (error) {
-        console.log('Usuario no creado.', error);
+        console.error('Usuario no creado.', error);
     }
 }
 

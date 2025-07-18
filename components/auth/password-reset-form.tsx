@@ -37,7 +37,6 @@ export const PasswordResetForm = () => {
         startTransition(() => {
             resetPassword(fromData).then((result) => {
                 setIsLoading(false);
-                console.log("result reset", result);
                 if (result.success) {
                     setSuccess(result.message);
                 } else {
