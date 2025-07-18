@@ -15,11 +15,8 @@ export const CheckTerms = ({ register, errors }: CheckTermsProp) => {
                 type='checkbox'
                 {...register('checkTerms')}
             />
-            <label>
-                Acepto los {' '}
-                <a href='/terminos-y-condiciones' target='_blank'>
-                    términos y condiciones
-                </a>
+            <label htmlFor="terminos" className={cn("text-sm text-gray-500")}>
+                Al enviar este formulario, acepto los <a href="/terms-of-service" className={cn("text-[#0BBBE7] underline")}>Términos y condiciones</a> y la <a href="/privacy-policy" className={cn("text-[#0BBBE7] underline")}>Política de privacidad</a>
             </label>
             <ErrorMessage
                 errors={errors}
