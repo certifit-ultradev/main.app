@@ -2,11 +2,20 @@
 
 ## [unreleased]
 
-### 1.1.5
+## 1.1.6
+
+### Fixed
+
+- Add terms of services and privacy policy.
+- Fix an error with url wompi.
+
+## 1.1.5
+
+### Fixed
 
 - Adjust email send with OAuth2 and googleapi.
 
-### 1.1.4
+## 1.1.4
 
 ### Fixed
 
@@ -15,7 +24,7 @@
 
 ### 1.1.4
 
-## Fixed
+### Fixed
 
 - Delete console.log from error.tsx
 

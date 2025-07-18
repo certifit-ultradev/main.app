@@ -1,4 +1,6 @@
 import { ReactNode } from "react"
+import { z } from "zod";
+import { EmailDataSchema } from "./schemas";
 
 export type RegisterUser = {
     name: string,
@@ -479,6 +481,8 @@ export interface TransactionWompiResponse {
         payment_link_id: string
     }
 }
+
+export type EmailDataFormValues = z.infer<typeof EmailDataSchema>;
 
 export type ErrAcc = { type: string; message: string };
 export type ErrMap = Record<string, ErrAcc>;
