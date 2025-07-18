@@ -3,7 +3,10 @@ export const publicRoutes = [
   '/register',
   '/verify-email',
   '/new-password',
-  '/reset-password'
+  '/reset-password',
+  '/login',
+  '/terms-of-service',
+  '/privacy-policy',
 ];
 
 export const authRoutes = ['/login', '/signup'];
@@ -19,3 +22,5 @@ export const videoRoute = '/uploads'
 
 // redirect users to this path after login
 export const DEFAULT_LOGIN_REDIRECT = '/dashboard';
+
+

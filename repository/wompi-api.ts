@@ -5,8 +5,7 @@ import { TransactionWompiResponse } from "@/utils/types";
 const urlSanbox = 'https://sandbox.wompi.co/v1';
 const urlProd = 'https://production.wompi.co/v1';
 
-const isSandbox = true;
-const baseUrl = isSandbox ? urlSanbox : urlProd;
+const baseUrl = process.env.APP_ENV != 'PROD' ? urlSanbox : urlProd;
 
 /**
  * Obtains the information of a Wompi transaction

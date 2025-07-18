@@ -12,25 +12,12 @@ import { FaFacebook, FaInstagram, FaTwitter } from "react-icons/fa6";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ErrorMessage } from "@hookform/error-message";
-import { z } from "zod";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import PhoneInput from "react-phone-input-2";
 import { FormError } from "@/components/form/form-error";
-
-// Esquema de validación con Zod
-const EmailDataSchema = z.object({
-    nombre: z.string().min(1, "El nombre es obligatorio"),
-    empresa: z.string().min(1, "La empresa es obligatoria"),
-    email: z.string().email("El correo debe ser válido"),
-    telefono: z.string().min(1, "El teléfono es obligatorio"),
-    curso: z.string().min(1, "Selecciona un curso"),
-    detalles: z.string().min(1, "Los detalles son obligatorios"),
-    terminos: z.boolean().refine(val => val === true, "Debes aceptar los Términos y Condiciones"),
-});
-
-// Tipo inferido del esquema
-type EmailDataFormValues = z.infer<typeof EmailDataSchema>;
+import { EmailDataSchema } from "../../../utils/schemas";
+import { EmailDataFormValues } from "@/utils/types";
 
 // Tipo para la opción del curso
 type CourseOption = {
@@ -280,25 +267,25 @@ export default function Home() {
                                 <div className={cn("flex flex-col")}>
                                     <label htmlFor="telefono" className={cn("text-sm text-gray-300 mb-1")}>Teléfono*</label>
                                     <Controller
-                                            control={control}
-                                            name='telefono'
-                                            render={({ field }) => (
-                                                <PhoneInput
-                                                    country={'co'}
-                                                    value={field.value}
-                                                    onChange={(value) => field.onChange(value)}
-                                                    inputClass={cn(
-                                                        'w-full bg-[#0B0B0B] border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#0BBBE7]'
-                                                    )}
-                                                    containerClass={cn('w-full')}
-                                                    inputProps={{
-                                                        name: 'telefono',
-                                                        required: true,
-                                                    }}
-                                                    specialLabel=''
-                                                />
-                                            )}
-                                        />
+                                        control={control}
+                                        name='telefono'
+                                        render={({ field }) => (
+                                            <PhoneInput
+                                                country={'co'}
+                                                value={field.value}
+                                                onChange={(value) => field.onChange(value)}
+                                                inputClass={cn(
+                                                    'w-full bg-[#0B0B0B] border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#0BBBE7]'
+                                                )}
+                                                containerClass={cn('w-full')}
+                                                inputProps={{
+                                                    name: 'telefono',
+                                                    required: true,
+                                                }}
+                                                specialLabel=''
+                                            />
+                                        )}
+                                    />
                                     <ErrorMessage errors={errors} name="telefono" render={({ message }) => <p className={cn("text-red-500 text-sm")}>{message}</p>} />
                                 </div>
                             </div>
@@ -323,11 +310,24 @@ export default function Home() {
                                 <ErrorMessage errors={errors} name="detalles" render={({ message }) => <p className={cn("text-red-500 text-sm")}>{message}</p>} />
                             </div>
                             <div className={cn("flex items-start space-x-2")}>
-                                <input type="checkbox" id="terminos" {...register("terminos")} className={cn("w-4 h-4 text-[#0BBBE7] bg-[#0B0B0B] border border-gray-700 rounded focus:ring-0")} />
-                                <label htmlFor="terminos" className={cn("text-sm text-gray-300")}>
-                                    Al enviar este formulario, acepto los <a href="#" className={cn("text-[#0BBBE7] underline")}>Términos y condiciones</a> y la <a href="#" className={cn("text-[#0BBBE7] underline")}>Política de privacidad</a>
-                                </label>
-                                <ErrorMessage errors={errors} name="terminos" render={({ message }) => <p className={cn("text-red-500 text-sm")}>{message}</p>} />
+                                <div className={cn('relative mb-4')}>
+                                    <input
+                                        type='checkbox'
+                                        {...register('terminos')}
+                                    />
+                                    <label htmlFor="terminos" className={cn("text-sm text-gray-500")}>
+                                        Al enviar este formulario, acepto los <a href="/terms-of-service" className={cn("text-[#0BBBE7] underline")}>Términos y condiciones</a> y la <a href="/privacy-policy" className={cn("text-[#0BBBE7] underline")}>Política de privacidad</a>
+                                    </label>
+                                    <ErrorMessage
+                                        errors={errors}
+                                        name='terminos'
+                                        render={({ message }) => (
+                                            <p className={cn('text-red-500 text-sm text-left w-full')}>
+                                                {message}
+                                            </p>
+                                        )}
+                                    />
+                                </div>
                             </div>
                             <div className={cn("flex justify-end")}>
                                 <Button type="submit" className={cn("bg-[#0BBBE7] text-black px-6 py-3 rounded-md hover:bg-[#009fdf] transition-colors")}>
