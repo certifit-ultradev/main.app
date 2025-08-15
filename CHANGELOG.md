@@ -2,6 +2,13 @@
 
 ## [unreleased]
 
+## 1.1.7
+
+### Fixed
+
+- Change smtp email
+
+
 ## 1.1.6
 
 ### Fixed
