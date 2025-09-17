@@ -66,6 +66,7 @@ export const VerificationOtpEmailForm = ({ data }: VerificationOtpEmailProps) =>
 
     const onClick = async (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
         e.preventDefault();
+        setError("");
         await sendVerificationToken(data.email);
     }
 
