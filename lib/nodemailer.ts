@@ -4,13 +4,12 @@ export const createTransporter = async () => {
     return nodemailer.createTransport({
         host: 'smtp.mailersend.net',
         port: 587,
-        secure: false, // TLS se activa con requireTLS. `secure: true` es para el puerto 465.
+        secure: false,
         auth: {
-            user: process.env.MAILERSEND_SMTP_USER, // Tu usuario de MailerSend
-            pass: process.env.MAILERSEND_SMTP_PASSWORD, // Tu contraseña de MailerSend
+            user: process.env.MAILERSEND_SMTP_USER,
+            pass: process.env.MAILERSEND_SMTP_PASSWORD,
         },
         tls: {
-            // No fallar en certificados inválidos (útil para entornos de prueba)
             rejectUnauthorized: false,
         },
     });;

@@ -55,6 +55,7 @@ export const sendVerificationEmailWithToken = async (email: string): Promise<Ver
 
         return { success: true, message: "Se envío el mensaje de activación!" };
     } catch (error) {
+        console.log("email error", error);
         logPrismaError(error);
         throw error;
     }

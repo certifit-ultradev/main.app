@@ -17,6 +17,7 @@ import { CourseChange } from "@/utils/change-types";
 import { mergeChangesByTypeAndId, toSnakeCase } from "@/utils/classes";
 import { isCourseModule, isModuleClass, isOption, isQuestion } from "@/utils/type-guards";
 import { CourseData, CoursesMonthResult, ResultSalesCourse, UsersMonthResult } from "@/utils/types";
+import { del } from '@vercel/blob';
 
 /**
  * 
@@ -648,6 +649,7 @@ export const updateFullCourse = async (
 ) => {
     let courseImage: File | undefined;
     let instructorPhoto: File | undefined;
+    let videoPathsToDelete: string[] = [];
 
     await prisma.$transaction(async (tx) => {
         for (const add of adds) {
@@ -819,6 +821,14 @@ export const updateFullCourse = async (
                 }
 
                 if (data.video) {
+                    const classToUpdate = await tx.moduleClass.findFirst({
+                        where: { id: id },
+                    });
+
+                    if (classToUpdate && classToUpdate.videoPath) {
+                        videoPathsToDelete.push(classToUpdate.videoPath);
+                    }
+
                     data.videoPath = data.video;
                     delete data.video;
                 }
@@ -835,7 +845,6 @@ export const updateFullCourse = async (
             }
         }
 
-
         for (const dlt of deletes) {
             switch (dlt.type) {
                 case 'course':
@@ -849,6 +858,14 @@ export const updateFullCourse = async (
                     });
                     break;
                 case 'class':
+                    const classToDelete = await tx.moduleClass.findFirst({
+                        where: { id: Number(dlt.path.class) },
+                    });
+
+                    if (classToDelete && classToDelete.videoPath) {
+                        videoPathsToDelete.push(classToDelete.videoPath);
+                    }
+
                     await tx.moduleClass.delete({
                         where: { id: Number(dlt.path.class) },
                     });
@@ -886,6 +903,14 @@ export const updateFullCourse = async (
         await updateCourse(courseId, {
             instructorPhoto: url
         });
+    }
+
+    if (videoPathsToDelete.length > 0) {
+        try {
+            await del(videoPathsToDelete);
+        } catch (error) {
+            console.error("Error deleting videos from blob storage:", error);
+        }
     }
 }
 

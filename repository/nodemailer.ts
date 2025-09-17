@@ -15,7 +15,7 @@ export const sendPasswordResetEmail = async (email: string, token: string) => {
   console.log("confirmLink", resetLink);
   const transporter = await createTransporter();
 
-  await transporter.sendMail({
+  const data = {
     from: process.env.FROM_EMAIL as string,
     to: email,
     subject: 'Restablece tu contraseña',
@@ -26,7 +26,9 @@ export const sendPasswordResetEmail = async (email: string, token: string) => {
         <p>Si no solicitaste este cambio, ignora este correo.</p>
         <p>Saludos,<br/>El equipo de Certifit</p>
       `,
-  });
+  }
+
+  await transporter.sendMail(data);
 };
 
 /**
@@ -38,7 +40,8 @@ export const sendVerificationEmail = async (email: string, token: string) => {
   const confirmLink = `${domain}/verify-email?token=${token}`;
   console.log("confirmLink", confirmLink);
   const transporter = await createTransporter();
-  await transporter.sendMail({
+
+  const data = {
     from: process.env.FROM_EMAIL as string,
     to: email,
     subject: 'Confirma tu correo electrónico',
@@ -49,7 +52,9 @@ export const sendVerificationEmail = async (email: string, token: string) => {
         <p>Si no creaste una cuenta, ignora este correo.</p>
         <p>Saludos,<br/>El equipo de Certifit</p>
       `,
-  });
+  }
+
+  await transporter.sendMail(data);
 };
 
 /**
