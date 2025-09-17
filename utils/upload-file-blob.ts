@@ -7,6 +7,7 @@ export const uploadFile = async (pathName: string, file: File): Promise<PutBlobR
     return await upload(fullPath, file, {
         access: 'public',
         handleUploadUrl: '/api/blob-upload',
+        
     });
 }
 

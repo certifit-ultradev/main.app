@@ -147,6 +147,7 @@ export function mapErrorToServerActionResponse(error: unknown) {
                 message: "ocurrio un error, intente mas tarde",
             };
         default:
+            console.error("General Error:", error);
             return {
                 success: false,
                 message: "ocurrio un error, intente mas tarde",

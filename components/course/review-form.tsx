@@ -2,7 +2,7 @@ import { edit, editClassVideoPath, register } from '@/actions/courses/register';
 import { CourseData, CourseModule, ServerActionResponse } from '@/utils/types';
 import { calculateTotalVideoDuration, calculateTotalVideoSize, formatVideoDuration, formatVideoSize } from '@/utils/video';
 import Modal from '../modal';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import _ from 'lodash';
@@ -10,6 +10,7 @@ import { uploadFile } from '@/utils/upload-file-blob';
 import SubmitButton from '../submitButton';
 import { Button } from '@nextui-org/react';
 import { FormError } from '../form/form-error';
+import { v4 as uuidv4 } from 'uuid'; // Add this import for generating unique IDs
 
 interface CourseReviewFormProps {
     data: CourseData;
@@ -18,13 +19,62 @@ interface CourseReviewFormProps {
     previousStep: () => void;
 };
 
+// Define the type for video upload status
+interface VideoUploadStatus {
+    id: string; // Unique identifier for each video
+    fileName: string;
+    status: 'Ready to Upload' | 'Uploading' | 'Uploaded';
+}
+
 export const CourseReviewForm = ({ data, originalData, previousStep }: CourseReviewFormProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string>('');
+    const [videoStatuses, setVideoStatuses] = useState<VideoUploadStatus[]>([]);
     const courseId = useRef<number | null | undefined>(null);
 
     const router = useRouter();
+
+    useEffect(() => {
+        // Initialize video statuses when data changes
+        const initialStatuses: VideoUploadStatus[] = [];
+        data.modules?.forEach((module) => {
+            module.classes?.forEach((cls) => {
+                if (cls.video instanceof File) {
+                    initialStatuses.push({ id: uuidv4(), fileName: cls.video.name, status: 'Ready to Upload' });
+                }
+            });
+        });
+        setVideoStatuses(initialStatuses);
+    }, [data]);
+
+    // Utility function to limit concurrent uploads
+    const uploadWithLimit = async (tasks: (() => Promise<void>)[], limit: number) => {
+        const results = [];
+        const executing: Promise<void>[] = [];
+
+        for (const task of tasks) {
+            const promise = task().then(() => {
+                executing.splice(executing.indexOf(promise), 1);
+            });
+            results.push(promise);
+            executing.push(promise);
+
+            if (executing.length >= limit) {
+                await Promise.race(executing);
+            }
+        }
+
+        return Promise.all(results);
+    };
+
+    const updateVideoStatus = (id: string, newStatus: 'Ready to Upload' | 'Uploading' | 'Uploaded') => {
+        setVideoStatuses((prevStatuses) =>
+            prevStatuses.map((video) =>
+                video.id === id ? { ...video, status: newStatus } : video
+            )
+        );
+    };
 
     const onSubmit = async () => {
         setIsLoading(true);
@@ -52,36 +102,34 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                     courseId.current = result.payload?.id;
                 }
 
-                const uploadPromises: Promise<void>[] = [];
+                const uploadTasks: (() => Promise<void>)[] = [];
                 data.modules?.forEach((module, mIndex) => {
                     module.classes?.forEach((cls, clsIndex) => {
                         const file: File = cls.video as File;
                         if (file) {
-                            const uploadPromise = uploadFile(`/courses/${!finalCourseId ? courseId.current : finalCourseId}/`, file)
-                                .then(async (putBlobResult) => {
-                                    const clsCreatedId = result?.payload?.modules?.[mIndex]?.classes?.[clsIndex]?.id;
-                                    if (!clsCreatedId) {
-                                        setIsLoading(false);
-                                        setError('fallo la creación de la clase');
-                                        return;
-                                    }
+                            const videoId = videoStatuses.find((video) => video.fileName === file.name)?.id;
+                            uploadTasks.push(async () => {
+                                if (videoId) updateVideoStatus(videoId, 'Uploading');
+                                const putBlobResult = await uploadFile(`/courses/${!finalCourseId ? courseId.current : finalCourseId}/`, file);
+                                const clsCreatedId = result?.payload?.modules?.[mIndex]?.classes?.[clsIndex]?.id;
+                                if (!clsCreatedId) {
+                                    setIsLoading(false);
+                                    setError('fallo la creación de la clase');
+                                    return;
+                                }
 
-                                    await editClassVideoPath({
-                                        data: {
-                                            clsId: clsCreatedId, videoPath: putBlobResult.url, videoSize: file.size
-                                        }
-                                    });
-                                })
-                                .catch((err) => {
-                                    console.error("Error subiendo archivo:", err);
-                                    throw err;
+                                await editClassVideoPath({
+                                    data: {
+                                        clsId: clsCreatedId, videoPath: putBlobResult.url, videoSize: file.size
+                                    }
                                 });
-                            uploadPromises.push(uploadPromise);
+                                if (videoId) updateVideoStatus(videoId, 'Uploaded');
+                            });
                         }
                     });
                 });
 
-                await Promise.all(uploadPromises);
+                await uploadWithLimit(uploadTasks, 2); // Limit to 2 concurrent uploads
                 setIsLoading(false);
                 setIsOpen(true);
             } else {
@@ -95,35 +143,33 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                     });
                     return module;
                 });
-                const uploadPromises: Promise<void>[] = [];
+
+                const uploadTasks: (() => Promise<void>)[] = [];
                 data.modules?.forEach((module, mIndex) => {
                     module.classes?.forEach((cls, clsIndex) => {
-                        const file = cls.video;                        
+                        const file = cls.video;
                         if (file instanceof File) {
-                            const uploadPromise = uploadFile(`/courses/${data.id}/`, file)
-                                .then(async (putBlobResult) => {
-                                    if (dataWithOutFiles.modules &&
-                                        dataWithOutFiles.modules[mIndex] &&
-                                        dataWithOutFiles.modules[mIndex].classes &&
-                                        dataWithOutFiles.modules[mIndex].classes[clsIndex])
-                                    {
-                                        dataWithOutFiles.modules[mIndex].classes[clsIndex].video = putBlobResult.url;
-                                        dataWithOutFiles.modules[mIndex].classes[clsIndex].videoSize = file.size;
-                                    } else {
-                                        setError("La estructura en dataWithOutFiles no existe para actualizar la URL del video.");
-                                        console.error("La estructura en dataWithOutFiles no existe para actualizar la URL del video.", { mIndex, clsIndex });
-                                    }
-                                })
-                                .catch((err) => {
-                                    console.error("Error subiendo archivo:", err);
-                                    throw err;
-                                });
-                            uploadPromises.push(uploadPromise);
+                            const videoId = videoStatuses.find((video) => video.fileName === file.name)?.id;
+                            uploadTasks.push(async () => {
+                                if (videoId) updateVideoStatus(videoId, 'Uploading');
+                                const putBlobResult = await uploadFile(`/courses/${data.id}/`, file);
+                                if (dataWithOutFiles.modules &&
+                                    dataWithOutFiles.modules[mIndex] &&
+                                    dataWithOutFiles.modules[mIndex].classes &&
+                                    dataWithOutFiles.modules[mIndex].classes[clsIndex]) {
+                                    dataWithOutFiles.modules[mIndex].classes[clsIndex].video = putBlobResult.url;
+                                    dataWithOutFiles.modules[mIndex].classes[clsIndex].videoSize = file.size;
+                                } else {
+                                    setError("La estructura en dataWithOutFiles no existe para actualizar la URL del video.");
+                                    console.error("La estructura en dataWithOutFiles no existe para actualizar la URL del video.", { mIndex, clsIndex });
+                                }
+                                if (videoId) updateVideoStatus(videoId, 'Uploaded');
+                            });
                         }
                     });
                 });
 
-                await Promise.all(uploadPromises);
+                await uploadWithLimit(uploadTasks, 2); // Limit to 2 concurrent uploads
                 const editResult = await edit({ data: { originalCourseData: originalData, newCourseData: dataWithOutFiles } });
                 setIsLoading(false);
                 if (editResult.success) {
@@ -165,6 +211,17 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                 <p className={cn('mb-4 text-gray-700')}>
                     Este curso estará activo hasta el <strong>{data.expiresAt.toString()}</strong>
                 </p>
+
+                <div className={cn('mb-4')}>
+                    <h2 className={cn('text-md font-semibold mb-2')}>Estado de los Videos</h2>
+                    <ul>
+                        {videoStatuses.map((video) => (
+                            <li key={video.id} className={cn('mb-1')}>
+                                {video.fileName}: <strong>{video.status}</strong>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
 
                 <div className={cn('flex justify-between items-center mt-6')}>
                     <div className={cn('text-center')}>

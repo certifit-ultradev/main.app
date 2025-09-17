@@ -11,6 +11,7 @@ import { ServerActionResponse } from "@/utils/types";
 export const checkIfUserIsActive = async (email: string): Promise<ServerActionResponse<null>> => {
     try {
         const user = await getUserByEmail(email);
+        console.log("User fetched for activation check:", user);
         return {
             success: user?.emailVerified ? true : false,
         }
