@@ -129,7 +129,7 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                     });
                 });
 
-                await uploadWithLimit(uploadTasks, 2); // Limit to 2 concurrent uploads
+                await uploadWithLimit(uploadTasks, 1); // Limit to 2 concurrent uploads
                 setIsLoading(false);
                 setIsOpen(true);
             } else {
@@ -169,7 +169,7 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                     });
                 });
 
-                await uploadWithLimit(uploadTasks, 2); // Limit to 2 concurrent uploads
+                await uploadWithLimit(uploadTasks, 1); // Limit to 2 concurrent uploads
                 const editResult = await edit({ data: { originalCourseData: originalData, newCourseData: dataWithOutFiles } });
                 setIsLoading(false);
                 if (editResult.success) {
