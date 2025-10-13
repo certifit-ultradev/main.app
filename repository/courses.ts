@@ -650,6 +650,7 @@ export const updateFullCourse = async (
     let courseImage: File | undefined;
     let instructorPhoto: File | undefined;
     let videoPathsToDelete: string[] = [];
+    let classIdsToUpdate: number[] = [];
 
     await prisma.$transaction(async (tx) => {
         for (const add of adds) {
@@ -821,14 +822,7 @@ export const updateFullCourse = async (
                 }
 
                 if (data.video) {
-                    const classToUpdate = await tx.moduleClass.findFirst({
-                        where: { id: id },
-                    });
-
-                    if (classToUpdate && classToUpdate.videoPath) {
-                        videoPathsToDelete.push(classToUpdate.videoPath);
-                    }
-
+                    classIdsToUpdate.push(id);
                     data.videoPath = data.video;
                     delete data.video;
                 }
@@ -890,6 +884,18 @@ export const updateFullCourse = async (
             }
         }
     });
+
+    if (classIdsToUpdate.length > 0) {
+        const classesToUpdate = await prisma.moduleClass.findMany({
+            where: { id: { in: classIdsToUpdate } },
+        });
+
+        for (const classToUpdate of classesToUpdate) {
+            if (classToUpdate.videoPath) {
+                videoPathsToDelete.push(classToUpdate.videoPath);
+            }
+        }
+    }
 
     if (courseImage) {
         const url = await storeVideoBlobStorage(`/courses/${courseId}/`, courseImage);

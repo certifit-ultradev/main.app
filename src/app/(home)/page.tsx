@@ -224,7 +224,7 @@ export default function Home() {
                     </Suspense>
                 </div>
             </section>
-            <section id="email-data" className={cn("nn:m-4 sm:m-8 md:m-16 py-10 sm:py-20 lg:py-24 px-4 sm:px-2 lg:px-8 rounded-3xl bg-gradient-to-tl from-[#1B1C1E] via-[#101113] to-[#141517]")}>
+            <section id="contact-us" className={cn("nn:m-4 sm:m-8 md:m-16 py-10 sm:py-20 lg:py-24 px-4 sm:px-2 lg:px-8 rounded-3xl bg-gradient-to-tl from-[#1B1C1E] via-[#101113] to-[#141517]")}>
                 <div className={cn("flex flex-col max-w-7xl nn:items-center lg:items-end mx-auto gap-8 mb-8")}>
                     <div className={cn("flex lg:justify-end")}>
                         <h2 className={cn("text-[#0BBBE7] text-xl font-semibold")}>Contáctanos</h2>

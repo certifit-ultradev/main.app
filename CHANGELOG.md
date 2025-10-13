@@ -2,12 +2,17 @@
 
 ## [unreleased]
 
+## 1.1.8
+
+### Fixed
+
+- Fix course edition when a video is modified.
+
 ## 1.1.7
 
 ### Fixed
 
 - Change smtp email
-
 
 ## 1.1.6
 
