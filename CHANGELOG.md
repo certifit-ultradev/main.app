@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## 1.1.9
+
+### Fixed
+
+- Reduce to 1 the concurrent file upload and add the option multipart for better performance.
+
 ## 1.1.8
 
 ### Fixed
