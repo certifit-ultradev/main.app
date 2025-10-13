@@ -2,11 +2,11 @@
 
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { cn } from '@/src/lib/utils'
+import { cn } from '@/src/lib/utils';
 
 export const metadata: Metadata = {
-  title: 'Términos y Condiciones – CERTIFIT',
-  description: 'Términos y condiciones de uso de los servicios y sitio web de CERTIFIT. Al usar nuestros servicios, usted acepta estos términos.',
+  title: 'Términos y Condiciones de Uso – CERTIFIT',
+  description: 'Términos y condiciones que rigen el uso de la plataforma educativa CERTIFIT. Al usar nuestros servicios, usted acepta estos términos.',
 };
 
 export default function TermsAndConditionsPage() {
@@ -15,91 +15,133 @@ export default function TermsAndConditionsPage() {
     <main className={cn('container mx-auto px-4 py-12 md:px-6 lg:py-16')}>
       
       {/* 'prose': aplica estilos de cascada a todo el texto.
-        'prose-lg': aumenta ligeramente el tamaño de la fuente para mejorar la legibilidad.
+        'prose-lg': aumenta el tamaño de la fuente para mejorar la legibilidad.
         'mx-auto' y 'max-w-4xl': centran el contenido y limitan su ancho.
       */}
       <div className={cn('prose prose-lg mx-auto max-w-4xl')}>
         
-        <h1>Términos y Condiciones de CERTIFIT</h1>
+        <h1>Términos y Condiciones de Uso – CERTIFIT</h1>
         
         {/* 'lead' es una clase de 'prose' que le da más énfasis al párrafo introductorio. */}
         <p className={cn('lead')}>
-          A continuación se describen los términos y condiciones generales y la autorización para el tratamiento de datos personales que rigen el uso de los servicios ofrecidos en nuestro sitio web.
+          Bienvenido(a) a CERTIFIT, una plataforma educativa en línea dedicada a la formación de entrenadores personales, profesionales y entusiastas del fitness, la salud y el deporte. Al acceder, navegar y utilizar nuestra plataforma, usted acepta estos Términos y Condiciones. Si no está de acuerdo con alguno de los puntos aquí establecidos, le solicitamos que no continúe utilizando nuestros servicios.
         </p>
+
+        <p><strong>Fecha de entrada en vigor:</strong> 25 de septiembre de 2025</p>
 
         <hr />
 
-        <h2>1. Aceptación y Autorización de Tratamiento de Datos (Habeas Data)</h2>
-        
-        <p>
-          Al aceptar estos términos y condiciones, usted autoriza de manera expresa, voluntaria, previa, informada e inequívoca a CERTIFIT, en calidad de responsable del tratamiento de datos personales, para que recolecte, almacene, use, circule, procese, actualice y suprima los datos personales que ha suministrado a través de este sitio web o cualquier otro medio autorizado.
-        </p>
-
-        <h3>Finalidades del Tratamiento</h3>
-        <p>
-          La información recopilada será utilizada con las siguientes finalidades:
-        </p>
+        <h2>1. Información Legal</h2>
         <ul>
-          <li>Procesar solicitudes de inscripción, certificación, consultas o cualquier otro trámite relacionado con los servicios ofrecidos por CERTIFIT.</li>
-          <li>Contactarlo para efectos de información comercial, académica, administrativa y de servicio al cliente.</li>
-          <li>Cumplir con obligaciones legales, contractuales y regulatorias.</li>
-          <li>Realizar encuestas de satisfacción, análisis estadísticos y estudios de mercado.</li>
-          <li>Compartir datos con aliados estratégicos o proveedores autorizados, únicamente para el cumplimiento de las finalidades aquí descritas.</li>
+          <li><strong>Nombre legal de la empresa:</strong> CERTIFIT</li>
+          <li><strong>Registro legal / NIT:</strong> 1004870869-0 (registrado bajo persona natural)</li>
+          <li><strong>Dirección física:</strong> Carrera 2 #6-69, Armenia, Quindío, Colombia</li>
+          <li><strong>Teléfono de contacto:</strong> +57 316 362 8828</li>
+          <li><strong>Correo electrónico oficial:</strong> <Link href="mailto:certifit1@hotmail.com" className={cn('text-blue-600 hover:underline')}>certifit1@hotmail.com</Link></li>
         </ul>
 
-        {/* El resto de los elementos de texto heredarán los estilos de 'prose' */}
-
-        <h3>Sus Derechos como Titular de los Datos</h3>
+        <h2>2. Uso de la Plataforma y Cuentas de Usuario</h2>
         <p>
-          Como titular de la información, usted tiene derecho a:
+          Para acceder a los cursos y contenidos, el usuario debe registrarse en la plataforma, proporcionando información veraz y actualizada, incluyendo su nombre completo y demás datos necesarios para la certificación.
         </p>
+        <h3>El usuario se compromete a:</h3>
         <ul>
-          <li>Conocer, actualizar, rectificar y suprimir sus datos personales.</li>
-          <li>Solicitar prueba de la autorización otorgada.</li>
-          <li>Ser informado sobre el uso que se ha dado a sus datos.</li>
-          <li>Presentar quejas ante la Superintendencia de Industria y Comercio u otra autoridad competente por infracciones a la ley.</li>
+          <li>No compartir su cuenta, nombre de usuario ni contraseña con terceros.</li>
+          <li>Mantener la confidencialidad de sus credenciales de acceso.</li>
+          <li>Utilizar la plataforma exclusivamente con fines educativos y dentro de la legalidad.</li>
+          <li>No descargar, copiar, distribuir ni compartir el contenido sin autorización expresa y por escrito de CERTIFIT.</li>
+          <li>Mantener una conducta respetuosa y profesional en foros, chats y otros medios de comunicación.</li>
         </ul>
         <p>
-          Para ejercer estos derechos, podrá contactar a CERTIFIT a través del correo electrónico: {/* Estilos de Tailwind para el enlace */} <Link href="mailto:certifit1@hotmail.com" className={cn('text-blue-600 hover:underline')}>certifit1@hotmail.com</Link> o mediante los canales dispuestos en la sección de contacto.
+          CERTIFIT podrá suspender o cancelar cualquier cuenta en caso de uso indebido de la plataforma, violación de estos Términos y Condiciones, o actividades fraudulentas o ilegales.
         </p>
 
-        <h3>Cumplimiento Normativo y Seguridad</h3>
+        <h2>3. Propiedad Intelectual</h2>
         <p>
-          CERTIFIT garantiza que el tratamiento de datos personales se realizará bajo estrictas medidas de seguridad, conforme a lo dispuesto en la Ley 1581 de 2012 (o legislación vigente aplicable), su Decreto Reglamentario 1377 de 2013 y demás normativas sobre protección de datos personales.
+          Todo el contenido disponible en la plataforma, incluyendo videos, textos, imágenes, gráficos, documentos, quizzes y exámenes, es propiedad exclusiva de CERTIFIT y está protegido por las leyes nacionales e internacionales sobre propiedad intelectual.
         </p>
-        
-        <div className={cn('my-12 rounded-lg border border-yellow-300 bg-yellow-50 p-6 not-prose')}>
-          <h3 className={cn('mt-0 text-xl font-bold text-yellow-900')}>
-            Secciones Recomendadas para Completar
-          </h3>
-          <p className={cn('text-yellow-800')}>
-            <strong>Nota importante:</strong> Los términos y condiciones actuales se centran en el tratamiento de datos. Para ofrecer un servicio robusto y proteger legalmente su negocio, es fundamental desarrollar y añadir las siguientes cláusulas:
-          </p>
-          <ul className={cn('list-disc space-y-2 pl-5 text-yellow-800')}>
-            <li>
-              <strong>Uso de la Plataforma y los Cursos:</strong> Describir las reglas para el uso de las cuentas de usuario (ej. prohibir compartir cuentas), el acceso a los cursos y el comportamiento esperado de los usuarios.
-            </li>
-            <li>
-              <strong>Propiedad Intelectual:</strong> Especificar que todo el contenido de los cursos (videos, documentos, etc.) es propiedad de CERTIFIT y no puede ser copiado ni distribuido.
-            </li>
-            <li>
-              <strong>Pagos, Precios y Reembolsos:</strong> Detallar los métodos de pago, la moneda, los impuestos aplicables y, muy importante, la política de devoluciones o cancelaciones de los cursos.
-            </li>
-            <li>
-              <strong>Limitación de Responsabilidad:</strong> Incluir un descargo de responsabilidad indicando que el contenido sobre fitness y salud es de carácter informativo y no reemplaza la asesoría de un profesional médico o deportivo.
-            </li>
-            <li>
-              <strong>Modificaciones y Terminación del Servicio:</strong> Reservarse el derecho de modificar los términos o de suspender una cuenta de usuario si se incumplen las condiciones.
-            </li>
-          </ul>
-        </div>
-        {/* --- FIN DE LA SECCIÓN DE MARCADORES --- */}
+        <h3>Está terminantemente prohibido:</h3>
+        <ul>
+          <li>Copiar, reproducir, distribuir o vender el contenido, parcial o totalmente, sin autorización previa de CERTIFIT.</li>
+          <li>Usar el contenido con fines comerciales o distintos a la formación personal.</li>
+        </ul>
+        <p>
+          El acceso al material es personal e intransferible, válido solo durante la vigencia de la inscripción al curso.
+        </p>
+
+        <h2>4. Detalles de los Cursos</h2>
+        <p>
+          Nuestros cursos están enfocados en la formación integral en fitness, salud y deporte.
+        </p>
+        <ul>
+          <li><strong>Formato:</strong> 100% online con videos, textos, quizzes y examen final.</li>
+          <li><strong>Duración aproximada:</strong> 12 semanas (aproximadamente 60 horas).</li>
+          <li><strong>Idioma:</strong> Español.</li>
+          <li><strong>Público objetivo:</strong> estudiantes, entrenadores, profesionales de la salud y cualquier persona interesada en capacitarse en el área.</li>
+        </ul>
+
+        <h2>5. Pagos y Política de Reembolsos</h2>
+        <h3>Moneda y métodos de pago</h3>
+        <p>
+          Todos los precios se expresan en pesos colombianos (COP) y son procesados mediante Wompi. Los métodos aceptados incluyen tarjeta de crédito, débito, transferencias bancarias, PayPal y Nequi.
+        </p>
+        <h3>Reembolsos</h3>
+        <p>
+          CERTIFIT no ofrece reembolsos una vez que el usuario ha accedido al contenido digital del curso. Si el usuario solicita un reembolso dentro de la primera hora posterior al pago y no ha ingresado al contenido, el reembolso será inmediato. Después de la primera hora, el proceso puede tardar entre 15 y 20 días hábiles. En situaciones excepcionales, como fallas técnicas atribuibles a CERTIFIT, el usuario podrá solicitar un reembolso dentro de las 48 horas posteriores al inconveniente, y CERTIFIT evaluará cada caso.
+        </p>
+
+        <h2>6. Aviso de Responsabilidad en Temas de Salud</h2>
+        <p>
+          La información y el contenido de los cursos de CERTIFIT tienen fines exclusivamente educativos. CERTIFIT no se hace responsable por lesiones, daños físicos o perjuicios derivados de la aplicación práctica de los conocimientos adquiridos, ni por los resultados obtenidos.
+        </p>
+        <p>
+          <strong>Importante:</strong> Antes de iniciar cualquier programa de ejercicio o nutrición, especialmente si existe una condición médica, el usuario debe consultar con un médico o especialista.
+        </p>
+
+        <h2>7. Modificaciones y Actualizaciones</h2>
+        <p>
+          CERTIFIT se reserva el derecho de modificar o actualizar estos Términos y Condiciones en cualquier momento. Los cambios serán notificados a través de la plataforma y el uso continuo de nuestros servicios implica la aceptación de las actualizaciones.
+        </p>
+
+        <h2>8. Terminación del Servicio</h2>
+        <p>
+          CERTIFIT podrá suspender o cancelar la cuenta de cualquier usuario que infrinja estos términos, comparta su cuenta o el contenido, o realice actividades fraudulentas. En estos casos no se realizarán reembolsos.
+        </p>
+
+        <h2>9. Política de Tratamiento de Datos Personales</h2>
+        <p>
+          CERTIFIT cumple con la Ley 1581 de 2012 y el Decreto 1377 de 2013 sobre protección de datos personales.
+        </p>
+        <h3>Finalidades del tratamiento de datos:</h3>
+        <ul>
+          <li>Gestionar inscripción, participación y certificación en los cursos.</li>
+          <li>Realizar comunicaciones académicas, informativas, administrativas y comerciales.</li>
+          <li>Cumplir con obligaciones legales y contractuales.</li>
+          <li>Evaluar la calidad y mejorar nuestros servicios.</li>
+        </ul>
+        <h3>Derechos del usuario:</h3>
+        <p>
+          Como titular de la información, usted tiene derecho a conocer, actualizar, rectificar sus datos, solicitar prueba de la autorización, ser informado sobre el uso de sus datos y revocar la autorización o solicitar la eliminación de sus datos.
+        </p>
+        <p>
+          Puede ejercer estos derechos a través del correo <Link href="mailto:certifit1@hotmail.com" className={cn('text-blue-600 hover:underline')}>certifit1@hotmail.com</Link> o el teléfono +57 316 362 8828.
+        </p>
         
         <hr />
 
-        <h2>2. Declaración de Aceptación</h2>
+        <h2>10. Contacto</h2>
         <p>
-          Al hacer clic en &quot;Aceptar&quot; o al utilizar nuestros servicios, usted declara que ha leído y comprendido la política de tratamiento de datos personales de CERTIFIT y que otorga su autorización para el tratamiento de sus datos y acepta los términos y condiciones conforme a lo aquí establecido.
+          Si tiene dudas sobre estos Términos y Condiciones, puede comunicarse a través de:
+        </p>
+        <ul>
+          <li><strong>Correo electrónico:</strong> <Link href="mailto:certifit1@hotmail.com" className={cn('text-blue-600 hover:underline')}>certifit1@hotmail.com</Link></li>
+          <li><strong>Teléfono:</strong> +57 316 362 8828</li>
+          <li><strong>Dirección física:</strong> Carrera 2 #6-69, Armenia, Quindío, Colombia</li>
+        </ul>
+
+        <h2>11. Aceptación</h2>
+        <p>
+          Al registrarse, realizar un pago o utilizar la plataforma, el usuario declara que ha leído, comprendido y aceptado estos Términos y Condiciones y la Política de Tratamiento de Datos Personales.
         </p>
         
       </div>
