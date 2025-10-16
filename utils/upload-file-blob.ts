@@ -6,7 +6,11 @@ export const uploadFile = async (pathName: string, file: File): Promise<PutBlobR
     const fullPath = pathName + generateFileName(file.type);
     return await upload(fullPath, file, {
         access: 'public',
-        handleUploadUrl: '/api/blob-upload'
+        handleUploadUrl: '/api/blob-upload',
+        multipart: true,
+        onUploadProgress: (progress) => {
+            console.log('Upload progress:', progress.percentage);
+        },
     });
 }
 

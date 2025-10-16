@@ -65,6 +65,8 @@ export const fetchUserById = async (request: ServerActionRequest<FetchUserByID>)
                         phoneNumber: existingUser.phoneNumber,
                         isAdmin: existingUser.isAdmin,
                         emailVerified: existingUser.emailVerified,
+                        identification: existingUser.identification,
+                        identificationType: existingUser.identificationType,
                         createdAt: existingUser.createdAt,
                         updatedAt: existingUser.updatedAt
                     }

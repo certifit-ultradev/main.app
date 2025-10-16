@@ -89,6 +89,8 @@ export const registerUser = async (userInfo: RegisterUser | UserCreateData): Pro
             isAdmin: false,
             email: userInfo.email,
             emailVerified: null,
+            identification: userInfo.identification,
+            identificationType: userInfo.identificationType,
             phoneNumber: userInfo.phoneNumber,
         }));
     } catch (error) {

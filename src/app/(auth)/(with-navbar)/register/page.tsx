@@ -18,6 +18,8 @@ const RegisterPage: NextPage = () => {
         phoneNumber: '',
         password: '',
         confirmPassword: '',
+        identification: '',
+        identificationType: 'CC',
         checkTerms: false,
     });
 

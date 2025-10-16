@@ -35,6 +35,8 @@ export const RegistrationForm = ({ data, setData, nextStep }: RegisterFormProps)
             email: data.email,
             phoneNumber: data.phoneNumber,
             checkTerms: data.checkTerms,
+            identification: data.identification || '',
+            identificationType: (data.identificationType as 'CC' | 'TI' | 'CE' | 'NIT' | 'PAS') || 'CC', // Ensure type compatibility
         }
     });
 

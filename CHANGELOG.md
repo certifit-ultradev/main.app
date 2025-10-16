@@ -2,6 +2,22 @@
 
 ## [unreleased]
 
+## 1.1.10
+
+### Added
+
+- Add identification and identificationType fields to user data.
+
+### Fixed
+
+- Add error detail con course edition.
+
+## 1.1.9
+
+### Fixed
+
+- Reduce to 1 the concurrent file upload and add the option multipart for better performance.
+
 ## 1.1.8
 
 ### Fixed
