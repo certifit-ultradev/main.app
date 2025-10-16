@@ -9,15 +9,19 @@ export type RegisterUser = {
     phoneNumber: string,
     password: string,
     confirmPassword: string,
-    checkTerms: boolean
+    checkTerms: boolean,
+    identification?: string | null,
+    identificationType?: string | null,
 }
 
 export interface RegisterUserFirstStep {
-    name: string,
-    lastName: string,
-    email: string,
-    phoneNumber: string,
-    checkTerms: boolean,
+    name: string;
+    lastName: string;
+    email: string;
+    phoneNumber: string;
+    checkTerms: boolean;
+    identification: string; // Cambiado a obligatorio
+    identificationType: 'CC' | 'TI' | 'CE' | 'NIT' | 'PAS';
 }
 
 export type UpdateUser = {
@@ -143,6 +147,8 @@ export interface RegisterPageData {
     password: string;
     confirmPassword: string;
     checkTerms: boolean;
+    identification: string;
+    identificationType: 'CC' | 'TI' | 'CE' | 'NIT' | 'PAS';
 };
 
 export interface CourseList {
@@ -159,6 +165,8 @@ export interface UserList {
     phoneNumber: string;
     isAdmin: boolean;
     emailVerified?: Date | null;
+    identification?: string | null;
+    identificationType?: string | null;
     createdAt?: Date;
     updatedAt?: Date | null;
 }
@@ -171,6 +179,8 @@ export interface UserCreateData {
     phoneNumber: string;
     password?: string;
     confirmPassword?: string;
+    identification?: string | null;
+    identificationType?: string | null;
 }
 
 export interface DataPaginated<T> {

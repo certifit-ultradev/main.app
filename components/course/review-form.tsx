@@ -182,7 +182,7 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
         } catch (err) {
             console.error("Error:", err);
             setIsLoading(false);
-            setError('Ocurrió un error, intente más tarde.');
+            setError('Ocurrió un error, intente más tarde. Error: ' + (err instanceof Error ? err.message : 'Unknown error'));
         }
     }
 

@@ -30,6 +30,18 @@ export const FirstStepRegisterSchema = z.object({
     checkTerms: z.boolean().refine((val) => val === true, {
         message: 'Debe aceptar los términos y condiciones',
     }),
+    identification: z.string().min(3,{
+        message: "La identificación es obligatoria"
+    }),
+    identificationType: z.enum([
+        'CC', // Cédula de Ciudadanía
+        'TI', // Tarjeta de Identidad
+        'CE', // Cédula de Extranjería
+        'NIT', // Número de Identificación Tributaria
+        'PAS', // Pasaporte
+    ],{
+        message: "El tipo de identificación es obligatorio"
+    }),
 });
 
 export const ResetSchema = z.object({
@@ -98,7 +110,15 @@ export const CreateUserSchema = z.object({
         .min(8, 'La contraseña debe tener al menos 8 caracteres')
         .regex(/[A-Z]/, 'La contraseña debe tener al menos una letra mayúscula')
         .regex(/\d/, 'La contraseña debe tener al menos un número'),
-    confirmPassword: z.string()
+    confirmPassword: z.string(),
+    identification: z.string().optional(),
+    identificationType: z.enum([
+        'CC', // Cédula de Ciudadanía
+        'TI', // Tarjeta de Identidad
+        'CE', // Cédula de Extranjería
+        'NIT', // Número de Identificación Tributaria
+        'PAS', // Pasaporte
+    ]).optional(),
 }).refine((data) => data.password === data.confirmPassword, {
     message: 'Las contraseñas no coinciden',
     path: ['confirmPassword'],
@@ -111,6 +131,14 @@ export const EditUserSchema = z.object({
     phoneNumber: z.string().optional(),
     password: z.string().optional(),
     confirmPassword: z.string().optional(),
+    identification: z.string().optional(),
+    identificationType: z.enum([
+        'CC', // Cédula de Ciudadanía
+        'TI', // Tarjeta de Identidad
+        'CE', // Cédula de Extranjería
+        'NIT', // Número de Identificación Tributaria
+        'PAS', // Pasaporte
+    ]).optional(),
 }).refine((data) => {
     // Validación condicional del número de teléfono
     if (data.phoneNumber && data.phoneNumber.length > 0) {

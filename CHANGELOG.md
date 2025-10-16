@@ -2,6 +2,16 @@
 
 ## [unreleased]
 
+## 1.1.10
+
+### Added
+
+- Add identification and identificationType fields to user data.
+
+### Fixed
+
+- Add error detail con course edition.
+
 ## 1.1.9
 
 ### Fixed

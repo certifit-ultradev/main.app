@@ -10,19 +10,21 @@ datasource db {
 }
 
 model User {
-  id            String       @id @default(cuid())
-  name          String
-  lastName      String       @map("last_name")
-  password      String?
-  email         String
-  emailVerified DateTime?    @map("email_verified")
-  phoneNumber   String       @map("phone_number")
-  isAdmin       Boolean      @default(false) @map("is_admin")
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime?    @updatedAt @map("updated_at")
-  sessions      Session[]
-  userCourse    UserCourse[]
-  cart          Cart[]
+  id                 String       @id @default(cuid())
+  name               String
+  lastName           String       @map("last_name")
+  password           String?
+  email              String
+  identification     String?
+  identificationType String?      @map("identification_type")
+  emailVerified      DateTime?    @map("email_verified")
+  phoneNumber        String       @map("phone_number")
+  isAdmin            Boolean      @default(false) @map("is_admin")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime?    @updatedAt @map("updated_at")
+  sessions           Session[]
+  userCourse         UserCourse[]
+  cart               Cart[]
 
   @@unique([email, phoneNumber])
 }
