@@ -33,6 +33,14 @@ const UserViewPage = async ({ params }) => {
                     <span className={cn('font-medium')}>{user?.phoneNumber}</span>
                 </div>
                 <div className={cn('flex justify-between')}>
+                    <span className={cn('text-gray-600')}>Identificación:</span>
+                    <span className={cn('font-medium')}>{user?.identification || 'No proporcionada'}</span>
+                </div>
+                <div className={cn('flex justify-between')}>
+                    <span className={cn('text-gray-600')}>Tipo de Identificación:</span>
+                    <span className={cn('font-medium')}>{user?.identificationType || 'No especificado'}</span>
+                </div>
+                <div className={cn('flex justify-between')}>
                     <span className={cn('text-gray-600')}>Administrador:</span>
                     <span className={`font-medium ${user?.isAdmin ? 'text-green-600' : 'text-red-600'}`}>
                         {user?.isAdmin ? 'Sí' : 'No'}

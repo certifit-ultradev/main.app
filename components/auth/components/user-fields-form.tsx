@@ -99,6 +99,47 @@ export const BasicFieldsForm = ({ register, control, errors }: RegisterFormProps
                     />
                 </div>
             </div>
+            {/* Identificación y Tipo de Identificación */}
+            <div className={cn('flex flex-wrap -mx-2 mb-4')}>
+                <div className={cn('w-full md:w-1/2 px-2')}>
+                    <select
+                        id='identificationType'
+                        {...register('identificationType')}
+                        className={cn('w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0BBBE7] appearance-none')}
+                        style={{ height: 'calc(3rem + 2px)' }} // Adjust height to match input fields
+                    >
+                        <option value='CC'>Cédula de Ciudadanía</option>
+                        <option value='TI'>Tarjeta de Identidad</option>
+                        <option value='CE'>Cédula de Extranjería</option>
+                        <option value='NIT'>Número de Identificación Tributaria</option>
+                        <option value='PAS'>Pasaporte</option>
+                    </select>
+                    <ErrorMessage
+                        errors={errors}
+                        name='identificationType'
+                        render={({ message }) => (
+                            <p className={cn('text-red-500 text-sm text-left w-full')}>{message}</p>
+                        )}
+                    />
+                </div>
+                <div className={cn('w-full md:w-1/2 px-2 ')}>
+                    <input
+                        type='text'
+                        placeholder='Número de Identificación'
+                        {...register('identification')}
+                        className={cn('w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0BBBE7]')}
+                    />
+                    <ErrorMessage
+                        errors={errors}
+                        name='identification'
+                        render={({ message }) => (
+                            <p className={cn('text-red-500 text-sm text-left w-full')}>
+                                {message}
+                            </p>
+                        )}
+                    />
+                </div>
+            </div>
         </>
     )
 }

@@ -8,6 +8,8 @@ export class User {
     email: string;
     isAdmin: boolean;
     emailVerified?: Date | null;
+    identification?: string | null;
+    identificationType?: string | null;
     phoneNumber: string;
     createdAt?: Date;
     updatedAt?: Date | null;
@@ -22,6 +24,8 @@ export class User {
             email: string;
             isAdmin: boolean;
             emailVerified?: Date | null;
+            identification?: string | null;
+            identificationType?: string | null;
             phoneNumber: string;
             createdAt?: Date;
             updatedAt?: Date | null;
@@ -35,6 +39,8 @@ export class User {
         this.email = data.email;
         this.isAdmin = data.isAdmin || false;
         this.emailVerified = data.emailVerified || null;
+        this.identification = data.identification || null;
+        this.identificationType = data.identificationType || null;
         this.phoneNumber = data.phoneNumber || '';
         this.createdAt = data.createdAt || new Date();
         this.updatedAt = data.updatedAt || null;

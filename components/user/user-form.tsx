@@ -31,6 +31,7 @@ export const UserCreateEditForm = ({ data }: UserFormProps<UserCreateData>) => {
 
     const schemaRequired = data.id ? EditUserSchema : CreateUserSchema;
 
+    console.log(data);
     const {
         register,
         handleSubmit,
@@ -45,6 +46,8 @@ export const UserCreateEditForm = ({ data }: UserFormProps<UserCreateData>) => {
             lastName: data.lastName,
             email: data.email,
             phoneNumber: data.phoneNumber,
+            identification: data.identification || '',
+            identificationType: (data.identificationType as 'CC' | 'TI' | 'CE' | 'NIT' | 'PAS') || 'CC', // Ensure type compatibility
         }
     });
 
@@ -56,6 +59,8 @@ export const UserCreateEditForm = ({ data }: UserFormProps<UserCreateData>) => {
                     lastName: data.lastName,
                     email: data.email,
                     phoneNumber: data.phoneNumber,
+                    identification: data.identification || '',
+                    identificationType: (data.identificationType as 'CC' | 'TI' | 'CE' | 'NIT' | 'PAS') || 'CC', // Ensure type compatibility
                 });
 
             } catch (error) {
@@ -85,7 +90,9 @@ export const UserCreateEditForm = ({ data }: UserFormProps<UserCreateData>) => {
                     email: formData.email as string,
                     phoneNumber: formData.phoneNumber as string,
                     password: formData.password as string,
-                    confirmPassword: formData.confirmPassword as string
+                    confirmPassword: formData.confirmPassword as string,
+                    identification: formData.identification || '',
+                    identificationType: (formData.identificationType as 'CC' | 'TI' | 'CE' | 'NIT' | 'PAS') || 'CC', // Ensure type compatibility
                 };
 
                 createUser({data:{ ...userDataForApi }}).then((data) => {
@@ -123,7 +130,7 @@ export const UserCreateEditForm = ({ data }: UserFormProps<UserCreateData>) => {
     };
 
     return (
-        <div className={cn('flex flex-col bg-white p-10')}>
+        <div className={cn('flex flex-col bg-white p-8')}>
             <h1 className={cn('text-2xl font-semibold mb-4 text-left w-full max-w-lg')}>
                 Datos Básicos
             </h1>
@@ -215,6 +222,47 @@ export const UserCreateEditForm = ({ data }: UserFormProps<UserCreateData>) => {
                             name='phoneNumber'
                             render={({ message }) => (
                                 <p className={cn('text-red-500 text-sm text-left w-full')}>{message}</p>
+                            )}
+                        />
+                    </div>
+                </div>
+                {/* Identificación y Tipo de Identificación */}
+                <div className={cn('flex flex-wrap -mx-2 mb-4')}>                    
+                    <div className={cn('w-full md:w-1/2 px-2')}>
+                        <select
+                            id='identificationType'
+                            {...register('identificationType')}
+                            className={cn('w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0BBBE7] appearance-none')}
+                            style={{ height: 'calc(3rem + 2px)' }} // Adjust height to match input fields
+                        >
+                            <option value='CC'>Cédula de Ciudadanía</option>
+                            <option value='TI'>Tarjeta de Identidad</option>
+                            <option value='CE'>Cédula de Extranjería</option>
+                            <option value='NIT'>Número de Identificación Tributaria</option>
+                            <option value='PAS'>Pasaporte</option>
+                        </select>
+                        <ErrorMessage
+                            errors={errors}
+                            name='identificationType'
+                            render={({ message }) => (
+                                <p className={cn('text-red-500 text-sm text-left w-full')}>{message}</p>
+                            )}
+                        />
+                    </div>
+                    <div className={cn('w-full md:w-1/2 px-2 ')}>
+                        <input
+                            type='text'
+                            placeholder='Número de Identificación'
+                            {...register('identification')}
+                            className={cn('w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0BBBE7]')}
+                        />
+                        <ErrorMessage
+                            errors={errors}
+                            name='identification'
+                            render={({ message }) => (
+                                <p className={cn('text-red-500 text-sm text-left w-full')}>
+                                    {message}
+                                </p>
                             )}
                         />
                     </div>

@@ -17,6 +17,8 @@ const EditUsersPage = async ({ params }) => {
             lastName: result.payload?.lastName as string,
             email: result.payload?.email as string,
             phoneNumber: result.payload?.phoneNumber as string,
+            identification: result.payload?.identification as string,
+            identificationType: result.payload?.identificationType as string,
         }} />
     );
 };

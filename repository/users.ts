@@ -122,6 +122,8 @@ export const createUser = async (user: User): Promise<User | null> => {
             email: user.email,
             isAdmin: user.isAdmin,
             emailVerified: user.emailVerified,
+            identification: user.identification,
+            identificationType: user.identificationType,
             phoneNumber: user.phoneNumber,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
