@@ -24,7 +24,7 @@ export const register = async (request: ServerActionRequest<CourseCategoryData>)
 
                 return { success: true, message: "Categoria creada correctamente." }
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         }
     );
@@ -48,7 +48,7 @@ export const edit = async (request: ServerActionRequest<Partial<CourseCategoryDa
 
                 return { success: true, message: "Categoria creado correctamente." }
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         }
     );
@@ -63,7 +63,7 @@ export const deleteCategory = async (request: ServerActionRequest<{ id: number }
                 await removeCourseCategory(request.id);
                 return { success: true, message: "Categoria eliminada correctamente." }
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         }
     );
