@@ -25,7 +25,7 @@ export const register = async (request: ServerActionRequest<UserCreateData>): Pr
 
                 return { success: true, message: "Usuario creado correctamente." }
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         });
 }
@@ -54,7 +54,7 @@ export const edit = async (request: ServerActionRequest<EditUserData>): Promise<
 
                 return { success: true, message: "Usuario creado correctamente." }
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         });
 }
@@ -76,7 +76,7 @@ export const activate = async (request: ServerActionRequest<{ id: string }>): Pr
                 }
                 return { success: true, message: "Usuario activado correctamente." }
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         });
 }
@@ -98,7 +98,7 @@ export const deactivate = async (request: ServerActionRequest<{ id: string }>): 
                 }
                 return { success: true, message: "Usuario desactivado correctamente." }
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         });
 }

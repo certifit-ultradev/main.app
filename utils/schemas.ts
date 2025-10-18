@@ -216,22 +216,26 @@ export const CourseModulesSchema = z.array(
                 z.object({
                     type: z.enum(['multiple', 'text']),
                     title: z.string().min(1, 'El título de la pregunta es obligatorio'),
-                    points: z.number({ message: "Debe ser un número" }).min(1, 'El valor de la pregunta debe ser un número positivo'),
+                    points: z.number().min(1, 'El valor de la pregunta debe ser mayor a 0'),
                     options: z.array(
                         z.object({
-                            value: z.string().min(1, 'El texto de la opción es obligatorio'),
+                            value: z.string().min(1, 'El valor de la opción es obligatorio'),
                             isCorrect: z.boolean(),
                         })
-                    )/*.refine((options, ctx) => {
-              if (ctx.parent.type === 'multiple') {
-                const correctOptions = options.filter((option) => option.correct);
-                return options.length >= 2 && correctOptions.length === 1;
-              } else if (ctx.parent.type === 'text') {
-                return options.length === 1;
-              }
-              return true;
-            }, 'Las preguntas de selección múltiple deben tener al menos dos opciones y una opción correcta. Las preguntas de texto deben tener una opción.'),
-          */})
+                    ).refine((options) => {
+                        const correctOptions = options.filter(option => option.isCorrect);
+                        return correctOptions.length === 1;
+                    }, {
+                        message: 'Debe haber exactamente una opción correcta',
+                    }).optional(), // Solo aplica para preguntas de tipo "multiple"
+                }).refine((data) => {
+                    if (data.type === 'multiple' && (!data.options || data.options.length < 2)) {
+                        return false;
+                    }
+                    return true;
+                }, {
+                    message: 'Las preguntas de tipo "multiple" deben tener al menos dos opciones',
+                })
             ).min(1, 'El quiz debe tener al menos una pregunta'),
         }),
     })

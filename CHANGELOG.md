@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## 1.1.11
+
+## Fixed
+
+- Now the validations checks if exist one radio button check on options multiple.
+
 ## 1.1.10
 
 ### Added
