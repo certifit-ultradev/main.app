@@ -54,7 +54,7 @@ export function mapErrorToAPIResponse(error: unknown) {
  * @param error - The error to map.
  * @returns A response object with the error message and status code.
  */
-export function mapErrorToServerActionResponse(error: unknown) {
+export function mapErrorToServerActionResponse(error: unknown, isAdmin: boolean = false) {
     switch (true) {
         case error instanceof CourseAlreadyPurchasedError:
         case error instanceof TransactionError:
@@ -111,7 +111,7 @@ export function mapErrorToServerActionResponse(error: unknown) {
             console.error("PrismaClientValidationError:", error);
             return {
                 success: false,
-                message: "ocurrio un error, intente mas tarde",
+                message: isAdmin ? `Detalles: ${error.message}` : "ocurrio un error, intente mas tarde.",
             };
         case error instanceof Error:
             if ((error as object).constructor.name == "PrismaClientKnownRequestError") {
@@ -139,12 +139,12 @@ export function mapErrorToServerActionResponse(error: unknown) {
             }
             return {
                 success: false,
-                message: "ocurrio un error, intente mas tarde",
+                message: isAdmin ? `Detalles: ${error.message}` : "ocurrio un error, intente mas tarde.",
             };
         case error instanceof TypeError:
             return {
                 success: false,
-                message: "ocurrio un error, intente mas tarde",
+                message: isAdmin ? `Detalles: ${error.message}` : "ocurrio un error, intente mas tarde."
             };
         default:
             console.error("General Error:", error);
@@ -161,6 +161,8 @@ export function mapErrorToServerActionResponse(error: unknown) {
  * @param error - The error to log.
  */
 export function logPrismaError(error: unknown) {
+    console.log("Logging Prisma error:");
+    console.log(error);
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
         console.log(`Error conocido de Prisma (código ${error.code}): ${error.message}`);
         // Errores conocidos de Prisma

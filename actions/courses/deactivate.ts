@@ -23,7 +23,7 @@ export const deactivate = async (request: ServerActionRequest<ActivateOrDeactiva
 
                 return { success: true, message: "Curso desactivado correctamente" }
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         }
     );

@@ -70,7 +70,7 @@ export const register = async (request: ServerActionRequest<CourseData>): Promis
                     }, message: "Curso creado correctamente."
                 }
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         });
 }
@@ -90,7 +90,7 @@ export const edit = async (request: ServerActionRequest<EditCourseData>): Promis
 
                 return { success: true, message: "Curso editado correctamente." }
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         });
 }
@@ -113,7 +113,7 @@ export const editClassVideoPath = async (request: ServerActionRequest<EditClassV
 
                 return { success: true, message: "Información del video de la clase modificada correctamente." }
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         });
 

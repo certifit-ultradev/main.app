@@ -24,7 +24,7 @@ export const activate = async (request: ServerActionRequest<ActivateOrDeactivate
 
                 return { success: true, message: result.message }
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         }
     );

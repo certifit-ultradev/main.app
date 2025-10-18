@@ -32,7 +32,7 @@ export const listAllCourseCategories = async (): Promise<ServerActionResponse<Co
                     })
                 };
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         });
 }
@@ -65,7 +65,7 @@ export async function fetchCategoryById(
                     }
                 }
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         });
 };

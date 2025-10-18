@@ -42,7 +42,7 @@ export const listAll = async (request: ServerActionRequest<FetchPage>): Promise<
                     }
                 };
             } catch (error) {
-                return mapErrorToServerActionResponse(error);
+                return mapErrorToServerActionResponse(error, true);
             }
         }
     );

@@ -667,6 +667,24 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                                                                         />
                                                                     </div>
                                                                 ))}
+                                                                <ErrorMessage
+                                                                    errors={errors}
+                                                                    name={`${moduleIndex}-quiz-questions-${questionIndex}-options`}
+                                                                    render={({ message }) => (
+                                                                        <p className={cn('text-red-500 text-sm text-left mb-4')}>
+                                                                            {message}
+                                                                        </p>
+                                                                    )}
+                                                                />
+                                                                <ErrorMessage
+                                                                    errors={errors}
+                                                                    name={`${moduleIndex}-quiz-questions-${questionIndex}`}
+                                                                    render={({ message }) => (
+                                                                        <p className={cn('text-red-500 text-sm text-left mb-4')}>
+                                                                            {message}
+                                                                        </p>
+                                                                    )}
+                                                                />
                                                                 <button
                                                                     type="button"
                                                                     className={cn('border border-[#0BBBE7] text-[#0BBBE7] px-1 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-1')}
