@@ -672,7 +672,7 @@ export const updateFullCourse = async (
                     }
 
                     for (const option of add.data.options ?? []) {
-                        if (!isOption(add.data))
+                        if (!isOption(option))
                             throw new Error("Datos de opción incompletos");
 
                         const createdQuestionOption = await tx.possibleAnswerQuestion.create({
