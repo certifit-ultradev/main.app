@@ -6,6 +6,12 @@
 
 ### Fixed
 
+- Fixed bugs related with lint.
+
+## 1.1.13
+
+### Fixed
+
 - Fixed a bug on view course on admin.
 - Fixed responsive on login view.
 - Fixed response on course view on user.

@@ -220,21 +220,33 @@ export const CourseModulesSchema = z.array(
                     options: z.array(
                         z.object({
                             value: z.string().min(1, 'El valor de la opción es obligatorio'),
-                            isCorrect: z.boolean(),
+                            isCorrect: z.boolean().optional(),
                         })
-                    ).refine((options) => {
-                        const correctOptions = options.filter(option => option.isCorrect);
-                        return correctOptions.length === 1;
-                    }, {
-                        message: 'Debe haber exactamente una opción correcta',
-                    }).optional(), // Solo aplica para preguntas de tipo "multiple"
-                }).refine((data) => {
-                    if (data.type === 'multiple' && (!data.options || data.options.length < 2)) {
-                        return false;
-                    }
-                    return true;
-                }, {
-                    message: 'Las preguntas de tipo "multiple" deben tener al menos dos opciones',
+                    ).superRefine((options, ctx) => {
+                        const type = ctx.path[ctx.path.length - 2];
+                        if (type === 'multiple') {
+                            const correctOptions = options.filter(option => option.isCorrect);
+                            if (options.length < 2) {
+                                ctx.addIssue({
+                                    code: z.ZodIssueCode.custom,
+                                    message: 'Las preguntas de tipo "multiple" deben tener al menos dos opciones',
+                                });
+                            }
+                            if (correctOptions.length !== 1) {
+                                ctx.addIssue({
+                                    code: z.ZodIssueCode.custom,
+                                    message: 'Debe haber exactamente una opción correcta',
+                                });
+                            }
+                        } else if (type === 'text') {
+                            if (options.length !== 1) {
+                                ctx.addIssue({
+                                    code: z.ZodIssueCode.custom,
+                                    message: 'Las preguntas de tipo "text" deben tener exactamente una respuesta',
+                                });
+                            }
+                        }
+                    }),
                 })
             ).min(1, 'El quiz debe tener al menos una pregunta'),
         }),
