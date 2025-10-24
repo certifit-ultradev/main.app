@@ -99,7 +99,8 @@ export default function CertifitCheckoutComponent({ courseCanonicalId }: Certifi
         </>
     );
 }
-
+// userCourse 2
+// card 10
 type ModalPurchaseResultProp = {
     result: {
         success: boolean,
