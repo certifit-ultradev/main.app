@@ -59,6 +59,16 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
         });
     }, [courseCanonicalId, quiz.id]);
 
+    useEffect(() => {
+        if (quiz) {
+            setIsStarted(false);
+            setIsFinished(false);
+            setIsLoading(false);
+            setScore(null);
+            setCurrentQuestionIndex(0);
+        }
+    }, [quiz]);
+
     const handleAnswerChange = (questionId: number, optionId: number, answer: string) => {
         setAnswers((prevAnswers) => ({
             ...prevAnswers,

@@ -293,11 +293,6 @@ export const findUserCourseByCanonicalId = async (id: string, userId: string): P
         },
         where: {
             canonicalId: id,
-            userCourse: {
-                every: {
-                    userId
-                }
-            }
         }
     });
 

@@ -1,21 +1,32 @@
 "use client";
 
-import { CoursePublicData, QuizModule } from "@/utils/types";
+import { CourseData, QuizModule } from "@/utils/types";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import Image from 'next/image'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useRef, useState } from "react";
 import { StepProgress } from "@/components/progress/step-progress";
-import { CheckIcon, XIcon } from "@/components/svg/certifit-icons";
+import { CheckIcon } from "@/components/svg/certifit-icons";
 
 type CourseViewProps = {
-    data: CoursePublicData;
+    data: CourseData;
 };
 
 export const AdminCourseView = ({ data }: CourseViewProps) => {
     const [selectedClass, setSelectedClass] = useState<{ moduleIndex: number; classIndex: number; classId: number | undefined } | null>(null);
     const [selectedQuiz, setSelectedQuiz] = useState<{ moduleIndex: number; moduleId: number; quizId: number } | null>(null);
+
+    // Reiniciar quizState cuando cambia el quiz seleccionado
+    const initialQuizState = { started: false, finished: false, currentQuestion: 0 };
+    const [quizState, setQuizState] = useState(initialQuizState);
+
+    // Detectar cambio de quiz
+    const prevQuizRef = useRef<{ moduleIndex: number; moduleId: number; quizId: number } | null>(null);
+    if (selectedQuiz && (prevQuizRef.current?.quizId !== selectedQuiz.quizId || prevQuizRef.current?.moduleIndex !== selectedQuiz.moduleIndex)) {
+        setQuizState(initialQuizState);
+        prevQuizRef.current = selectedQuiz;
+    }
 
     const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -24,12 +35,6 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
         : null;
     const selectedQuizData = selectedQuiz ? data.modules?.[selectedQuiz.moduleIndex!].quiz : null;
 
-    // Estado para quiz admin
-    const [quizState, setQuizState] = useState({
-        started: false,
-        finished: false,
-        currentQuestion: 0,
-    });
 
     const handleStartQuiz = () => setQuizState({ started: true, finished: false, currentQuestion: 0 });
     const handleNextQuestion = (quiz: QuizModule) => {
@@ -279,7 +284,8 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
                     </TabsContent>
                     <TabsContent value="instructor" className={cn("p-4 flex flex-col items-center")}> 
                         {data.instructorPhoto && (
-                            <img 
+                            <Image 
+                                width={120} height={120}
                                 src={typeof data.instructorPhoto === 'string' ? data.instructorPhoto : ''}
                                 alt={data.instructorName}
                                 className={cn("w-24 h-24 rounded-full object-cover mb-4 border-2 border-[#0BBBE7]")}
@@ -307,7 +313,7 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
                     </TabsContent>
                     <TabsContent value="instructor" className={cn("p-2 flex flex-col items-center")}> 
                         {data.instructorPhoto && (
-                            <img 
+                            <Image 
                                 src={typeof data.instructorPhoto === 'string' ? data.instructorPhoto : ''}
                                 alt={data.instructorName}
                                 className={cn("w-20 h-20 rounded-full object-cover mb-2 border-2 border-[#0BBBE7]")}
