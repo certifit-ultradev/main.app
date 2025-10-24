@@ -52,8 +52,8 @@ export const LoginForm = () => {
     };
 
     return (
-        <div className={cn('flex h-screen bg-gray-100')}>
-            <div className={cn('flex flex-col justify-center items-center w-1/2 bg-white p-10')}>
+        <div className={cn('flex flex-col md:flex-row h-screen bg-gray-100')}> 
+            <div className={cn('flex flex-col justify-center items-center w-full md:w-1/2 bg-white p-6 md:p-10 order-1 min-h-[50vh] md:min-h-screen h-full')}>
                 <Image
                     src='https://vnruzfzvnvdhb848.public.blob.vercel-storage.com/public/logo-Xm0liee8ZmpclDqhTaYAi5vKcHPiEz.png'
                     alt='logo'
@@ -148,14 +148,22 @@ export const LoginForm = () => {
             </div>
 
             {/* Sección de Información */}
-            <div className={cn('relative w-full md:w-1/2 lg:w-1/2 mt-10 md:mt-0 flex justify-center md:justify-center flex-col items-center bg-gray-900 text-white')}>
-                <div className={cn('relative w-[30rem] h-[30rem]')}>
+            <div
+                className={cn(
+                    'hidden md:flex', // Oculta en móvil, muestra en md+
+                    'relative w-full md:w-1/2 lg:w-1/2 justify-center flex-col items-center bg-gray-900 text-white',
+                    'order-2',
+                    'mt-10 md:mt-0',
+                    'min-h-[50vh] md:min-h-screen h-full',
+                )}
+            >
+                <div className={cn('relative w-full max-w-[30rem] h-[22rem] md:w-[22rem] md:h-[22rem] lg:w-[30rem] lg:h-[30rem] flex items-center justify-center')}>
                     <div className={cn('absolute inset-0 rounded-full border-[16px] border-gray-800')}></div>
                     <Image src="https://vnruzfzvnvdhb848.public.blob.vercel-storage.com/public/photo_2025-06-28_19-35-28-xUXu6rhRG33roSpBwnSV8Yqoh7jjLE-6UiYLISzss0WJn5Mz4YXvUFjuxTkeJ.jpg"
                         width={500}
                         height={500}
                         alt="Entrenador"
-                        className={cn('relative z-9 rounded-full w-[30rem] h-[30rem] object-cover')} />
+                        className={cn('relative z-9 rounded-full w-full h-[22rem] md:w-[22rem] md:h-[22rem] lg:w-[30rem] lg:h-[30rem] object-cover mx-auto')} />
 
                     <div className={cn('absolute top-0 left-[-1rem] bg-white text-black p-4 rounded-lg shadow-md flex items-center space-x-1')}>
                         <div className={cn('flex items-center justify-center w-12 h-12 bg-[#0BBBE7] rounded-xl')}><LaptopIcon width={36} height={34} className={cn('')} /></div>

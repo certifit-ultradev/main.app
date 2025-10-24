@@ -337,10 +337,10 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                     </div>
 
                     {selectedClassData && selectedClassData.description ? (
-                        <div className={cn("bg-white p-6")}>
+                        <div className={cn("bg-white")}>
                             <h4 className={cn("text-2xl font-semibold mb-2")}>{selectedClassData.title}</h4>
-                            <div className={cn("mb-6")}>
-                                <p className={cn("text-gray-700")}>{selectedClassData.description}</p>
+                            <div className={cn("mb-6 max-h-40 overflow-y-auto pr-2 rounded-md")}>
+                                <p className={cn("text-gray-700 whitespace-pre-line")}>{selectedClassData.description}</p>
                             </div>
                         </div>
                     ) : (
@@ -349,19 +349,26 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                 </div>
 
                 {/* Panel derecho: Tabs con descripción e instructor */}
-                <div className={cn("lg:w-1/4 w-full border border-[#dde1e7] rounded-2xl p-6 shadow-md")}>
+                <div className={cn("lg:w-1/4 w-full border border-[#dde1e7] rounded-2xl p-6 shadow-md max-h-[70vh] overflow-y-auto")}>
                     <Tabs defaultValue="description">
-                        <TabsList className={cn("mb-4")}>
-                            <TabsTrigger value="description">Descripción</TabsTrigger>
-                            <TabsTrigger value="instructor">Instructor</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="description" className={cn("p-4")}>
-                            <p className={cn("text-gray-700")}>{data.description}</p>
-                        </TabsContent>
-                        <TabsContent value="instructor" className={cn("p-4")}>
-                            <p className={cn("text-gray-700")}>{data.instructorName}</p>
-                        </TabsContent>
-                    </Tabs>
+                    <TabsList className={cn("mb-4")}> 
+                        <TabsTrigger value="description">Descripción</TabsTrigger>
+                        <TabsTrigger value="instructor">Instructor</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="description" className={cn("p-4")}> 
+                        <p className={cn("text-gray-700")}>{data.description}</p>
+                    </TabsContent>
+                    <TabsContent value="instructor" className={cn("p-4 flex flex-col items-center")}> 
+                        {data.instructorPhoto && (
+                            <img 
+                                src={typeof data.instructorPhoto === 'string' ? data.instructorPhoto : ''}
+                                alt={data.instructorName}
+                                className={cn("w-24 h-24 rounded-full object-cover mb-4 border-2 border-[#0BBBE7]")}
+                            />
+                        )}
+                        <p className={cn("text-gray-700 text-center")}>{data.instructorName}</p>
+                    </TabsContent>
+                </Tabs>
                 </div>
             </div>
         </>
