@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## 1.1.14
+
+### Fixed
+
+- Fixed module and class order.
+
 ## 1.1.13
 
 ### Fixed
