@@ -2,9 +2,41 @@
 
 ## [unreleased]
 
+## 1.1.15
+
+### Fixed
+
+- Fix error when a video is update, now is deleting the old video.
+
+## 1.1.14
+
+### Fixed
+
+- Fixed module and class order.
+
+## 1.1.13
+
+### Fixed
+
+- Fixed bugs related with lint.
+
+## 1.1.13
+
+### Fixed
+
+- Fixed a bug on view course on admin.
+- Fixed responsive on login view.
+- Fixed response on course view on user.
+
+## 1.1.12
+
+### Fixed
+
+- Fixed a bug when a question is added to a existing quiz.
+
 ## 1.1.11
 
-## Fixed
+### Fixed
 
 - Now the validations checks if exist one radio button check on options multiple.
 

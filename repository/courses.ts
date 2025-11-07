@@ -167,7 +167,10 @@ export const findUserCourses = async (userId?: string): Promise<UserCourse[]> =>
  */
 export const findModulesByCourseId = async (courseId: number): Promise<CourseModules[]> => {
     const modules = await prisma.courseModules.findMany({
-        where: { deleted: false, courseId }
+        where: { deleted: false, courseId },
+        orderBy: {
+            id: 'asc',
+        },
     });
 
     if (modules.length == 0) {
@@ -190,20 +193,37 @@ export const findCourseById = async (id: number): Promise<Course> => {
             category: true,
             courseModules: {
                 include: {
-                    moduleClass: true,
+                    moduleClass: {
+                        orderBy: {
+                            id: 'asc',
+                        },
+                    },
                     moduleQuiz: {
                         include: {
                             quizQuestion: {
                                 include: {
-                                    possibleAnswerQuestion: true
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+                                    possibleAnswerQuestion: {
+                                        orderBy: {
+                                            id: 'asc',
+                                        },
+                                    },
+                                },
+                                orderBy: {
+                                    id: 'asc',
+                                },
+                            },
+                        },
+                        orderBy: {
+                            id: 'asc',
+                        },
+                    },
+                },
+                orderBy: {
+                    id: 'asc',
+                },
+            },
         },
-        where: { id }
+        where: { id },
     });
 
     if (!course) {
@@ -227,17 +247,34 @@ export const findCourseWithModulesByCanonicalId = async (id: string, userId: str
             category: true,
             courseModules: {
                 include: {
-                    moduleClass: true,
+                    moduleClass: {
+                        orderBy: {
+                            id: 'asc',
+                        },
+                    },
                     moduleQuiz: {
                         include: {
                             quizQuestion: {
                                 include: {
-                                    possibleAnswerQuestion: true
-                                }
+                                    possibleAnswerQuestion: {
+                                        orderBy: {
+                                            id: 'asc',
+                                        },
+                                    }
+                                },
+                                orderBy: {
+                                    id: 'asc',
+                                },
                             }
-                        }
+                        },
+                        orderBy: {
+                            id: 'asc',
+                        },
                     }
-                }
+                },
+                orderBy: {
+                    id: 'asc',
+                },
             },
         },
         where: { canonicalId: id }
@@ -286,18 +323,21 @@ export const findUserCourseByCanonicalId = async (id: string, userId: string): P
                     userId,
                 },
                 include: {
-                    userClassesState: true,
-                    userModuleState: true,
+                    userClassesState: {
+                        orderBy: {
+                            id: 'desc',
+                        },
+                    },
+                    userModuleState: {
+                        orderBy: {
+                            id: 'desc',
+                        },
+                    },
                 }
             }
         },
         where: {
             canonicalId: id,
-            userCourse: {
-                every: {
-                    userId
-                }
-            }
         }
     });
 
@@ -322,25 +362,50 @@ export const findUserCourseWithModulesByCanonicalId = async (id: string, userId:
             category: true,
             courseModules: {
                 include: {
-                    moduleClass: true,
+                    moduleClass: {
+                        orderBy: {
+                            id: 'asc',
+                        },
+                    },
                     moduleQuiz: {
                         include: {
                             quizQuestion: {
                                 include: {
-                                    possibleAnswerQuestion: true
-                                }
+                                    possibleAnswerQuestion: {
+                                        orderBy: {
+                                            id: 'asc',
+                                        },
+                                    }
+                                },
+                                orderBy: {
+                                    id: 'asc',
+                                },
                             }
-                        }
+                        },
+                        orderBy: {
+                            id: 'asc',
+                        },
                     }
-                }
+                },
+                orderBy: {
+                    id: 'asc',
+                },
             },
             userCourse: {
                 where: {
                     userId,
                 },
                 include: {
-                    userClassesState: true,
-                    userModuleState: true,
+                    userClassesState: {
+                        orderBy: {
+                            id: 'desc',
+                        },
+                    },
+                    userModuleState: {
+                        orderBy: {
+                            id: 'desc',
+                        },
+                    },
                     userQuizState: {
                         orderBy: [
                             {
@@ -354,7 +419,7 @@ export const findUserCourseWithModulesByCanonicalId = async (id: string, userId:
         where: { canonicalId: id }
     });
 
-     if (course === null) {
+    if (course === null) {
         throw new NotFoundError('Curso no encontrado');
     }
 
@@ -374,6 +439,9 @@ export const findQuizAnswersByQuizId = async (userCourseId: number, quizId: numb
         where: {
             userCourseId: userCourseId,
             quizId: quizId,
+        },
+        orderBy: {
+            id: 'asc',
         },
     });
 
@@ -672,7 +740,7 @@ export const updateFullCourse = async (
                     }
 
                     for (const option of add.data.options ?? []) {
-                        if (!isOption(add.data))
+                        if (!isOption(option))
                             throw new Error("Datos de opción incompletos");
 
                         const createdQuestionOption = await tx.possibleAnswerQuestion.create({
@@ -711,7 +779,7 @@ export const updateFullCourse = async (
                             courseModuleId: Number(add.path.module),
                             videoPath: add.data.video as string,
                             videoDuration: add.data.videoDuration,
-                            videoSize: add.data.videoSize 
+                            videoSize: add.data.videoSize
                         }
                     });
                     if (!createdModuleClass) {
@@ -883,19 +951,24 @@ export const updateFullCourse = async (
                     throw new Error(`Tipo desconocido para eliminar: ${dlt}`);
             }
         }
-    });
 
-    if (classIdsToUpdate.length > 0) {
-        const classesToUpdate = await prisma.moduleClass.findMany({
-            where: { id: { in: classIdsToUpdate } },
-        });
+        if (classIdsToUpdate.length > 0) {
+            const classesToUpdate = await prisma.moduleClass.findMany({
+                where: { id: { in: classIdsToUpdate } },
+                orderBy: {
+                    id: 'asc',
+                },
+            });
 
-        for (const classToUpdate of classesToUpdate) {
-            if (classToUpdate.videoPath) {
-                videoPathsToDelete.push(classToUpdate.videoPath);
+            for (const classToUpdate of classesToUpdate) {
+                if (classToUpdate.videoPath) {
+                    videoPathsToDelete.push(classToUpdate.videoPath);
+                }
             }
         }
-    }
+    });
+
+
 
     if (courseImage) {
         const url = await storeVideoBlobStorage(`/courses/${courseId}/`, courseImage);

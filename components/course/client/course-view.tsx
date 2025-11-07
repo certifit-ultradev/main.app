@@ -8,6 +8,7 @@ import { ClientQuizView } from "./quiz-view";
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import Image from 'next/image';
 
 type CourseViewProps = {
     data: CoursePublicData;
@@ -17,20 +18,20 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const intervalRef = useRef<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null)
-    const [selectedClass, setSelectedClass] = useState<{ moduleIndex: number; classIndex: number; classId: number|undefined } | null>(() => {
+    const [selectedClass, setSelectedClass] = useState<{ moduleIndex: number; classIndex: number; classId: number | undefined } | null>(() => {
         if (data.classCompleted.length === 0) return null
-    
+
         const lastId = data.classCompleted[data.classCompleted.length - 1].classId
-    
+
         for (let m = 0; m < data.modules!.length; m++) {
-          const mod = data.modules![m]
-          const idx = mod.classes?.findIndex((cls) => cls.id === lastId)
-          if (idx != null && idx >= 0) {
-            return { moduleIndex: m, classIndex: idx, classId: lastId }
-          }
+            const mod = data.modules![m]
+            const idx = mod.classes?.findIndex((cls) => cls.id === lastId)
+            if (idx != null && idx >= 0) {
+                return { moduleIndex: m, classIndex: idx, classId: lastId }
+            }
         }
         return null
-      });
+    });
     const [selectedQuiz, setSelectedQuiz] = useState<{ moduleIndex: number; moduleId: number; quizId: number } | null>(null);
     const [videoEnded, setVideoEnded] = useState(false);
 
@@ -168,6 +169,7 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
             }
         });
     }
+
 
     return (
         <>
@@ -321,7 +323,7 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                             <ClientQuizView
                                 quiz={selectedQuizData}
                                 quizIndex={selectedQuiz?.moduleIndex ?? 0}
-                               // lastResult={data.quizCompleted.find((quizCompleted) => quizCompleted.quizId === selectedQuizData.id)}
+                                // lastResult={data.quizCompleted.find((quizCompleted) => quizCompleted.quizId === selectedQuizData.id)}
                                 courseCanonicalId={data.canonicalId}
                                 minRequiredPoints={data.modules?.[selectedQuiz?.moduleIndex ?? 0].minRequiredPoints ?? 0}
                                 onQuizFinish={(moduleIndex: number, passed: boolean) => {
@@ -337,10 +339,10 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                     </div>
 
                     {selectedClassData && selectedClassData.description ? (
-                        <div className={cn("bg-white p-6")}>
+                        <div className={cn("bg-white")}>
                             <h4 className={cn("text-2xl font-semibold mb-2")}>{selectedClassData.title}</h4>
-                            <div className={cn("mb-6")}>
-                                <p className={cn("text-gray-700")}>{selectedClassData.description}</p>
+                            <div className={cn("mb-6 max-h-40 overflow-y-auto pr-2 rounded-md")}>
+                                <p className={cn("text-gray-700 whitespace-pre-line")}>{selectedClassData.description}</p>
                             </div>
                         </div>
                     ) : (
@@ -349,7 +351,7 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                 </div>
 
                 {/* Panel derecho: Tabs con descripción e instructor */}
-                <div className={cn("lg:w-1/4 w-full border border-[#dde1e7] rounded-2xl p-6 shadow-md")}>
+                <div className={cn("lg:w-1/4 w-full border border-[#dde1e7] rounded-2xl p-6 shadow-md max-h-[70vh] overflow-y-auto")}>
                     <Tabs defaultValue="description">
                         <TabsList className={cn("mb-4")}>
                             <TabsTrigger value="description">Descripción</TabsTrigger>
@@ -358,8 +360,16 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                         <TabsContent value="description" className={cn("p-4")}>
                             <p className={cn("text-gray-700")}>{data.description}</p>
                         </TabsContent>
-                        <TabsContent value="instructor" className={cn("p-4")}>
-                            <p className={cn("text-gray-700")}>{data.instructorName}</p>
+                        <TabsContent value="instructor" className={cn("p-4 flex flex-col items-center")}>
+                            {data.instructorPhoto && (
+                                <Image
+                                    width={120} height={120}
+                                    src={typeof data.instructorPhoto === 'string' ? data.instructorPhoto : ''}
+                                    alt={data.instructorName}
+                                    className={cn("w-24 h-24 rounded-full object-cover mb-4 border-2 border-[#0BBBE7]")}
+                                />
+                            )}
+                            <p className={cn("text-gray-700 text-center")}>{data.instructorName}</p>
                         </TabsContent>
                     </Tabs>
                 </div>
