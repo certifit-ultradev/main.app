@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## 1.1.15
+
+### Fixed
+
+- Fix error when a video is update, now is deleting the old video.
+
 ## 1.1.14
 
 ### Fixed
