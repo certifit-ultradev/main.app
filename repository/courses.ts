@@ -951,22 +951,24 @@ export const updateFullCourse = async (
                     throw new Error(`Tipo desconocido para eliminar: ${dlt}`);
             }
         }
-    });
 
-    if (classIdsToUpdate.length > 0) {
-        const classesToUpdate = await prisma.moduleClass.findMany({
-            where: { id: { in: classIdsToUpdate } },
-            orderBy: {
-                id: 'asc',
-            },
-        });
+        if (classIdsToUpdate.length > 0) {
+            const classesToUpdate = await prisma.moduleClass.findMany({
+                where: { id: { in: classIdsToUpdate } },
+                orderBy: {
+                    id: 'asc',
+                },
+            });
 
-        for (const classToUpdate of classesToUpdate) {
-            if (classToUpdate.videoPath) {
-                videoPathsToDelete.push(classToUpdate.videoPath);
+            for (const classToUpdate of classesToUpdate) {
+                if (classToUpdate.videoPath) {
+                    videoPathsToDelete.push(classToUpdate.videoPath);
+                }
             }
         }
-    }
+    });
+
+
 
     if (courseImage) {
         const url = await storeVideoBlobStorage(`/courses/${courseId}/`, courseImage);
