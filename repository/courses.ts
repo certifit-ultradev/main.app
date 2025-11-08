@@ -966,9 +966,9 @@ export const updateFullCourse = async (
                 }
             }
         }
+    }, {
+        timeout: 8000
     });
-
-
 
     if (courseImage) {
         const url = await storeVideoBlobStorage(`/courses/${courseId}/`, courseImage);

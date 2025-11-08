@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## 1.1.16
+
+### Fixed
+
+- Increase the transaction timeout from 5 to 8 seconds.
+
 ## 1.1.15
 
 ### Fixed
