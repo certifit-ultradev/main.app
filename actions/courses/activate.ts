@@ -2,7 +2,7 @@
 
 import { activateCourse } from "@/services/courses";
 import { ActivateOrDeactivateCourse, ServerActionRequest, ServerActionResponse } from "@/utils/types"
-import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
+import { requireAdminVerifiedUser } from "../middlewares/middlewares";
 import { Middlewares } from "../server-action-middleware";
 import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 
@@ -14,7 +14,7 @@ import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 export const activate = async (request: ServerActionRequest<ActivateOrDeactivateCourse>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, ActivateOrDeactivateCourse>(
         request,
-        [isAdmin, isEmailVerified],
+        [requireAdminVerifiedUser],
         async (request: ActivateOrDeactivateCourse) => {
             try {
                 const result = await activateCourse(request.id);

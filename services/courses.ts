@@ -6,7 +6,7 @@ import { QuizQuestion } from "@/models/quiz-question";
 import { diffCourses } from "@/utils/diff";
 import { PossibleAnswerQuestion } from "@/models/possible-answer-question";
 import { calculateTotalVideoDuration, formatVideoDuration } from "@/utils/video";
-import { auth } from "@/auth";
+import { withAuth, getOptionalUserId } from "@/utils/auth-wrapper";
 import { UserClassesState } from "@/models/user-classes-state";
 import { UserQuizAnswer } from "@/models/user-quiz-answer";
 import { UserModuleState } from "@/models/user_module_state";
@@ -18,6 +18,7 @@ import { UserQuizState } from "@/models/user-quiz-state";
 import { NotFoundError } from "@/exceptions/not-found";
 import { CourseChange } from "@/utils/change-types";
 import { CourseNotPurchasedError } from "@/exceptions/course-not-purchased";
+import { CourseMapper } from "@/mappers/course-mapper";
 
 export const COURSES_PAGE_SIZE = 10;
 
@@ -77,19 +78,9 @@ export const getModulesByCourseId = async (courseId: number): Promise<CourseModu
  * @param canonicalId 
  * @returns 
  */
-export const getUserCourseWithModulesByCanonicalId = async (canonicalId: string): Promise<Course> => {
+export const getUserCourseWithModulesByCanonicalId = withAuth(async (user, canonicalId: string): Promise<Course> => {
     try {
-        const session = await auth();
-        const userID = session?.user.id;
-        if (!userID) {
-            throw new UserNotLoggedError("El usuario debe loguearse");
-        }
-        const isEmailVerified = session?.user.emailVerified;
-        if (!isEmailVerified) {
-            throw new UserNotLoggedError("El usuario debe verificar su email");
-        }
-
-        let course = await findUserCourseWithModulesByCanonicalId(canonicalId, userID);
+        let course = await findUserCourseWithModulesByCanonicalId(canonicalId, user.id);
         if (!course.courseModules) {
             throw new CourseNotPurchasedError("El curso no puede ser visto, intente mas tarde.");
         }
@@ -124,7 +115,7 @@ export const getUserCourseWithModulesByCanonicalId = async (canonicalId: string)
         logPrismaError(error);
         throw error;
     }
-}
+})
 
 /**
  * 
@@ -132,19 +123,9 @@ export const getUserCourseWithModulesByCanonicalId = async (canonicalId: string)
  * @param quizId 
  * @returns 
  */
-export const getUserCourseQuizAnswers = async (canonicalId: string, quizId: number): Promise<UserQuizAnswer[]> => {
+export const getUserCourseQuizAnswers = withAuth(async (user, canonicalId: string, quizId: number): Promise<UserQuizAnswer[]> => {
     try {
-        const session = await auth();
-        const userID = session?.user.id;
-        if (!userID) {
-            throw new UserNotLoggedError("El usuario debe loguearse");
-        }
-        const isEmailVerified = session?.user.emailVerified;
-        if (!isEmailVerified) {
-            throw new UserNotLoggedError("El usuario debe verificar su email");
-        }
-
-        let course = await findUserCourseByCanonicalId(canonicalId, userID);
+        let course = await findUserCourseByCanonicalId(canonicalId, user.id);
         if (course.userCourse?.length == 0) {
             throw new Error("Este curso no pertenece al usuario");
         }
@@ -155,26 +136,16 @@ export const getUserCourseQuizAnswers = async (canonicalId: string, quizId: numb
         logPrismaError(error);
         throw error;
     }
-}
+})
 
 /**
  * 
  * @param canonicalId 
  * @returns 
  */
-export const getUserCourseByCanonicalId = async (canonicalId: string): Promise<Course> => {
+export const getUserCourseByCanonicalId = withAuth(async (user, canonicalId: string): Promise<Course> => {
     try {
-        const session = await auth();
-        const userId = session?.user.id;
-        if (!userId) {
-            throw new UserNotLoggedError("El usuario debe loguearse");
-        }
-        const isEmailVerified = session?.user.emailVerified;
-        if (!isEmailVerified) {
-            throw new UserNotLoggedError("El usuario debe verificar su email");
-        }
-
-        return await findUserCourseByCanonicalId(canonicalId, userId);
+        return await findUserCourseByCanonicalId(canonicalId, user.id);
     } catch (error) {
         logPrismaError(error);
         if (error instanceof NotFoundError) {
@@ -182,31 +153,21 @@ export const getUserCourseByCanonicalId = async (canonicalId: string): Promise<C
         }
         throw error;
     }
-}
+})
 
 /**
  * 
  * @param canonicalId 
  * @returns 
  */
-export const getCourseByCanonicalId = async (canonicalId: string): Promise<Course> => {
+export const getCourseByCanonicalId = withAuth(async (user, canonicalId: string): Promise<Course> => {
     try {
-        const session = await auth();
-        const userID = session?.user.id;
-        if (!userID) {
-            throw new UserNotLoggedError("El usuario debe loguearse");
-        }
-        const isEmailVerified = session?.user.emailVerified;
-        if (!isEmailVerified) {
-            throw new UserNotLoggedError("El usuario debe verificar su email");
-        }
-
-        return await findCourseByCanonicalId(canonicalId, userID);
+        return await findCourseByCanonicalId(canonicalId, user.id);
     } catch (error) {
         logPrismaError(error);
         throw error;
     }
-}
+})
 
 /**
  * 
@@ -214,9 +175,8 @@ export const getCourseByCanonicalId = async (canonicalId: string): Promise<Cours
  */
 export const getTopThreeCourses = async (): Promise<CoursePlainData[]> => {
     try {
-        const session = await auth();
-        const userID = session?.user.id;
-        const activeCourses = await findThreeCoursesActives(userID);
+        const userID = await getOptionalUserId();
+        const activeCourses = await findThreeCoursesActives(userID ?? undefined);
 
         // filter active courses by expiresAt
         const now = new Date();
@@ -224,41 +184,9 @@ export const getTopThreeCourses = async (): Promise<CoursePlainData[]> => {
             return course.expiresAt > now;
         });
 
-        return filteredActiveCourses.map<CoursePlainData>((course: Course) => {
-            const modules = course.courseModules?.map((courseModule): CourseModule => ({
-                id: courseModule.id,
-                courseId: courseModule.courseId,
-                title: courseModule.title,
-                minRequiredPoints: courseModule.minRequiredPoints,
-                quiz: undefined,
-                classes: courseModule.moduleClass?.map((cls) => ({
-                    id: cls.id,
-                    courseModuleId: cls.courseModuleId,
-                    title: cls.title,
-                    description: cls.description,
-                    video: cls.videoPath,
-                    videoDuration: cls.videoDuration,
-                    videoSize: cls.videoSize
-                }))
-            }));
-
-            const videoDur = formatVideoDuration(calculateTotalVideoDuration(modules ?? []))
+        return filteredActiveCourses.map((course: Course) => {
             const isAlreadyPurchased = (course.userCourse?.length ?? 0) > 0;
-
-            return {
-                id: course.id,
-                canonicalId: course.canonicalId,
-                title: course.title,
-                price: course.price,
-                courseImage: course.courseImage,
-                courseDuration: videoDur,
-                instructorName: course.instructorName,
-                instructorPhoto: course.instructorPhoto,
-                category: course.category,
-                description: course.description,
-                expiresAt: course.expiresAt,
-                alreadyPurchased: isAlreadyPurchased
-            }
+            return CourseMapper.toPlainData(course, isAlreadyPurchased);
         });
     } catch (error) {
         logPrismaError(error);
@@ -270,70 +198,15 @@ export const getTopThreeCourses = async (): Promise<CoursePlainData[]> => {
  * 
  * @returns 
  */
-export const getUserCourses = async (): Promise<CoursePublicDataWithOutCompletion[]> => {
+export const getUserCourses = withAuth(async (user): Promise<CoursePublicDataWithOutCompletion[]> => {
     try {
-        const session = await auth();
-        const userID = session?.user.id;
-        if (!userID) {
-            throw new UserNotLoggedError("El usuario debe loguearse");
-        }
-        const isEmailVerified = session?.user.emailVerified;
-        if (!isEmailVerified) {
-            throw new UserNotLoggedError("El usuario debe verificar su email");
-        }
-        const userCourses = await findUserCourses(userID);
-        return userCourses.map<CoursePublicDataWithOutCompletion>((userCourse: UserCourse) => {
-            const modules = userCourse.course?.courseModules?.map((courseModule): CourseModule => ({
-                id: courseModule.id,
-                courseId: courseModule.courseId,
-                title: courseModule.title,
-                minRequiredPoints: courseModule.minRequiredPoints,
-                quiz: undefined,
-                classes: courseModule.moduleClass?.map((cls) => ({
-                    id: cls.id,
-                    courseModuleId: cls.courseModuleId,
-                    title: cls.title,
-                    description: cls.description,
-                    video: cls.videoPath,
-                    videoDuration: cls.videoDuration,
-                    videoSize: cls.videoSize
-                }))
-            }));
-
-            const remapedCourse: RemapedCourse = {
-                canonicalId: userCourse.course?.canonicalId as string,
-                title: userCourse.course?.title as string,
-                price: userCourse.course?.price as number,
-                courseDuration: formatVideoDuration(calculateTotalVideoDuration(modules ?? [])),
-                courseImage: userCourse.course?.courseImage,
-                instructorName: userCourse.course?.instructorName as string,
-                instructorPhoto: userCourse.course?.instructorPhoto,
-                category: userCourse.course?.category,
-                description: userCourse.course?.description ?? "",
-                expiresAt: userCourse.course?.expiresAt as Date,
-                classViewed: userCourse.userClassesState,
-                moduleViewed: userCourse.userModuleState,
-                modules: modules,
-            };
-
-            const progressCalculation = getCourseProgress(remapedCourse);
-
-            delete remapedCourse['modules'];
-
-            return {
-                ...remapedCourse,
-                classesWithCompletion: progressCalculation?.classesWithCompletion,
-                visibleClasses: progressCalculation?.visibleClasses,
-                progressPercent: progressCalculation?.progressPercent as number,
-                currentIndex: progressCalculation?.currentIndex as number,
-                totalClasses: progressCalculation?.totalClasses as number,
-            };
-        });
+        const userCourses = await findUserCourses(user.id);
+        return CourseMapper.fromUserCoursesToPublicData(userCourses);
     } catch (error) {
         logPrismaError(error);
         return [];
     }
-}
+})
 
 /**
  * 
@@ -453,18 +326,9 @@ export const deactivateCourse = async (id: number) => {
  * @param isCompleted 
  * @returns 
  */
-export const registerClassCurrentState = async (courseId: string, classId: number, currentVideoTime: number, isCompleted: boolean) => {
+export const registerClassCurrentState = withAuth(async (user, courseId: string, classId: number, currentVideoTime: number, isCompleted: boolean) => {
     try {
-        const session = await auth();
-        const userID = session?.user.id;
-        if (!userID) {
-            throw new UserNotLoggedError("El usuario debe loguearse");
-        }
-        const isEmailVerified = session?.user.emailVerified;
-        if (!isEmailVerified) {
-            throw new UserNotLoggedError("El usuario debe verificar su email");
-        }
-        const courseData = await findUserCourseWithModulesByCanonicalId(courseId, userID);
+        const courseData = await findUserCourseWithModulesByCanonicalId(courseId, user.id);
         if (!courseData.userCourse) {
             throw new Error("El curso no le pertenece al usuario");
         }
@@ -478,7 +342,7 @@ export const registerClassCurrentState = async (courseId: string, classId: numbe
         }));
 
         if (!currentClassState) {
-            return { success: false, message: "No se pudo gaurdar el estado de la clase" };
+            return { success: false, message: "No se pudo guardar el estado de la clase" };
         }
 
         return { success: true };
@@ -486,7 +350,7 @@ export const registerClassCurrentState = async (courseId: string, classId: numbe
         logPrismaError(error);
         throw error;
     }
-}
+})
 
 /**
  * 
@@ -494,18 +358,9 @@ export const registerClassCurrentState = async (courseId: string, classId: numbe
  * @param moduleId 
  * @returns 
  */
-export const registerModuleFinishtState = async (courseId: string, moduleId: number) => {
+export const registerModuleFinishtState = withAuth(async (user, courseId: string, moduleId: number) => {
     try {
-        const session = await auth();
-        const userID = session?.user.id;
-        if (!userID) {
-            throw new UserNotLoggedError("El usuario debe loguearse");
-        }
-        const isEmailVerified = session?.user.emailVerified;
-        if (!isEmailVerified) {
-            throw new UserNotLoggedError("El usuario debe verificar su email");
-        }
-        const courseData = await findUserCourseWithModulesByCanonicalId(courseId, userID);
+        const courseData = await findUserCourseWithModulesByCanonicalId(courseId, user.id);
         if (!courseData.userCourse) {
             throw new Error("El curso no le pertenece al usuario");
         }
@@ -518,7 +373,7 @@ export const registerModuleFinishtState = async (courseId: string, moduleId: num
         }));
 
         if (!currentModuleState) {
-            return { success: false, message: "No se pudo gaurdar el estado del modulo" };
+            return { success: false, message: "No se pudo guardar el estado del modulo" };
         }
 
         return { success: true };
@@ -526,25 +381,16 @@ export const registerModuleFinishtState = async (courseId: string, moduleId: num
         logPrismaError(error);
         throw error;
     }
-}
+})
 
 /**
  * 
  * @param data 
  * @returns 
  */
-export const registerQuestionAnswer = async (data: CreateQuestionAnswer) => {
+export const registerQuestionAnswer = withAuth(async (user, data: CreateQuestionAnswer) => {
     try {
-        const session = await auth();
-        const userID = session?.user.id;
-        if (!userID) {
-            throw new UserNotLoggedError("El usuario debe loguearse");
-        }
-        const isEmailVerified = session?.user.emailVerified;
-        if (!isEmailVerified) {
-            throw new UserNotLoggedError("El usuario debe verificar su email");
-        }
-        const courseData = await findUserCourseWithModulesByCanonicalId(data.canonicalId, userID);
+        const courseData = await findUserCourseWithModulesByCanonicalId(data.canonicalId, user.id);
         if (!courseData.userCourse) {
             throw new Error("El curso no le pertenece al usuario");
         }
@@ -594,7 +440,7 @@ export const registerQuestionAnswer = async (data: CreateQuestionAnswer) => {
         }));
 
         if (!answerQuestionCreated) {
-            return { success: false, message: "No se pudo gaurdar la respuesta de la pregunta" };
+            return { success: false, message: "No se pudo guardar la respuesta de la pregunta" };
         }
 
         return { success: true };
@@ -602,25 +448,16 @@ export const registerQuestionAnswer = async (data: CreateQuestionAnswer) => {
         logPrismaError(error);
         throw error;
     }
-}
+})
 
 /**
  * 
  * @param data 
  * @returns 
  */
-export const calculateQuizScore = async (data: CalculateQuizScore): Promise<ResultQuizScore | null> => {
+export const calculateQuizScore = withAuth(async (user, data: CalculateQuizScore): Promise<ResultQuizScore | null> => {
     try {
-        const session = await auth();
-        const userID = session?.user.id;
-        if (!userID) {
-            throw new UserNotLoggedError("El usuario debe loguearse");
-        }
-        const isEmailVerified = session?.user.emailVerified;
-        if (!isEmailVerified) {
-            throw new UserNotLoggedError("El usuario debe verificar su email");
-        }
-        const courseData = await findUserCourseWithModulesByCanonicalId(data.canonicalId, userID);
+        const courseData = await findUserCourseWithModulesByCanonicalId(data.canonicalId, user.id);
         if (!courseData.userCourse) {
             throw new Error("El curso no le pertenece al usuario");
         }
@@ -678,7 +515,7 @@ export const calculateQuizScore = async (data: CalculateQuizScore): Promise<Resu
         logPrismaError(error);
         throw error;
     }
-}
+})
 
 /**
  * 
@@ -686,19 +523,9 @@ export const calculateQuizScore = async (data: CalculateQuizScore): Promise<Resu
  * @param quizId 
  * @returns 
  */
-export const getUserQuizState = async (canonicalId: string, quizId: number): Promise<UserQuizState> => {
+export const getUserQuizState = withAuth(async (user, canonicalId: string, quizId: number): Promise<UserQuizState> => {
     try {
-        const session = await auth();
-        const userID = session?.user.id;
-        if (!userID) {
-            throw new UserNotLoggedError("El usuario debe loguearse");
-        }
-        const isEmailVerified = session?.user.emailVerified;
-        if (!isEmailVerified) {
-            throw new UserNotLoggedError("El usuario debe verificar su email");
-        }
-
-        const courseData = await findUserCourseWithModulesByCanonicalId(canonicalId, userID);
+        const courseData = await findUserCourseWithModulesByCanonicalId(canonicalId, user.id);
         if (!courseData.userCourse) {
             throw new Error("El curso no le pertenece al usuario");
         }
@@ -708,63 +535,44 @@ export const getUserQuizState = async (canonicalId: string, quizId: number): Pro
         logPrismaError(error);
         throw error;
     }
-}
+});
 
 /**
  * 
  * @param canonicalId 
  * @returns 
  */
-export const calculateTotalSalesPerCourse = async (): Promise<ResultSalesCourse[]> => {
+export const calculateTotalSalesPerCourse = withAuth(async (): Promise<ResultSalesCourse[]> => {
     try {
-        const session = await auth();
-        const userID = session?.user.id;
-        if (!userID) {
-            throw new UserNotLoggedError("El usuario debe loguearse");
-        }
-        const isEmailVerified = session?.user.emailVerified;
-        if (!isEmailVerified) {
-            throw new UserNotLoggedError("El usuario debe verificar su email");
-        }
         return await countCourseSales();
     } catch (error) {
         logPrismaError(error);
         throw error;
     }
-}
+});
 
 /**
  * 
  * @returns 
  */
-export const calculateTotalSalesByMonth = async (): Promise<CoursesMonthResult> => {
+export const calculateTotalSalesByMonth = withAuth(async (): Promise<CoursesMonthResult> => {
     try {
-        const session = await auth();
-        const userID = session?.user.id;
-        if (!userID) {
-            throw new UserNotLoggedError("El usuario debe loguearse");
-        }
         return await sumCourseSalesByLastMonth();
     } catch (error) {
         logPrismaError(error);
         throw error;
     }
-}
+}, { requireEmailVerified: false });
 
 /**
  * 
  * @returns 
  */
-export const calculateUsersRegisteredByMonth = async (): Promise<UsersMonthResult> => {
+export const calculateUsersRegisteredByMonth = withAuth(async (): Promise<UsersMonthResult> => {
     try {
-        const session = await auth();
-        const userID = session?.user.id;
-        if (!userID) {
-            throw new UserNotLoggedError("El usuario debe loguearse");
-        }
         return await sumUsersByLastMonth();
     } catch (error) {
         logPrismaError(error);
         throw error;
     }
-}
+}, { requireEmailVerified: false });

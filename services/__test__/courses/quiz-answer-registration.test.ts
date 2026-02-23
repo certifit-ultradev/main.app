@@ -302,7 +302,7 @@ describe('Courses Service - Quiz Answer Registration', () => {
 
             expect(result).toEqual({
                 success: false,
-                message: 'No se pudo gaurdar la respuesta de la pregunta'
+                message: 'No se pudo guardar la respuesta de la pregunta'
             });
         });
 

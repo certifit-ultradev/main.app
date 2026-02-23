@@ -3,7 +3,7 @@
 import { getAllCourseCategories, getCategoryById } from "@/services/categories";
 import { CourseCategoryData, FetchCategory, ServerActionRequest, ServerActionResponse } from "@/utils/types";
 import { Middlewares } from "../server-action-middleware";
-import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
+import { requireAdminVerifiedUser, isAdmin } from "../middlewares/middlewares";
 import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 
 /**
@@ -14,7 +14,7 @@ import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 export const listAllCourseCategories = async (): Promise<ServerActionResponse<CourseCategoryData[]>> => {
     return await Middlewares<CourseCategoryData[], null>(
         { data: null },
-        [isAdmin, isEmailVerified],
+        [requireAdminVerifiedUser],
         async () => {
             try {
                 const courseCategories = await getAllCourseCategories();

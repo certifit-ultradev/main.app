@@ -2,7 +2,7 @@
 
 import { getUserByEmail, getUserById } from "@/services/user"
 import { FetchUserByEmail, FetchUserByID, ServerActionRequest, ServerActionResponse, UserList } from "@/utils/types";
-import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
+import { requireAdminVerifiedUser } from "../middlewares/middlewares";
 import { Middlewares } from "../server-action-middleware";
 import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 
@@ -14,7 +14,7 @@ import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 export const fetchUserByEmail = async (request: ServerActionRequest<FetchUserByEmail>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, FetchUserByEmail>(
         request,
-        [isAdmin, isEmailVerified],
+        [requireAdminVerifiedUser],
         async (data: FetchUserByEmail) => {
             try {
                 const existingUser = await getUserByEmail(data.email);
@@ -45,7 +45,7 @@ export const fetchUserByEmail = async (request: ServerActionRequest<FetchUserByE
 export const fetchUserById = async (request: ServerActionRequest<FetchUserByID>): Promise<ServerActionResponse<UserList>> => {
     return await Middlewares<UserList, FetchUserByID>(
         request,
-        [isAdmin, isEmailVerified],
+        [requireAdminVerifiedUser],
         async (data: FetchUserByID) => {
             try {
                 const existingUser = await getUserById(data.id);
