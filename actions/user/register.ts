@@ -4,7 +4,7 @@ import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 import { editUserById, registerUser } from "@/services/user";
 import { EditUserData, ServerActionRequest, ServerActionResponse, UserCreateData } from "@/utils/types"
 import { Middlewares } from "../server-action-middleware";
-import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
+import { requireAdminVerifiedUser, isAdmin } from "../middlewares/middlewares";
 import { cleanData } from "@/utils/filter-data";
 
 /**
@@ -89,7 +89,7 @@ export const activate = async (request: ServerActionRequest<{ id: string }>): Pr
 export const deactivate = async (request: ServerActionRequest<{ id: string }>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, { id: string }>(
         request,
-        [isAdmin, isEmailVerified],
+        [requireAdminVerifiedUser],
         async (request: { id: string }) => {
             try {
                 const user = await editUserById(request.id, { emailVerified: null });

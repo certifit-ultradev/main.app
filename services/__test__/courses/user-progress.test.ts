@@ -102,7 +102,7 @@ describe('Courses Service - User Progress', () => {
 
             expect(result).toEqual({ 
                 success: false, 
-                message: 'No se pudo gaurdar el estado de la clase' 
+                message: 'No se pudo guardar el estado de la clase' 
             });
         });
 
@@ -238,7 +238,7 @@ describe('Courses Service - User Progress', () => {
 
             expect(result).toEqual({ 
                 success: false, 
-                message: 'No se pudo gaurdar el estado del modulo' 
+                message: 'No se pudo guardar el estado del modulo' 
             });
         });
 

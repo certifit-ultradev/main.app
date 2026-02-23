@@ -3,7 +3,7 @@
 import { deactivateCourse } from "@/services/courses";
 import { ActivateOrDeactivateCourse, ServerActionRequest, ServerActionResponse } from "@/utils/types"
 import { Middlewares } from "../server-action-middleware";
-import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
+import { requireAdminVerifiedUser } from "../middlewares/middlewares";
 import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 
 /**
@@ -14,7 +14,7 @@ import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 export const deactivate = async (request: ServerActionRequest<ActivateOrDeactivateCourse>): Promise<ServerActionResponse<null>> => {
     return await Middlewares<null, ActivateOrDeactivateCourse>(
         request,
-        [isAdmin, isEmailVerified],
+        [requireAdminVerifiedUser],
         async (request: ActivateOrDeactivateCourse) => {
             try {
                 if (!await deactivateCourse(request.id)) {

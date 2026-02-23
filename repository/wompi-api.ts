@@ -1,18 +1,16 @@
 import { TransactionError } from "@/exceptions/transaction-error";
 import { Transaction } from "@/models/transaction";
 import { TransactionWompiResponse } from "@/utils/types";
-
-const urlSanbox = 'https://sandbox.wompi.co/v1';
-const urlProd = 'https://production.wompi.co/v1';
-
-const baseUrl = process.env.APP_ENV != 'PROD' ? urlSanbox : urlProd;
+import { getWompiBaseUrl } from "@/config/env";
 
 /**
  * Obtains the information of a Wompi transaction
  * @param {string} trxId - ID of the transaction you want to query
- * @returns {Promise<any>} Transaction data (JSON object) or an error if it fails
+ * @returns {Promise<Transaction>} Transaction data or an error if it fails
  */
 export const getTransaction = async (trxId: string): Promise<Transaction> => {
+    const baseUrl = getWompiBaseUrl();
+    
     const response = await fetch(`${baseUrl}/transactions/${trxId}`, {
         method: 'GET',
         headers: {

@@ -1,10 +1,11 @@
 "use server";
 
 import { getAllCourses, getCourseById } from "@/services/courses";
-import { CourseData, CourseList, CourseModule, DataPaginated, FetchCourseByID, FetchPage, QuestionOption, QuizQuestions, ServerActionRequest, ServerActionResponse } from "@/utils/types";
-import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
+import { CourseData, CourseList, DataPaginated, FetchCourseByID, FetchPage, ServerActionRequest, ServerActionResponse } from "@/utils/types";
+import { requireAdminVerifiedUser } from "../middlewares/middlewares";
 import { Middlewares } from "../server-action-middleware";
 import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
+import { ModuleMapper } from "@/mappers/course-mapper";
 
 /**
  * 
@@ -14,7 +15,7 @@ import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 export const listAll = async (request: ServerActionRequest<FetchPage>): Promise<ServerActionResponse<DataPaginated<CourseList>>> => {
     return await Middlewares<DataPaginated<CourseList>, FetchPage>(
         request,
-        [isAdmin, isEmailVerified],
+        [requireAdminVerifiedUser],
         async (request: FetchPage) => {
             try {
                 const coursesPaged = await getAllCourses({ page: request.page });
@@ -56,44 +57,11 @@ export const listAll = async (request: ServerActionRequest<FetchPage>): Promise<
 export const getCourseDataById = async (request: ServerActionRequest<FetchCourseByID>): Promise<ServerActionResponse<CourseData>> => {
     return await Middlewares<CourseData, FetchCourseByID>(
         request,
-        [isAdmin, isEmailVerified],
+        [requireAdminVerifiedUser],
         async (request: FetchCourseByID) => {
             try {
                 const course = await getCourseById(request.id);
-                const modules = course.courseModules?.map((courseModule): CourseModule => ({
-                    id: courseModule.id,
-                    courseId: courseModule.courseId,
-                    title: courseModule.title,
-                    minRequiredPoints: courseModule.minRequiredPoints,
-                    classes: courseModule.moduleClass?.map((cls) => ({
-                        id: cls.id,
-                        courseModuleId: cls.courseModuleId,
-                        title: cls.title,
-                        description: cls.description,
-                        video: cls.videoPath,
-                        videoDuration: cls.videoDuration,
-                        videoSize: cls.videoSize
-                    })),
-                    quiz: {
-                        id: courseModule.moduleQuiz?.[0].id,
-                        courseModuleId: courseModule.moduleQuiz?.[0].courseModuleId,
-                        title: courseModule.moduleQuiz?.[0].title ?? '',
-                        description: courseModule.moduleQuiz?.[0].description ?? '',
-                        questions: courseModule.moduleQuiz?.[0].quizQuestion?.map((question): QuizQuestions => ({
-                            id: question.id,
-                            quizModuleId: question.quizId,
-                            type: question.type,
-                            title: question.title,
-                            points: question.points,
-                            options: question.possibleAnswerQuestion?.map((option): QuestionOption => ({
-                                id: option.id,
-                                quizQuestionId: option.questionId,
-                                value: option.value,
-                                isCorrect: option.isCorrect
-                            }))
-                        })),
-                    }
-                }));
+                const modules = ModuleMapper.toDTOArray(course.courseModules);
 
                 return {
                     success: true,

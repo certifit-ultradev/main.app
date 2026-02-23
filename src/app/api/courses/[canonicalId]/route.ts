@@ -2,7 +2,7 @@ import { CourseNotPurchasedError } from '@/exceptions/course-not-purchased';
 import { mapErrorToAPIResponse } from '@/exceptions/error-encoder';
 import { NotFoundError } from '@/exceptions/not-found';
 import { getUserCourseWithModulesByCanonicalId } from '@/services/courses';
-import { CourseModule, QuestionOption, QuizQuestions } from '@/utils/types';
+import { ModuleMapper } from '@/mappers/course-mapper';
 import { NextRequest } from 'next/server';
 
 /**
@@ -20,40 +20,7 @@ export async function GET(req: NextRequest, context) {
             throw new NotFoundError("El curso no existe");
         }
 
-        const modules = course.courseModules?.map((courseModule): CourseModule => ({
-            id: courseModule.id,
-            courseId: courseModule.courseId,
-            title: courseModule.title,
-            minRequiredPoints: courseModule.minRequiredPoints,
-            classes: courseModule.moduleClass?.map((cls) => ({
-                id: cls.id,
-                courseModuleId: cls.courseModuleId,
-                title: cls.title,
-                description: cls.description,
-                video: cls.videoPath,
-                videoDuration: cls.videoDuration,
-                videoSize: cls.videoSize
-            })),
-            quiz: {
-                id: courseModule.moduleQuiz?.[0].id,
-                courseModuleId: courseModule.moduleQuiz?.[0].courseModuleId,
-                title: courseModule.moduleQuiz?.[0].title as string,
-                description: courseModule.moduleQuiz?.[0].description as string,
-                questions: courseModule.moduleQuiz?.[0].quizQuestion?.map((question): QuizQuestions => ({
-                    id: question.id,
-                    quizModuleId: question.quizId,
-                    type: question.type,
-                    title: question.title,
-                    points: question.points,
-                    options: question.possibleAnswerQuestion?.map((option): QuestionOption => ({
-                        id: option.id,
-                        quizQuestionId: option.questionId,
-                        value: option.value,
-                        isCorrect: option.isCorrect
-                    }))
-                })),
-            }
-        }));
+        const modules = ModuleMapper.toDTOArray(course.courseModules, { hideQuizAnswers: true });
 
         if (!course.userCourse) {
             throw new CourseNotPurchasedError("El curso no le pertenece al usuario");

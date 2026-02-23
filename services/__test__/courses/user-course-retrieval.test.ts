@@ -196,9 +196,7 @@ describe('Courses Service - User Course Retrieval', () => {
         test('debería requerir usuario logueado', async () => {
             (auth as jest.Mock).mockResolvedValue(null);
 
-            const result = await getUserCourses();
-
-            expect(result).toEqual([]);
+            await expect(getUserCourses()).rejects.toThrow(UserNotLoggedError);
         });
     });
 });
