@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { uploadEditorAsset } from '@/features/courses/editor/client/blob-assets';
 import SubmitButton from '../submitButton';
-import { Button } from '@nextui-org/react';
+import { Button } from '@heroui/react';
 import { FormError } from '../form/form-error';
 import { v4 as uuidv4 } from 'uuid'; // Add this import for generating unique IDs
 import type { CourseEditorDto } from '@/application/courses/course.dto';

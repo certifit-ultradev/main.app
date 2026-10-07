@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { type PropsWithChildren } from 'react'
+import { type PropsWithChildren, type JSX } from 'react'
 import { cn } from '@/lib/utils'
 import Navbar from '../navbar'
 import { useSession } from 'next-auth/react'

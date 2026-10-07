@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import '../../globals.css';
+import { AppHeroUIProvider } from '@/components/heroui-provider';
 
 // These styles apply to every route in the application
 
@@ -16,7 +17,7 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body>
-                {children}
+                <AppHeroUIProvider>{children}</AppHeroUIProvider>
             </body>
         </html>
     )

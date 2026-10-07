@@ -21,9 +21,9 @@ const LearnPage = async ({ params }: LearnPageProps) => {
         { method: 'GET', headers: new Headers(rqHeaders) }
     );
 
+    let courseData;
     try {
-        const courseData = await parseStudentCourseResponse(response);
-        return <ClientCourseView data={courseData} />;
+        courseData = await parseStudentCourseResponse(response);
     } catch (error) {
         if (error instanceof StudentCourseHttpError) {
             if (error.status === 401) {
@@ -38,6 +38,8 @@ const LearnPage = async ({ params }: LearnPageProps) => {
 
         throw error;
     }
+
+    return <ClientCourseView data={courseData} />;
 }
 
 export default LearnPage;

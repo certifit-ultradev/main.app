@@ -19,16 +19,8 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
     const [selectedClass, setSelectedClass] = useState<{ moduleIndex: number; classIndex: number; classId: number | undefined } | null>(null);
     const [selectedQuiz, setSelectedQuiz] = useState<{ moduleIndex: number; moduleId: number; quizId: number } | null>(null);
 
-    // Reiniciar quizState cuando cambia el quiz seleccionado
     const initialQuizState = { started: false, finished: false, currentQuestion: 0 };
     const [quizState, setQuizState] = useState(initialQuizState);
-
-    // Detectar cambio de quiz
-    const prevQuizRef = useRef<{ moduleIndex: number; moduleId: number; quizId: number } | null>(null);
-    if (selectedQuiz && (prevQuizRef.current?.quizId !== selectedQuiz.quizId || prevQuizRef.current?.moduleIndex !== selectedQuiz.moduleIndex)) {
-        setQuizState(initialQuizState);
-        prevQuizRef.current = selectedQuiz;
-    }
 
     const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -108,6 +100,9 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
                                 <button
                                     key={module.quiz.id}
                                     onClick={() => {
+                                        if (!selectedQuiz || selectedQuiz.quizId !== (module.quiz?.id ?? 0) || selectedQuiz.moduleIndex !== moduleIndex) {
+                                            setQuizState({ started: false, finished: false, currentQuestion: 0 });
+                                        }
                                         setSelectedQuiz({ moduleIndex, moduleId: module.id ?? 0, quizId: module.quiz?.id ?? 0 });
                                         setSelectedClass(null);
                                     }}

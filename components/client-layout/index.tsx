@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { type PropsWithChildren } from 'react'
+import { type PropsWithChildren, type JSX } from 'react'
 import { cn } from '@/lib/utils'
 import Navbar from '../navbar'
 import { Slash } from "lucide-react"

@@ -10,7 +10,6 @@ export async function GET() {
     try {
         return Response.json(apiSuccess(await getCatalogCourses()));
     } catch (error) {
-        console.error('Error al obtener los cursos del catálogo:', error);
         return mapErrorToAPIResponse(error);
     }
 }

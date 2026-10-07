@@ -1,4 +1,4 @@
-import { useCallback, MouseEventHandler } from 'react'
+import { useCallback, MouseEventHandler, type JSX } from 'react'
 
 import { OptionProps } from '../../types'
 import { cn } from '@/lib/utils'

@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import type { StudentCourseListItemDto } from '@/application/courses/student-course.dto';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type JSX } from 'react';
 import { CourseProgressCard, EmptyCourseProgressCard } from './course-progress-card';
 import { Loading } from './loading';
 import { getUserCourseList } from '@/features/courses/learning/course-api.client';
