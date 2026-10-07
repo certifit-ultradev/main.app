@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils'
 import type { Metadata } from 'next'
 import '../../globals.css';
 import { auth } from '@/auth';
+import { AppHeroUIProvider } from '@/components/heroui-provider';
 
 // These styles apply to every route in the application
 
@@ -29,7 +30,7 @@ export default async function RootLayout({
                             <a href="/login" className={cn('ml-5 font-semibold cursor-pointer text-[#0BBBE7]')}> Iniciar sesión </a></>)}
                     </div>
                 </nav>
-                {children}
+                <AppHeroUIProvider>{children}</AppHeroUIProvider>
             </body>
         </html>
     )

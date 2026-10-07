@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useState, useTransition } from 'react';
 import { login } from '@/actions/auth/login';
 import Image from 'next/image';
-import { Button } from '@nextui-org/react';
+import { Button } from '@heroui/react';
 import { ErrorMessage } from '@hookform/error-message';
 import { LoginSchema } from '@/features/auth/auth-form.schema';
 import { zodResolver } from '@hookform/resolvers/zod';

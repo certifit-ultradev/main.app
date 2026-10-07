@@ -11,6 +11,7 @@
 
 ### Changed
 
+- Upgraded to Next.js 16 and React 19, replaced deprecated NextUI packages with HeroUI v2, and migrated linting and request interception to the supported Next.js 16 conventions.
 - Split the monolithic course repository into focused catalog, editor, progress, and analytics adapters, with business rules and DTO mapping at explicit layer boundaries.
 - Reworked the course editor around immutable module updates, serializable drafts, browser-only file handling, and a scoped Blob upload adapter.
 - Moved password reset, identity tokens, password hashing, and email delivery behind application ports and infrastructure adapters.

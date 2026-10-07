@@ -21,7 +21,6 @@ const nextConfig = {
         },
     },
     experimental: {
-        forceSwcTransforms: true,
         serverActions: {
             bodySizeLimit: '900mb',
         }

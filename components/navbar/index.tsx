@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, type JSX } from 'react'
 import MobileMenu from './components/mobileMenu'
 import { useRouter } from 'next/navigation'
 import { logout } from '@/actions/auth/logout'

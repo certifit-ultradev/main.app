@@ -17,7 +17,7 @@ const { auth } = NextAuth(authConfig);
 /**
  * 
  */
-export default auth((req: { auth?: Session |null; nextUrl?: NextURL; headers: Headers }) => {
+export const proxy = auth((req: { auth?: Session |null; nextUrl?: NextURL; headers: Headers }) => {
     const { nextUrl } = req;
     const isLoggedIn = !!req.auth;
 

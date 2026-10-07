@@ -1,7 +1,7 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { Card, Spinner } from '@nextui-org/react';
+import { Card, Spinner } from '@heroui/react';
 import { FaCircleCheck, FaCircleExclamation } from 'react-icons/fa6';
 import { verifyEmail } from '@/actions/auth/verification-token';
 import { cn } from '@/lib/utils';
