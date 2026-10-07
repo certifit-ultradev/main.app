@@ -16,8 +16,9 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import PhoneInput from "react-phone-input-2";
 import { FormError } from "@/components/form/form-error";
-import { EmailDataSchema } from "../../../utils/schemas";
-import { EmailDataFormValues } from "@/utils/types";
+import { EmailDataSchema, type EmailDataFormValues } from '@/features/contact/contact-form.schema';
+import { sendCourseInformationRequest } from '@/features/contact/course-information-request.client';
+import { getTopCourses } from '@/features/courses/learning/course-api.client';
 
 // Tipo para la opción del curso
 type CourseOption = {
@@ -40,11 +41,9 @@ export default function Home() {
     useEffect(() => {
         async function fetchCourses() {
             try {
-                const res = await fetch("/api/courses/top-three");
-                const data = await res.json();
-                setCourses(data);
-            } catch (error) {
-                console.error("Error al cargar cursos:", error);
+                setCourses((await getTopCourses()).map(({ canonicalId, title }) => ({ canonicalId, title })));
+            } catch {
+                setCourses([]);
             }
         }
         fetchCourses();
@@ -54,20 +53,9 @@ export default function Home() {
         // El valor del select 'curso' es el canonicalId del curso seleccionado.
         const canonicalId = formData.curso;
         try {
-            const res = await fetch(`/api/courses/${canonicalId}/email`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(formData),
-            });
-            const result = await res.json();
-            if (result.success === false) {
-                setError(result.message || "Ocurrió un error al enviar el formulario, intente mas tard");
-            }
-        } catch (error) {
+            await sendCourseInformationRequest(canonicalId, formData);
+        } catch {
             setError("Ocurrió un error al enviar el formulario, intente mas tarde");
-            console.error("Error al enviar el formulario:", error);
         }
     };
 

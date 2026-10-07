@@ -1,71 +1,42 @@
-"use server";
+'use server';
 
-import { getAllCourseCategories, getCategoryById } from "@/services/categories";
-import { CourseCategoryData, FetchCategory, ServerActionRequest, ServerActionResponse } from "@/utils/types";
-import { Middlewares } from "../server-action-middleware";
-import { requireAdminVerifiedUser, isAdmin } from "../middlewares/middlewares";
-import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
+import { getAllCourseCategories, getCategoryById } from '@/services/categories';
+import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/actions/action-result';
+import { withAdminAction } from '@/interfaces/actions/action-context';
+import type { CategoryDto } from '@/interfaces/actions/categories/category.contract';
+import { DeleteCategoryInputSchema } from '@/interfaces/actions/categories/category.contract';
+import { validateActionInput } from '@/interfaces/actions/validation';
 
-/**
- * 
- * @param request 
- * @returns 
- */
-export const listAllCourseCategories = async (): Promise<ServerActionResponse<CourseCategoryData[]>> => {
-    return await Middlewares<CourseCategoryData[], null>(
-        { data: null },
-        [requireAdminVerifiedUser],
-        async () => {
-            try {
-                const courseCategories = await getAllCourseCategories();
-                if (!courseCategories) {
-                    return {
-                        success: false,
-                        payload: []
-                    };
-                }
-
-                return {
-                    success: true,
-                    payload: courseCategories.map<CourseCategoryData>((category) => {
-                        return { ...category };
-                    })
-                };
-            } catch (error) {
-                return mapErrorToServerActionResponse(error, true);
-            }
-        });
+function unexpectedCategoryError(): ActionResult<never> {
+    return actionFailure('UNEXPECTED', 'No fue posible completar la operación de categorías.');
 }
 
-/**
- * 
- * @param request 
- * @returns 
- */
-export async function fetchCategoryById(
-    request: ServerActionRequest<FetchCategory>
-): Promise<ServerActionResponse<CourseCategoryData>> {
-    return await Middlewares<CourseCategoryData, FetchCategory>(
-        request,
-        [isAdmin], // Array de middlewares
-        async (fetchCategory: FetchCategory) => {
-            try {
-                const courseCategory = await getCategoryById(fetchCategory.id);
-                if (!courseCategory) {
-                    return {
-                        success: false,
-                        message: 'La categoria no existe',
-                    };
-                }
+export async function listAllCourseCategories(): Promise<ActionResult<CategoryDto[]>> {
+    return withAdminAction(async () => {
+        try {
+            const categories = await getAllCourseCategories();
+            return actionSuccess(categories);
+        } catch {
+            return unexpectedCategoryError();
+        }
+    });
+}
 
-                return {
-                    success: true,
-                    payload: {
-                        ...courseCategory
-                    }
-                }
-            } catch (error) {
-                return mapErrorToServerActionResponse(error, true);
+export async function fetchCategoryById(
+    input: unknown,
+): Promise<ActionResult<CategoryDto>> {
+    const parsedInput = validateActionInput(DeleteCategoryInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
+
+    return withAdminAction(async () => {
+        try {
+            const category = await getCategoryById(parsedInput.data.id);
+            if (!category) {
+                return actionFailure('NOT_FOUND', 'La categoría no existe.');
             }
-        });
-};
+            return actionSuccess(category);
+        } catch {
+            return unexpectedCategoryError();
+        }
+    });
+}

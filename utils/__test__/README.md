@@ -1,5 +1,7 @@
 # Utils Tests Documentation
 
+> Historical inventory: utility files retired by the type-boundaries refactor are listed below for reference. `filter-data.ts` and its tests were removed in TB-052; patch semantics now live in each action schema and command.
+
 ## Overview
 Comprehensive test suite for utility functions in `/utils` directory. These tests ensure data transformation, validation, cryptographic operations, file handling, and course management utilities work correctly.
 
@@ -44,20 +46,8 @@ Tests TypeScript type guard functions for runtime type checking:
 ---
 
 ### 3. filter-data.test.ts
-**Functions Tested:** 1  
-**Total Tests:** 10  
-**Status:** ✅ All passing
 
-Tests data sanitization functionality:
-- `cleanData` - Removes undefined, null, and empty string values from objects
-
-**Key Test Cases:**
-- Removing undefined values
-- Removing null values
-- Removing empty strings
-- Preserving zero values and false booleans
-- Handling nested objects
-- Handling arrays
+Retired in TB-052 with the unused `cleanData` helper. User update semantics are covered by action and repository tests.
 
 ---
 
@@ -231,7 +221,6 @@ npm test -- utils/__test__
 ```bash
 npm test -- utils/__test__/classes.test.ts
 npm test -- utils/__test__/type-guards.test.ts
-npm test -- utils/__test__/filter-data.test.ts
 npm test -- utils/__test__/expiraton-token.test.ts
 npm test -- utils/__test__/signature.test.ts
 npm test -- utils/__test__/url.test.ts
@@ -259,7 +248,7 @@ npm test -- utils/__test__ --coverage
 |------|-----------|-------|--------|----------------|
 | classes.test.ts | 3 | 21 | ✅ | ~0.2s |
 | type-guards.test.ts | 4 | 24 | ✅ | ~0.2s |
-| filter-data.test.ts | 1 | 10 | ✅ | ~0.2s |
+| filter-data.test.ts | — | — | Retired in TB-052 | — |
 | expiraton-token.test.ts | 1 | 5 | ✅ | ~0.2s |
 | signature.test.ts | 3 | 22 | ✅ | ~0.2s |
 | url.test.ts | 1 | 5 | ✅ | ~0.2s |
@@ -354,7 +343,7 @@ All 21 functions tested across 10 test files with 160 test cases. Fast execution
 ### Validation & Error Handling
 - `type-guards.ts` - Runtime validation before processing
 - `zod-errors-mapper.ts` - User-friendly error messages
-- `filter-data.ts` - Data sanitization before DB operations
+- User patches now express omission, clearing and validation in their own command and action schema.
 
 ### Authentication & Security
 - `expiraton-token.ts` - Verification tokens, password reset

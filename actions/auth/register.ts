@@ -1,29 +1,32 @@
 "use server";
 
 import { registerUser } from "@/services/user";
-import { ServerActionResponse, UserCreateData } from "@/utils/types"
+import { UserExistError } from '@/exceptions/user-exist';
+import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/actions/action-result';
+import { RegisterAccountInputSchema } from '@/interfaces/actions/auth.contract';
+import { validateActionInput } from '@/interfaces/actions/validation';
 
 /**
  * 
  * @param data 
  * @returns 
  */
-export const register = async (data: UserCreateData): Promise<ServerActionResponse<null>> => {
+/** Public action: validation and duplicate-record conflicts use closed error codes. */
+export const register = async (input: unknown): Promise<ActionResult<null>> => {
+    const parsedInput = validateActionInput(RegisterAccountInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
+
     try {
-        const user = await registerUser({
-            ...data,
-            checkTerms: true
-        });
+        const user = await registerUser(parsedInput.data);
         if (!user) {
-            return { success: false, error: "No se pudo crear el usuario." }
+            return actionFailure('UNEXPECTED', 'No se pudo crear el usuario.');
         }
 
-        return { success: true, message: "Usuario creado correctamente." }
+        return actionSuccess(null, 'Usuario creado correctamente.');
     } catch (error) {
-        console.error("Error al crear el usuario", error);
-        return {
-            success: false,
-            error: "no podemos procesar tu petición, intenta mas tarde",
-        };
+        if (error instanceof UserExistError) {
+            return actionFailure('CONFLICT', 'No fue posible crear el usuario.');
+        }
+        return actionFailure('UNEXPECTED', 'No fue posible crear el usuario.');
     }
 }

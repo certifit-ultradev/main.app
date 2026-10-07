@@ -2,32 +2,38 @@
 
 import { listAllCourseCategories } from '@/actions/category/list';
 import { cn } from '@/lib/utils';
-import { CourseBasicInfoSchema } from '@/utils/schemas';
-import { CourseCategoryData, CourseData, ErrMap } from '@/utils/types';
+import { CourseBasicInfoSchema } from '@/features/courses/editor/editor-form.schema.client';
+import type { EditorErrorMap } from '@/features/courses/editor/editor-form-errors';
+import type { CourseEditorFormValues } from '@/features/courses/editor/course-editor-form.types';
+import type { CategoryDto } from '@/interfaces/actions/categories/category.contract';
 import { ErrorMessage } from '@hookform/error-message';
 import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { z } from 'zod';
 import { Button } from '../ui/button';
-import _ from 'lodash';
-import { mapZodErrors } from '@/utils/zod-errors-mapper';
+import { mapEditorZodErrors } from '@/features/courses/editor/editor-form-errors';
 
 interface CourseBasicFormProps {
-    data: CourseData;
-    setData: Dispatch<SetStateAction<CourseData>>;
+    data: CourseEditorFormValues;
+    setData: Dispatch<SetStateAction<CourseEditorFormValues>>;
     nextStep: () => void;
 };
 
 export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProps) => {
-    const [errors, setErrors] = useState<ErrMap>({});
-    const [categories, setCategories] = useState<CourseCategoryData[]>([]);// Estado para categorías
+    const [errors, setErrors] = useState<EditorErrorMap>({});
+    const [categories, setCategories] = useState<CategoryDto[]>([]);// Estado para categorías
+    const [categoryLoadError, setCategoryLoadError] = useState('');
 
     useEffect(() => {
         const initializeForm = async () => {
             try {
                 const result = await listAllCourseCategories();
-                setCategories(result.payload ?? []);
-            } catch (error) {
-                console.error("Error al inicializar el formulario:", error);
+                if (result.ok) {
+                    setCategories(result.data);
+                } else {
+                    setCategoryLoadError('No fue posible cargar las categorías. Intenta recargar la página.');
+                }
+            } catch {
+                setCategoryLoadError('No fue posible cargar las categorías. Intenta recargar la página.');
             }
         };
 
@@ -45,48 +51,36 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
             CourseBasicInfoSchema.parse(data);
         } catch (e) {
             if (e instanceof z.ZodError) {
-                setErrors(mapZodErrors(e));
+                setErrors(mapEditorZodErrors(e));
             }
             return false;
         }
         return true;
     };
 
-    const handleBasicDataChange = <K extends keyof CourseData>(
+    const handleBasicDataChange = <K extends keyof CourseEditorFormValues>(
         field: K,
-        value: CourseData[K],
+        value: CourseEditorFormValues[K],
     ) => {
-        setData((prevData) => {
-            const newData = _.cloneDeep(prevData);
-            newData[field] = value;
-            return newData;
-        });
+        setData((prevData) => ({ ...prevData, [field]: value }));
     };
 
-    const handleFileBasicDataChange = <K extends keyof CourseData>(
-        field: K,
+    const handleFileBasicDataChange = (
+        field: 'courseImage' | 'instructorPhoto',
         e: React.ChangeEvent<HTMLInputElement>,
     ) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        setData((prevData) => {
-            const newData = _.cloneDeep(prevData);
-            newData[field] = file as CourseData[K];
-            return newData;
-        });
+        setData((prevData) => ({ ...prevData, [field]: file }));
     };
 
     const handleCategoryBasicDataChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const options = e.target.selectedOptions;
         if (e.target.value != "" && options[0]) {
-            setData((prevData) => {
-                const newData = _.cloneDeep(prevData);
-                newData['category'] = {
-                    id: Number(e.target.value),
-                    name: options[0].text
-                };
-                return newData;
-            });
+            setData((prevData) => ({
+                ...prevData,
+                category: { id: Number(e.target.value), name: options[0].text },
+            }));
         }
     };
 
@@ -95,6 +89,7 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
             <div className={cn('mb-6')}>
                 <h2 className={cn('text-2xl font-semibold')}>Información Básica</h2>
                 <p className={cn('text-gray-600')}>Ingresa la información general del curso</p>
+                {categoryLoadError && <p className={cn('mt-2 text-sm text-red-500')}>{categoryLoadError}</p>}
             </div>
 
             {/* Form Fields */}

@@ -1,8 +1,6 @@
-import { User } from "@/models/user";
-import { UserCourse } from "@/models/user-course";
 import { prisma } from "@/lib/prisma";
-import { NotFoundError } from "@/exceptions/not-found";
-import bcrypt from "bcryptjs";
+import { Prisma } from '@/prisma/app/generated/prisma/client';
+import { UserExistError } from '@/exceptions/user-exist';
 import {
     allUsers,
     findUserByPhoneNumber,
@@ -27,15 +25,11 @@ jest.mock('@/lib/prisma', () => ({
         },
         userCourse: {
             create: jest.fn(),
-            findFirst: jest.fn(),
-            delete: jest.fn(),
+            deleteMany: jest.fn(),
         }
     }
 }));
 
-jest.mock('bcryptjs');
-jest.mock('@/models/user');
-jest.mock('@/models/user-course');
 
 describe('Users Repository Tests', () => {
     afterEach(() => {
@@ -76,7 +70,6 @@ describe('Users Repository Tests', () => {
             ];
 
             (prisma.user.findMany as jest.Mock).mockResolvedValue(mockUsers);
-            (User as jest.Mock).mockImplementation((data) => data);
 
             const result = await allUsers(1, 10);
 
@@ -131,13 +124,12 @@ describe('Users Repository Tests', () => {
                 isAdmin: false,
                 emailVerified: new Date(),
                 identification: '111222',
-                identificationType: 'CC',
+                identificationType: 'CC' as const,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             };
 
             (prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser);
-            (User as jest.Mock).mockImplementation((data) => data);
 
             const result = await findUserByPhoneNumber('+57 300 1234567');
 
@@ -150,9 +142,7 @@ describe('Users Repository Tests', () => {
         test('debería lanzar NotFoundError cuando el usuario no existe', async () => {
             (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
 
-            await expect(findUserByPhoneNumber('+57 300 9999999'))
-                .rejects
-                .toThrow(NotFoundError);
+            await expect(findUserByPhoneNumber('+57 300 9999999')).resolves.toBeNull();
             
             expect(prisma.user.findFirst).toHaveBeenCalledWith({
                 where: { phoneNumber: '+57 300 9999999' }
@@ -197,22 +187,19 @@ describe('Users Repository Tests', () => {
             };
 
             (prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser);
-            (User as jest.Mock).mockImplementation((data) => data);
 
             const result = await findUserByEmail('ana@test.com');
 
             expect(prisma.user.findFirst).toHaveBeenCalledWith({
                 where: { email: 'ana@test.com' }
             });
-            expect(result.email).toBe('ana@test.com');
+            expect(result?.email).toBe('ana@test.com');
         });
 
         test('debería lanzar NotFoundError cuando el email no existe', async () => {
             (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
 
-            await expect(findUserByEmail('noexiste@test.com'))
-                .rejects
-                .toThrow(NotFoundError);
+            await expect(findUserByEmail('noexiste@test.com')).resolves.toBeNull();
         });
     });
 
@@ -234,31 +221,51 @@ describe('Users Repository Tests', () => {
             };
 
             (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-            (User as jest.Mock).mockImplementation((data) => data);
 
             const result = await findUserById('user-id-123');
 
             expect(prisma.user.findUnique).toHaveBeenCalledWith({
                 where: { id: 'user-id-123' }
             });
-            expect(result.id).toBe('user-id-123');
+            expect(result?.id).toBe('user-id-123');
         });
 
         test('debería lanzar NotFoundError cuando el ID no existe', async () => {
             (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
-            await expect(findUserById('non-existent-id'))
-                .rejects
-                .toThrow(NotFoundError);
+            await expect(findUserById('non-existent-id')).resolves.toBeNull();
         });
     });
 
     describe('updateUserById', () => {
-        test('debería actualizar un usuario y hashear la contraseña si se proporciona', async () => {
+        test('omite undefined y persiste null para limpiar campos anulables', async () => {
+            const userId = 'user-nullable-patch';
+            (prisma.user.update as jest.Mock).mockResolvedValue({
+                id: userId,
+                name: 'Ada', lastName: 'Lovelace', email: 'ada@test.com',
+                password: 'stored-hash', isAdmin: false, emailVerified: null,
+                identification: null, identificationType: null,
+                phoneNumber: '573001234567', createdAt: new Date(), updatedAt: null,
+            });
+
+            await updateUserById(userId, {
+                name: undefined,
+                identification: null,
+                identificationType: null,
+                emailVerified: null,
+            });
+
+            expect(prisma.user.update).toHaveBeenCalledWith({
+                where: { id: userId },
+                data: { identification: null, identificationType: null, emailVerified: null },
+            });
+        });
+
+        test('debería persistir el hash de contraseña recibido', async () => {
             const userId = 'user-update-123';
             const updateData = {
                 name: 'Nombre Actualizado',
-                password: 'newpassword',
+                passwordHash: 'hashed-newpassword',
             };
 
             const mockUpdatedUser = {
@@ -276,13 +283,10 @@ describe('Users Repository Tests', () => {
                 updatedAt: new Date(),
             };
 
-            (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-newpassword');
             (prisma.user.update as jest.Mock).mockResolvedValue(mockUpdatedUser);
-            (User as jest.Mock).mockImplementation((data) => data);
 
             const result = await updateUserById(userId, updateData);
 
-            expect(bcrypt.hash).toHaveBeenCalledWith('newpassword', 10);
             expect(prisma.user.update).toHaveBeenCalledWith({
                 where: { id: userId },
                 data: expect.objectContaining({
@@ -293,7 +297,7 @@ describe('Users Repository Tests', () => {
             expect(result.name).toBe('Nombre Actualizado');
         });
 
-        test('debería actualizar usuario sin hashear contraseña si no se proporciona', async () => {
+        test('debería actualizar usuario sin contraseña cuando no se recibe un hash', async () => {
             const userId = 'user-update-456';
             const updateData = {
                 name: 'Solo Nombre',
@@ -316,11 +320,9 @@ describe('Users Repository Tests', () => {
             };
 
             (prisma.user.update as jest.Mock).mockResolvedValue(mockUpdatedUser);
-            (User as jest.Mock).mockImplementation((data) => data);
 
             const result = await updateUserById(userId, updateData);
 
-            expect(bcrypt.hash).not.toHaveBeenCalled();
             expect(prisma.user.update).toHaveBeenCalledWith({
                 where: { id: userId },
                 data: updateData
@@ -351,7 +353,6 @@ describe('Users Repository Tests', () => {
             };
 
             (prisma.user.update as jest.Mock).mockResolvedValue(mockUpdatedUser);
-            (User as jest.Mock).mockImplementation((data) => data);
 
             await updateUserById(userId, updateData);
 
@@ -365,20 +366,29 @@ describe('Users Repository Tests', () => {
     });
 
     describe('createUser', () => {
-        test('debería crear un nuevo usuario y hashear la contraseña', async () => {
-            const newUser = new User({
+        test('traduce una colisión única de Prisma a conflicto de usuario', async () => {
+            (prisma.user.create as jest.Mock).mockRejectedValue(new Prisma.PrismaClientKnownRequestError(
+                'private database detail', { code: 'P2002', clientVersion: 'test' },
+            ));
+
+            await expect(createUser({
+                name: 'Ada', lastName: 'Lovelace', email: 'ada@test.com', phoneNumber: '573001234567',
+                passwordHash: 'stored-hash', isAdmin: false, emailVerified: null,
+            })).rejects.toThrow(UserExistError);
+        });
+
+        test('debería crear un nuevo usuario con el hash recibido', async () => {
+            const newUser = {
                 name: 'Nuevo',
                 lastName: 'Usuario',
                 email: 'nuevo@test.com',
-                password: 'plainpassword',
+                passwordHash: 'hashed-plainpassword',
                 isAdmin: false,
                 emailVerified: null,
                 identification: '123000',
-                identificationType: 'CC',
+                identificationType: 'CC' as const,
                 phoneNumber: '+57 300 1230000',
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            });
+            };
 
             const mockCreatedUser = {
                 id: 'new-user-id',
@@ -386,12 +396,10 @@ describe('Users Repository Tests', () => {
                 password: 'hashed-plainpassword',
             };
 
-            (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-plainpassword');
             (prisma.user.create as jest.Mock).mockResolvedValue(mockCreatedUser);
 
             const result = await createUser(newUser);
 
-            expect(bcrypt.hash).toHaveBeenCalledWith('plainpassword', 10);
             expect(prisma.user.create).toHaveBeenCalledWith({
                 data: expect.objectContaining({
                     name: 'Nuevo',
@@ -400,23 +408,21 @@ describe('Users Repository Tests', () => {
                     password: 'hashed-plainpassword',
                 })
             });
-            expect(result).toEqual(mockCreatedUser);
+            expect(result).toMatchObject({ id: 'new-user-id', passwordHash: 'hashed-plainpassword' });
         });
 
-        test('debería crear usuario sin hashear si no tiene contraseña', async () => {
-            const newUser = new User({
+        test('el repositorio no acepta una contraseña en texto plano', async () => {
+            const newUser = {
                 name: 'Sin',
                 lastName: 'Password',
                 email: 'sinpass@test.com',
-                password: undefined,
+                passwordHash: 'stored-hash',
                 isAdmin: false,
                 emailVerified: null,
                 identification: '456000',
-                identificationType: 'CE',
+                identificationType: 'CE' as const,
                 phoneNumber: '+57 300 4560000',
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            });
+            };
 
             const mockCreatedUser = {
                 id: 'new-user-no-pass',
@@ -427,14 +433,13 @@ describe('Users Repository Tests', () => {
 
             const result = await createUser(newUser);
 
-            expect(bcrypt.hash).not.toHaveBeenCalled();
             expect(prisma.user.create).toHaveBeenCalledWith({
                 data: expect.objectContaining({
                     email: 'sinpass@test.com',
-                    password: undefined,
+                    password: 'stored-hash',
                 })
             });
-            expect(result).toEqual(mockCreatedUser);
+            expect(result).toMatchObject({ id: 'new-user-no-pass' });
         });
     });
 
@@ -451,7 +456,6 @@ describe('Users Repository Tests', () => {
             };
 
             (prisma.userCourse.create as jest.Mock).mockResolvedValue(mockUserCourse);
-            (UserCourse as jest.Mock).mockImplementation((data) => data);
 
             const result = await assignCourse(userId, courseId);
 
@@ -479,63 +483,30 @@ describe('Users Repository Tests', () => {
             const userId = 'user-remove-123';
             const courseId = 10;
 
-            const mockUserCourse = {
-                id: 'user-course-remove-123',
-                userId: userId,
-                courseId: courseId,
-                createdAt: new Date(),
-            };
+            (prisma.userCourse.deleteMany as jest.Mock).mockResolvedValue({ count: 1 });
 
-            (prisma.userCourse.findFirst as jest.Mock).mockResolvedValue(mockUserCourse);
-            (prisma.userCourse.delete as jest.Mock).mockResolvedValue(mockUserCourse);
+            await expect(removeCourseFromUser(userId, courseId)).resolves.toBe(true);
 
-            await removeCourseFromUser(userId, courseId);
-
-            expect(prisma.userCourse.findFirst).toHaveBeenCalledWith({
-                where: {
-                    userId: userId,
-                    courseId: courseId,
-                }
-            });
-            expect(prisma.userCourse.delete).toHaveBeenCalledWith({
-                where: {
-                    id: 'user-course-remove-123'
-                }
-            });
+            expect(prisma.userCourse.deleteMany).toHaveBeenCalledWith({ where: { userId, courseId } });
         });
 
-        test('debería lanzar NotFoundError cuando la asignación no existe', async () => {
-            (prisma.userCourse.findFirst as jest.Mock).mockResolvedValue(null);
+        test('retorna false cuando la asignación no existe', async () => {
+            (prisma.userCourse.deleteMany as jest.Mock).mockResolvedValue({ count: 0 });
 
-            await expect(removeCourseFromUser('user-not-found', 999))
-                .rejects
-                .toThrow(NotFoundError);
+            await expect(removeCourseFromUser('user-not-found', 999)).resolves.toBe(false);
             
-            expect(prisma.userCourse.findFirst).toHaveBeenCalled();
-            expect(prisma.userCourse.delete).not.toHaveBeenCalled();
+            expect(prisma.userCourse.deleteMany).toHaveBeenCalledWith({ where: { userId: 'user-not-found', courseId: 999 } });
         });
 
         test('debería verificar que se elimina la asignación correcta', async () => {
             const userId = 'user-specific';
             const courseId = 25;
 
-            const mockUserCourse = {
-                id: 'specific-assignment',
-                userId: userId,
-                courseId: courseId,
-                createdAt: new Date(),
-            };
-
-            (prisma.userCourse.findFirst as jest.Mock).mockResolvedValue(mockUserCourse);
-            (prisma.userCourse.delete as jest.Mock).mockResolvedValue(mockUserCourse);
+            (prisma.userCourse.deleteMany as jest.Mock).mockResolvedValue({ count: 1 });
 
             await removeCourseFromUser(userId, courseId);
 
-            expect(prisma.userCourse.delete).toHaveBeenCalledWith({
-                where: {
-                    id: 'specific-assignment'
-                }
-            });
+            expect(prisma.userCourse.deleteMany).toHaveBeenCalledWith({ where: { userId, courseId } });
         });
     });
 });

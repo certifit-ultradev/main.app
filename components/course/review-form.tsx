@@ -1,20 +1,27 @@
 import { edit, editClassVideoPath, register } from '@/actions/courses/register';
-import { CourseData, CourseModule, ServerActionResponse } from '@/utils/types';
-import { calculateTotalVideoDuration, calculateTotalVideoSize, formatVideoDuration, formatVideoSize } from '@/utils/video';
+import {
+    type CourseEditorFormValues,
+} from '@/features/courses/editor/course-editor-form.types';
+import { prepareCourseEditorDraftForAction } from '@/features/courses/editor/client/prepare-course-editor-draft';
+import {
+    calculateEditorVideoDuration,
+    calculateEditorVideoSize,
+    formatEditorVideoDuration,
+    formatEditorVideoSize,
+} from '@/features/courses/editor/client/course-video-metrics';
 import Modal from '../modal';
 import { useRef, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import _ from 'lodash';
-import { uploadFile } from '@/utils/upload-file-blob';
+import { uploadEditorAsset } from '@/features/courses/editor/client/blob-assets';
 import SubmitButton from '../submitButton';
 import { Button } from '@nextui-org/react';
 import { FormError } from '../form/form-error';
 import { v4 as uuidv4 } from 'uuid'; // Add this import for generating unique IDs
+import type { CourseEditorDto } from '@/application/courses/course.dto';
 
 interface CourseReviewFormProps {
-    data: CourseData;
-    originalData: CourseData;
+    data: CourseEditorFormValues;
     nextStep: () => void;
     previousStep: () => void;
 };
@@ -26,12 +33,12 @@ interface VideoUploadStatus {
     status: 'Ready to Upload' | 'Uploading' | 'Uploaded';
 }
 
-export const CourseReviewForm = ({ data, originalData, previousStep }: CourseReviewFormProps) => {
+export const CourseReviewForm = ({ data, previousStep }: CourseReviewFormProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string>('');
     const [videoStatuses, setVideoStatuses] = useState<VideoUploadStatus[]>([]);
-    const courseId = useRef<number | null | undefined>(null);
+    const createdCourseRef = useRef<CourseEditorDto | null>(null);
 
     const router = useRouter();
 
@@ -81,48 +88,35 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
         setError('');
 
         try {
-            const finalCourseId = courseId.current;
             if (!data.id) {
-                let result: ServerActionResponse<CourseData | null>;
-                if (!finalCourseId) {
-                    const dataWithOutFiles = _.cloneDeep(data);
-                    dataWithOutFiles.modules = dataWithOutFiles.modules?.map<CourseModule>((module) => {
-                        module.classes = module.classes?.map((cls) => {
-                            cls.video = null;
-                            return cls;
-                        });
-                        return module;
-                    });
-                    result = await register({ data: dataWithOutFiles });
-                    if (!result.success) {
-                        setIsLoading(false);
-                        setError(result.error ?? 'Error al crear el curso');
+                let createdCourse = createdCourseRef.current;
+                if (!createdCourse) {
+                    const dataWithOutFiles = await prepareCourseEditorDraftForAction(data, '/courses/pending/');
+                    const result = await register(dataWithOutFiles);
+                    if (!result.ok) {
+                        setError(result.error.message);
                         return;
                     }
-                    courseId.current = result.payload?.id;
+                    createdCourse = result.data;
+                    createdCourseRef.current = createdCourse;
                 }
 
                 const uploadTasks: (() => Promise<void>)[] = [];
                 data.modules?.forEach((module, mIndex) => {
                     module.classes?.forEach((cls, clsIndex) => {
-                        const file: File = cls.video as File;
-                        if (file) {
+                        const file = cls.video;
+                        if (file instanceof File) {
                             const videoId = videoStatuses.find((video) => video.fileName === file.name)?.id;
                             uploadTasks.push(async () => {
                                 if (videoId) updateVideoStatus(videoId, 'Uploading');
-                                const putBlobResult = await uploadFile(`/courses/${!finalCourseId ? courseId.current : finalCourseId}/`, file);
-                                const clsCreatedId = result?.payload?.modules?.[mIndex]?.classes?.[clsIndex]?.id;
-                                if (!clsCreatedId) {
-                                    setIsLoading(false);
-                                    setError('fallo la creación de la clase');
-                                    return;
-                                }
+                                const putBlobResult = await uploadEditorAsset(`/courses/${createdCourse.id}/`, file);
+                                const clsCreatedId = createdCourse.modules[mIndex]?.classes[clsIndex]?.id;
+                                if (!clsCreatedId) throw new Error('La clase creada no tiene un identificador válido');
 
-                                await editClassVideoPath({
-                                    data: {
-                                        clsId: clsCreatedId, videoPath: putBlobResult.url, videoSize: file.size
-                                    }
+                                const videoResult = await editClassVideoPath({
+                                    clsId: clsCreatedId, videoPath: putBlobResult.url, videoSize: file.size,
                                 });
+                                if (!videoResult.ok) throw new Error(videoResult.error.message);
                                 if (videoId) updateVideoStatus(videoId, 'Uploaded');
                             });
                         }
@@ -133,16 +127,7 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                 setIsLoading(false);
                 setIsOpen(true);
             } else {
-                const dataWithOutFiles = _.cloneDeep(data);
-                dataWithOutFiles.modules = dataWithOutFiles.modules?.map<CourseModule>((module) => {
-                    module.classes = module.classes?.map((cls) => {
-                        if (cls.video instanceof File) {
-                            cls.video = null;
-                        }
-                        return cls;
-                    });
-                    return module;
-                });
+                const dataWithOutFiles = await prepareCourseEditorDraftForAction(data, `/courses/${data.id}/`);
 
                 const uploadTasks: (() => Promise<void>)[] = [];
                 data.modules?.forEach((module, mIndex) => {
@@ -152,7 +137,7 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                             const videoId = videoStatuses.find((video) => video.fileName === file.name)?.id;
                             uploadTasks.push(async () => {
                                 if (videoId) updateVideoStatus(videoId, 'Uploading');
-                                const putBlobResult = await uploadFile(`/courses/${data.id}/`, file);
+                                const putBlobResult = await uploadEditorAsset(`/courses/${data.id}/`, file);
                                 if (dataWithOutFiles.modules &&
                                     dataWithOutFiles.modules[mIndex] &&
                                     dataWithOutFiles.modules[mIndex].classes &&
@@ -161,7 +146,6 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                                     dataWithOutFiles.modules[mIndex].classes[clsIndex].videoSize = file.size;
                                 } else {
                                     setError("La estructura en dataWithOutFiles no existe para actualizar la URL del video.");
-                                    console.error("La estructura en dataWithOutFiles no existe para actualizar la URL del video.", { mIndex, clsIndex });
                                 }
                                 if (videoId) updateVideoStatus(videoId, 'Uploaded');
                             });
@@ -170,19 +154,17 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                 });
 
                 await uploadWithLimit(uploadTasks, 1); // Limit to 2 concurrent uploads
-                const editResult = await edit({ data: { originalCourseData: originalData, newCourseData: dataWithOutFiles } });
-                setIsLoading(false);
-                if (editResult.success) {
+                const editResult = await edit({ courseId: data.id, patch: dataWithOutFiles });
+                if (editResult.ok) {
                     setIsOpen(true);
                 } else {
-                    const errorMessage = editResult.message ?? '';
-                    setError(errorMessage);
+                    setError(editResult.error.message);
                 }
             }
-        } catch (err) {
-            console.error("Error:", err);
+        } catch {
+            setError('Ocurrió un error, intenta más tarde.');
+        } finally {
             setIsLoading(false);
-            setError('Ocurrió un error, intente más tarde. Error: ' + (err instanceof Error ? err.message : 'Unknown error'));
         }
     }
 
@@ -203,8 +185,8 @@ export const CourseReviewForm = ({ data, originalData, previousStep }: CourseRev
                 <p className={cn('mb-2')}>Precio: ${data.price}</p>
                 <p className={cn('mb-2')}>Instructor: <strong>{data.instructorName}</strong></p>
                 <p className={cn('mb-2')}>Categoría: <strong>{data.category?.name}</strong></p>
-                <p className={cn('mb-2')}>Peso del curso: {formatVideoSize(calculateTotalVideoSize(data.modules ?? []))} GB</p>
-                <p className={cn('mb-2')}>Duración del curso: {formatVideoDuration(calculateTotalVideoDuration(data.modules ?? []))}</p>
+                <p className={cn('mb-2')}>Peso del curso: {formatEditorVideoSize(calculateEditorVideoSize(data.modules))} GB</p>
+                <p className={cn('mb-2')}>Duración del curso: {formatEditorVideoDuration(calculateEditorVideoDuration(data.modules))}</p>
                 <p className={cn('mb-4')}>
                     {data.description}
                 </p>

@@ -2,22 +2,22 @@
 
 import { NextPage } from 'next';
 import { cn } from '@/lib/utils';
-import { useEffect, useRef, useState } from 'react';
-import { CourseCategoryData, CourseData } from '@/utils/types';
+import { useEffect, useState } from 'react';
+import type { CourseEditorFormValues } from '@/features/courses/editor/course-editor-form.types';
+import { toCourseEditorFormValues } from '@/features/courses/editor/course-editor-form.mapper';
 import { CourseStepProgress } from '@/components/course/progress-form';
 import { CourseBasicForm } from '@/components/course/basic-form';
 import { CourseClassesForm } from '@/components/course/classes-form';
 import { CourseReviewForm } from '@/components/course/review-form';
 import { useParams } from 'next/navigation'
 import { getCourseDataById } from '@/actions/courses/list';
-import _ from 'lodash';
 
 const IndexEditCoursesPage: NextPage = () => {
-    const initialCourseData = {
+    const initialCourseData: CourseEditorFormValues = {
         title: '',
         price: 0.0,
         instructorName: '',
-        category: { name: '' },
+        category: null,
         description: '',
         expiresAt: '',
         courseImage: '',
@@ -25,7 +25,7 @@ const IndexEditCoursesPage: NextPage = () => {
         modules: [{
             title: '',
             minRequiredPoints: 0,
-            classes: [{ title: '', description: '', videoDuration: 0, videoSize: 0 }],
+            classes: [{ title: '', description: '', video: null, videoDuration: 0, videoSize: 0 }],
             quiz: {
                 title: '',
                 description: '',
@@ -35,33 +35,19 @@ const IndexEditCoursesPage: NextPage = () => {
     };
 
     const [step, setStep] = useState<number>(1);
-    const [data, setData] = useState<CourseData>(initialCourseData);
-    const originalData = useRef<CourseData>(_.cloneDeep(initialCourseData));
+    const [data, setData] = useState<CourseEditorFormValues>(initialCourseData);
     const { id } = useParams();
+
     useEffect(() => {
         const fetchCourse = async () => {
             try {
-                const response = await getCourseDataById({ data: { id: Number(id) } });
-                if (response.success && response.payload) {
-                    setData(() => {
-                        return {
-                            id: response.payload?.id as number,
-                            title: response.payload?.title as string,
-                            price: response.payload?.price as number,
-                            courseImage: response.payload?.courseImage as string,
-                            instructorName: response.payload?.instructorName as string,
-                            instructorPhoto: response.payload?.instructorPhoto as string,
-                            category: response.payload?.category as CourseCategoryData,
-                            description: response.payload?.description as string,
-                            expiresAt: response.payload?.expiresAt as string,
-                            modules: response.payload?.modules
-                        }
-                    });
-                    originalData.current = _.cloneDeep(response.payload);
+                const response = await getCourseDataById({ id: Number(id) });
+                if (response.ok) {
+                    const editorFormData = toCourseEditorFormValues(response.data);
+                    setData(editorFormData);
                 }
             } catch (error) {
                 if (error instanceof Error) {
-                    console.error(error);
                     // notFound();
                 }
             }
@@ -83,7 +69,7 @@ const IndexEditCoursesPage: NextPage = () => {
                     <CourseClassesForm previousStep={previousStep} nextStep={nextStep} setData={setData} data={data} />
                 )}
                 {step === 3 && (
-                    <CourseReviewForm previousStep={previousStep} nextStep={nextStep} data={data} originalData={originalData.current} />
+                    <CourseReviewForm previousStep={previousStep} nextStep={nextStep} data={data} />
                 )}
             </div>
         </div>

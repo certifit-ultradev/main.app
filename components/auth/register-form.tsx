@@ -1,21 +1,21 @@
 'use client';
 
 import { Dispatch, SetStateAction, useState } from 'react';
-import { FirstStepRegisterSchema } from '@/utils/schemas';
+import { FirstStepRegisterSchema } from '@/features/auth/auth-form.schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { Button } from '../ui/button';
 import { cn } from '@/lib/utils';
-import { RegisterPageData, RegisterUserFirstStep } from '@/utils/types';
+import type { RegistrationFormValues, RegistrationProfileFormValues } from '@/features/auth/registration/registration-form.types';
 import { BasicFieldsForm } from './components/user-fields-form';
 import { FormError } from '../form/form-error';
 import { FormSuccess } from '../form/form-success';
 import { CheckTerms } from './components/check-terms';
 
 interface RegisterFormProps {
-    data: RegisterUserFirstStep;
-    setData: Dispatch<SetStateAction<RegisterPageData>>;
+    data: RegistrationProfileFormValues;
+    setData: Dispatch<SetStateAction<RegistrationFormValues>>;
     nextStep: () => void;
 };
 

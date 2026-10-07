@@ -6,7 +6,7 @@ import { login } from '@/actions/auth/login';
 import Image from 'next/image';
 import { Button } from '@nextui-org/react';
 import { ErrorMessage } from '@hookform/error-message';
-import { LoginSchema } from '@/utils/schemas';
+import { LoginSchema } from '@/features/auth/auth-form.schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FormError } from '@/components/form/form-error';
 import { FormSuccess } from '@/components/form/form-success';
@@ -35,18 +35,16 @@ export const LoginForm = () => {
         setError('');
         setSuccess('');
         startTransition(() => {
-            login(values, callbackUrl)
+            login({ ...values, callbackUrl })
                 .then((data) => {
-                    if (data?.error) {
-                        setError(data.error);
-                    }
-                    if (data?.success) {
+                    if (data.ok) {
                         reset();
                         setSuccess(data.message);
+                    } else {
+                        setError(data.error.message);
                     }
-                }).catch((e) => {
+                }).catch(() => {
                     setError('Algo ha pasado, intenta mas tarde!');
-                    console.error(e);
                 });
         });
     };

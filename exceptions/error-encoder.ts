@@ -3,185 +3,69 @@ import { CourseAlreadyPurchasedError } from "./course-already-purchased";
 import { CourseInvalidStateError } from "./course-invalid-state";
 import { NotFoundError } from "./not-found";
 import { TransactionError } from "./transaction-error";
+import { PaymentProviderError } from './payment-provider-error';
 import { UserNotLoggedError } from "./user-not-logged";
+import { EmailUnverifiedError, InsufficientRoleError } from './actor-access-errors';
 import { UserExistError } from "./user-exist";
-import { AuthError } from "next-auth";
 import { Prisma } from "@/prisma/app/generated/prisma/client";
 import { CourseNotPurchasedError } from "./course-not-purchased";
+import { MalformedJsonError } from './malformed-json';
+import { safeLogger } from '@/shared/observability/safe-logger';
+import { apiFailure, type ApiErrorCode } from '@/interfaces/http/api-response';
 
-/**
- * mapErrorToAPIResponse
- * This function maps the error to a response object that can be returned to the client.
- * @param error - The error to map.
- * @returns A response object with the error message and status code.
- */
-export function mapErrorToAPIResponse(error: unknown) {
+const httpFailure = (status: number, code: ApiErrorCode, message: string): Response =>
+    Response.json(apiFailure(code, message), { status });
+
+/** Translates application failures at the HTTP boundary without exposing exception details. */
+export function mapErrorToAPIResponse(error: unknown): Response {
+    const isMalformedJson = error instanceof SyntaxError || (error instanceof Error && error.name === 'SyntaxError');
+
     switch (true) {
+        case isMalformedJson || error instanceof MalformedJsonError:
+            return httpFailure(400, 'BAD_REQUEST', 'El cuerpo de la solicitud no contiene JSON válido.');
         case error instanceof CourseAlreadyPurchasedError:
-        case error instanceof TransactionError:
-        case error instanceof UserNotLoggedError:
+            return httpFailure(409, 'CONFLICT', 'El curso ya fue comprado.');
         case error instanceof CourseInvalidStateError:
+            return httpFailure(409, 'CONFLICT', 'El curso no está disponible.');
+        case error instanceof PaymentProviderError:
+            if (error.kind === 'transaction_not_found') {
+                return httpFailure(404, 'NOT_FOUND', 'Recurso no encontrado.');
+            }
+            if (error.kind === 'unavailable') {
+                return httpFailure(503, 'SERVICE_UNAVAILABLE', 'No fue posible consultar la transacción. Inténtalo más tarde.');
+            }
+            return httpFailure(502, 'BAD_GATEWAY', 'No fue posible consultar la transacción. Inténtalo más tarde.');
+        case error instanceof TransactionError:
+            return httpFailure(409, 'CONFLICT', 'No fue posible procesar la transacción.');
+        case error instanceof UserNotLoggedError:
+            return httpFailure(401, 'UNAUTHENTICATED', 'No tienes una sesión válida para esta operación.');
+        case error instanceof EmailUnverifiedError:
+            return httpFailure(403, 'EMAIL_UNVERIFIED', 'Debes verificar tu correo para realizar esta operación.');
+        case error instanceof InsufficientRoleError:
+            return httpFailure(403, 'FORBIDDEN', 'No tienes permisos para esta operación.');
         case error instanceof CourseNotPurchasedError:
-            return Response.json({
-                success: false,
-                message: error.cause,
-            }, { status: 400 });
+            return httpFailure(403, 'FORBIDDEN', 'No tienes acceso a este curso.');
         case error instanceof UserExistError:
+            return httpFailure(409, 'CONFLICT', 'El recurso ya existe.');
         case error instanceof NotFoundError:
-            return Response.json({
-                success: false,
-                message: error.cause,
-            }, { status: 404 });
+            return httpFailure(404, 'NOT_FOUND', 'Recurso no encontrado.');
         case error instanceof z.ZodError:
-            return Response.json({
-                success: false,
-                message: "Datos de respuesta invalidos"
-            }, { status: 422 });
+            return httpFailure(422, 'VALIDATION', 'Datos inválidos.');
         default:
-            if (error instanceof Error) {
-                console.log("error", error.message, error.cause);
-            }
-            return Response.json({
-                success: false,
-                message: "ocurrio un error, intente mas tarde",
-            }, { status: 500 });
-    }
-}
-
-/**
- * mapErrorToServerActionResponse
- * This function maps the error to a response object that can be returned to the admin client.
- * @param error - The error to map.
- * @returns A response object with the error message and status code.
- */
-export function mapErrorToServerActionResponse(error: unknown, isAdmin: boolean = false) {
-    switch (true) {
-        case error instanceof CourseAlreadyPurchasedError:
-        case error instanceof TransactionError:
-        case error instanceof UserNotLoggedError:
-        case error instanceof CourseInvalidStateError:
-        case error instanceof NotFoundError:
-        case error instanceof UserExistError:
-            return {
-                success: false,
-                message: error.cause,
-            };
-        case error instanceof AuthError:
-            switch (error.type) {
-                case "CredentialsSignin":
-                    return { success: false, error: "Credenciales invalidas." };
-                default:
-                    return { success: false, error: "Algo ha pasado, intenta mas tarde!" };
-            }
-
-        case error instanceof Prisma.PrismaClientRustPanicError:
-            console.error("PrismaClientRustPanicError:", error);
-            return {
-                success: false,
-                message: "ocurrio un error, contacte soporte",
-            };
-        case error instanceof Prisma.PrismaClientInitializationError:
-            console.error("PrismaClientInitializationError:", error);
-            return {
-                success: false,
-                message: "ocurrio un error, intente mas tarde",
-            };
-        case error instanceof Prisma.PrismaClientKnownRequestError:
-            // Errores conocidos de Prisma
-            switch (error.code) {
-                case 'P2002':
-                    return {
-                        success: false,
-                        message: "El correo electrónico ya está en uso.",
-                    };
-                case 'P2003':
-                    return {
-                        success: false,
-                        message: "Se encuentra en uso por otro registro.",
-                    };
-                case 'P2025':
-                    return {
-                        success: false,
-                        message: "No se encontró el registro solicitado.",
-                    };
-                default:
-                    console.log(`Error conocido de Prisma (código ${error.code}): ${error.message}`);
-            }
-        case error instanceof Prisma.PrismaClientValidationError:
-            console.error("PrismaClientValidationError:", error);
-            return {
-                success: false,
-                message: isAdmin ? `Detalles: ${error.message}` : "ocurrio un error, intente mas tarde.",
-            };
-        case error instanceof Error:
-            if ((error as object).constructor.name == "PrismaClientKnownRequestError") {
-                const code = (error as Prisma.PrismaClientKnownRequestError).code;
-
-                switch (code) {
-                    case 'P2002':
-                        return {
-                            success: false,
-                            message: "El correo electrónico ya está en uso.",
-                        };
-                    case 'P2003':
-                        return {
-                            success: false,
-                            message: "Se encuentra en uso por otro registro.",
-                        };
-                    case 'P2025':
-                        return {
-                            success: false,
-                            message: "No se encontró el registro solicitado.",
-                        };
-                    default:
-                        console.log(`Error conocido de Prisma: ${error.message}`);
-                }
-            }
-            return {
-                success: false,
-                message: isAdmin ? `Detalles: ${error.message}` : "ocurrio un error, intente mas tarde.",
-            };
-        case error instanceof TypeError:
-            return {
-                success: false,
-                message: isAdmin ? `Detalles: ${error.message}` : "ocurrio un error, intente mas tarde."
-            };
-        default:
-            console.error("General Error:", error);
-            return {
-                success: false,
-                message: "ocurrio un error, intente mas tarde",
-            };
+            safeLogger.error('http.error.unexpected', { name: error instanceof Error ? error.name : 'unknown' });
+            return httpFailure(500, 'UNEXPECTED', 'Ocurrió un error. Inténtalo más tarde.');
     }
 }
 
 /**
  * logPrismaError
- * This function logs the Prisma error to the console.
+ * This function records a safe operational event without logging query data.
  * @param error - The error to log.
  */
 export function logPrismaError(error: unknown) {
-    console.log("Logging Prisma error:");
-    console.log(error);
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        console.log(`Error conocido de Prisma (código ${error.code}): ${error.message}`);
-        // Errores conocidos de Prisma
-        if (error.code === 'P2002') {
-            console.log('Error: El correo electrónico ya está en uso.', error.message);
-        } else {
-            console.log(`Error conocido de Prisma (código ${error.code}): ${error.message}`);
-        }
-    } else if (error instanceof Prisma.PrismaClientValidationError) {
-        // Errores de validación
-        console.log('Error de validación:', error.message);
-    } else if (error instanceof Prisma.PrismaClientInitializationError) {
-        // Errores de inicialización
-        console.log('Error de inicialización del cliente de Prisma:', error.message);
-    } else if (error instanceof Prisma.PrismaClientRustPanicError) {
-        // Errores de pánico en Rust
-        console.log('Error crítico en el motor de Prisma:', error.message);
-    } else if (error instanceof Error) {
-        // Otros errores
-        console.log('Error desconocido:', error.name);
-    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError) safeLogger.error('persistence.known', { code: error.code });
+    else if (error instanceof Prisma.PrismaClientValidationError) safeLogger.error('persistence.validation');
+    else if (error instanceof Prisma.PrismaClientInitializationError) safeLogger.error('persistence.initialization');
+    else if (error instanceof Prisma.PrismaClientRustPanicError) safeLogger.error('persistence.panic');
+    else if (error instanceof Error) safeLogger.error('persistence.unexpected', { name: error.name });
 }

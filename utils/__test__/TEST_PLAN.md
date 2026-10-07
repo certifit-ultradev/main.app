@@ -5,16 +5,12 @@ Complete testing strategy for 11 utility files in the `/utils` directory. These 
 
 ## Files to Test
 
-### 1. ✅ classes.ts (COMPLETED - 21 tests)
+### 1. ✅ classes.ts
 **Functions:**
-- `mergeChangesByTypeAndId` - Merges course update changes by entity type and ID
 - `getCourseProgress` - Calculates student progress through course modules
 - `toSnakeCase` - Converts strings to snake_case format
 
-**Test Coverage:** 3 functions, 21 tests total
-- mergeChangesByTypeAndId: 6 tests
-- getCourseProgress: 8 tests
-- toSnakeCase: 7 tests
+**Test Coverage:** progress behavior and canonical identifier normalization.
 
 ### 2. ✅ type-guards.ts (COMPLETED - 24 tests)
 **Functions:**
@@ -26,13 +22,9 @@ Complete testing strategy for 11 utility files in the `/utils` directory. These 
 **Test Coverage:** 4 functions, 24 tests total
 - Each function: 6 tests (valid object, missing property, null, undefined, primitives, empty object)
 
-### 3. ✅ filter-data.ts (COMPLETED - 10 tests)
-**Functions:**
-- `cleanData` - Removes undefined, null, and empty string values from objects
+### 3. filter-data.ts (retired in TB-052)
 
-**Test Coverage:** 1 function, 10 tests total
-- Undefined removal, null removal, zero values, false values
-- Empty strings, empty objects, complex objects, nested objects, arrays
+The helper had no production consumers. Admin user action and repository tests now verify `''`, `null` and `undefined` according to the user patch contract.
 
 ### 4. ✅ expiraton-token.ts (COMPLETED - 5 tests)
 **Functions:**
@@ -88,15 +80,4 @@ Complete testing strategy for 11 utility files in the `/utils` directory. These 
 - generateFileName: 8 tests (mp4, png, jpg extensions, invalid formats, multiple calls)
 - uploadFile: 11 tests (upload config, public access, multipart, progress, different file types)
 
-### 10. ✅ diff.ts (COMPLETED - 16 tests)
-**Functions:**
-- `diffCourses` - Deep comparison of course objects to detect changes
-
-**Test Coverage:** 1 function, 16 tests total
-- Course property updates, module add/delete/update
-- Class add/delete/update, quiz changes, question changes
-- Option changes, complex nested changes, path preservation
-
-### 11. ⏭️ change-types.ts (SKIPPED - Type definitions only)
-**Content:** TypeScript type definitions only, no executable functions
-**Reason:** Type definitions are validated at compile time, not runtime
+> `diff.ts`, `change-types.ts` and their tests were retired with the dynamic course editor. The current editor persists the explicit `CourseEditorPatch` command.

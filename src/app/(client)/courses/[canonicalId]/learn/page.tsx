@@ -1,51 +1,43 @@
 
 import { ClientCourseView } from "@/components/course/client/course-view";
-import { CourseNotPurchasedError } from "@/exceptions/course-not-purchased";
-import { NotFoundError } from "@/exceptions/not-found";
+import { getPublicAppUrl } from "@/config/env";
+import { CourseParamsSchema } from "@/interfaces/http/courses/params.contract";
+import { parseStudentCourseResponse, StudentCourseHttpError } from "@/features/courses/learning/student-course-api";
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
-// @ts-expect-error: params
-const LearnPage = async ({ params }) => {
-    const { canonicalId } = await params;
+type LearnPageProps = {
+    params: Promise<{ canonicalId: string }>;
+};
+
+const LearnPage = async ({ params }: LearnPageProps) => {
+    const parsedParams = CourseParamsSchema.safeParse(await params);
+    if (!parsedParams.success) notFound();
+
+    const { canonicalId } = parsedParams.data;
     const rqHeaders = await headers();
     const response = await fetch(
-        process.env.NEXT_PUBLIC_APP_URL + `/api/courses/${canonicalId}`,
+        `${getPublicAppUrl()}/api/courses/${encodeURIComponent(canonicalId)}`,
         { method: 'GET', headers: new Headers(rqHeaders) }
     );
 
-    let courseData = null;
     try {
-        courseData = await response.json();
-        if (!response.ok) {
-            switch (response.status) {
-                case 404:
-                    throw new NotFoundError(courseData.message);
-                case 400:
-                    throw new CourseNotPurchasedError(courseData.message);
-                default:
-                    throw new Error(`Error inesperado: ${response.statusText}`);
+        const courseData = await parseStudentCourseResponse(response);
+        return <ClientCourseView data={courseData} />;
+    } catch (error) {
+        if (error instanceof StudentCourseHttpError) {
+            if (error.status === 401) {
+                redirect(`/login?callbackUrl=${encodeURIComponent(`/courses/${canonicalId}/learn`)}`);
             }
-        }
-    } catch (e) {
-        if (e && typeof e === 'object') {
-            switch (e.constructor) {
-                case CourseNotPurchasedError:
-                    throw new Error((e as CourseNotPurchasedError).cause);
-                case Error:
-                    throw e;
-                case NotFoundError:
-                    notFound();
-                default:
-                    throw new Error(`${e}, intente mas tarde`);
+
+            // Do not disclose whether a course exists to an unauthorised student.
+            if (error.status === 403 || error.status === 404) {
+                notFound();
             }
         }
 
+        throw error;
     }
-
-    return (
-        <ClientCourseView data={courseData} />
-    );
 }
 
 export default LearnPage;

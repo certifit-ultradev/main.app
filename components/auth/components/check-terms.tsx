@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils"
-import { RegisterUserFirstStep } from "@/utils/types"
+import type { RegistrationProfileFormValues } from '@/features/auth/registration/registration-form.types'
 import { ErrorMessage } from "@hookform/error-message"
 import { FieldErrors, UseFormRegister } from "react-hook-form"
 
 interface CheckTermsProp {
-    errors: FieldErrors<RegisterUserFirstStep>
-    register: UseFormRegister<RegisterUserFirstStep>
+    errors: FieldErrors<RegistrationProfileFormValues>
+    register: UseFormRegister<RegistrationProfileFormValues>
 }
 
 export const CheckTerms = ({ register, errors }: CheckTermsProp) => {

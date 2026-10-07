@@ -1,10 +1,6 @@
 import { logPrismaError } from "@/exceptions/error-encoder";
 import { UserNotLoggedError } from "@/exceptions/user-not-logged";
-import {
-    countCourseSales,
-    sumCourseSalesByLastMonth,
-    sumUsersByLastMonth
-} from "@/repository/courses";
+import { prismaCourseAnalyticsReadPort } from '@/repository/course-analytics.prisma';
 import {
     calculateTotalSalesPerCourse,
     calculateTotalSalesByMonth,
@@ -13,7 +9,13 @@ import {
 import { auth } from "@/auth";
 import { mockSession, setupMocks, clearAllMocks } from './setup';
 
-jest.mock('@/repository/courses');
+jest.mock('@/repository/course-analytics.prisma', () => ({
+    prismaCourseAnalyticsReadPort: {
+        findSalesByCourse: jest.fn(),
+        findApprovedSalesByMonth: jest.fn(),
+        findRegisteredUsersByMonth: jest.fn(),
+    },
+}));
 jest.mock('@/exceptions/error-encoder');
 jest.mock('@/auth');
 
@@ -33,12 +35,12 @@ describe('Courses Service - Analytics', () => {
                 { courseId: 2, courseName: 'Curso 2', totalSales: 200 }
             ];
 
-            (countCourseSales as jest.Mock).mockResolvedValue(mockSalesData);
+            (prismaCourseAnalyticsReadPort.findSalesByCourse as jest.Mock).mockResolvedValue(mockSalesData);
 
             const result = await calculateTotalSalesPerCourse();
 
             expect(result).toEqual(mockSalesData);
-            expect(countCourseSales).toHaveBeenCalled();
+            expect(prismaCourseAnalyticsReadPort.findSalesByCourse).toHaveBeenCalled();
         });
 
         test('debería lanzar error si el usuario no está logueado', async () => {
@@ -58,12 +60,12 @@ describe('Courses Service - Analytics', () => {
                 percentageChange: 25
             };
 
-            (sumCourseSalesByLastMonth as jest.Mock).mockResolvedValue(mockMonthSales);
+            (prismaCourseAnalyticsReadPort.findApprovedSalesByMonth as jest.Mock).mockResolvedValue(mockMonthSales);
 
             const result = await calculateTotalSalesByMonth();
 
             expect(result).toEqual(mockMonthSales);
-            expect(sumCourseSalesByLastMonth).toHaveBeenCalled();
+            expect(prismaCourseAnalyticsReadPort.findApprovedSalesByMonth).toHaveBeenCalled();
         });
 
         test('debería lanzar error si el usuario no está logueado', async () => {
@@ -83,12 +85,12 @@ describe('Courses Service - Analytics', () => {
                 percentageChange: 25
             };
 
-            (sumUsersByLastMonth as jest.Mock).mockResolvedValue(mockUserStats);
+            (prismaCourseAnalyticsReadPort.findRegisteredUsersByMonth as jest.Mock).mockResolvedValue(mockUserStats);
 
             const result = await calculateUsersRegisteredByMonth();
 
             expect(result).toEqual(mockUserStats);
-            expect(sumUsersByLastMonth).toHaveBeenCalled();
+            expect(prismaCourseAnalyticsReadPort.findRegisteredUsersByMonth).toHaveBeenCalled();
         });
 
         test('debería lanzar error si el usuario no está logueado', async () => {

@@ -88,7 +88,7 @@ npm test -- --coverage services/__test__/courses/
 
 ### Mocking
 Todos los tests usan jest.mock() para:
-- `@/repository/courses` - Capa de datos
+- Puertos Prisma por propósito (`course-read`, `course-editor`, `course-progress` y `course-analytics`)
 - `@/auth` - Autenticación
 - `@/exceptions/error-encoder` - Logging de errores
 - `@/models/*` - Modelos de datos

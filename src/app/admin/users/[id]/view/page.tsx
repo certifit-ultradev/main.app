@@ -3,15 +3,18 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { notFound } from 'next/navigation';
 
-// @ts-expect-error: params
-const UserViewPage = async ({ params }) => {
+interface UserViewPageProps {
+    params: Promise<{ id: string }>;
+}
+
+const UserViewPage = async ({ params }: UserViewPageProps) => {
     const { id } = await params;
-    const result = await fetchUserById({ data: { id } });
-    if (!result.success) {
+    const result = await fetchUserById({ id });
+    if (!result.ok) {
         notFound(); // Si no se encuentra el usuario, muestra una página 404
     }
 
-    const user = result.payload;
+    const user = result.data;
     return (
         <div className={cn('p-6 w-[70rem] my-4 mx-auto bg-white rounded-xl shadow-md space-y-4')}>
             <h2 className={cn('text-2xl font-semibold')}>Detalles del Usuario</h2>

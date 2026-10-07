@@ -141,18 +141,21 @@ model ModuleQuiz {
   quizQuestion   QuizQuestion[]
   userQuizAnswer UserQuizAnswer[]
   userQuizState  UserQuizState[]
+
+  @@unique([courseModuleId])
 }
 
 model QuizQuestion {
-  id        Int       @id @default(autoincrement())
-  quizId    Int       @map("quiz_id")
-  title     String
-  type      String
-  points    Int
-  deleted   Boolean   @default(false)
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime? @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
+  id             Int       @id @default(autoincrement())
+  quizId         Int       @map("quiz_id")
+  title          String
+  type           String
+  points         Int
+  expectedAnswer String?   @map("expected_answer")
+  deleted        Boolean   @default(false)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime? @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
 
   moduleQuiz             ModuleQuiz               @relation(fields: [quizId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   possibleAnswerQuestion PossibleAnswerQuestion[]
@@ -204,6 +207,8 @@ model UserQuizState {
   courseModule CourseModules @relation(fields: [courseModuleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   Course       Course?       @relation(fields: [courseId], references: [id])
   courseId     Int?
+
+  @@unique([userCourseId, quizId])
 }
 
 model Cart {
@@ -245,6 +250,8 @@ model UserModuleState {
 
   userCourse   UserCourse    @relation(fields: [userCourseId], references: [id])
   courseModule CourseModules @relation(fields: [moduleId], references: [id])
+
+  @@unique([userCourseId, moduleId])
 }
 
 model UserClassesState {
@@ -258,6 +265,8 @@ model UserClassesState {
 
   userCourse  UserCourse  @relation(fields: [userCourseId], references: [id])
   moduleClass ModuleClass @relation(fields: [classId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([userCourseId, classId])
 }
 
 model UserQuizAnswer {
@@ -277,6 +286,8 @@ model UserQuizAnswer {
   quizQuestion             QuizQuestion            @relation(fields: [questionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   PossibleAnswerQuestion   PossibleAnswerQuestion? @relation(fields: [possibleAnswerQuestionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   possibleAnswerQuestionId Int?
+
+  @@unique([userCourseId, quizId, questionId])
 }
 
 model CourseCategory {

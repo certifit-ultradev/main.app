@@ -1,12 +1,13 @@
 import { auth } from "@/auth";
 import { UserNotLoggedError } from "@/exceptions/user-not-logged";
+import { EmailUnverifiedError, InsufficientRoleError } from '@/exceptions/actor-access-errors';
 import { 
-    getAuthenticatedUser, 
-    withAuth, 
-    withAdminAuth, 
-    getOptionalUserId,
-    AuthenticatedUser 
-} from "@/utils/auth-wrapper";
+    getAuthenticatedActor as getAuthenticatedUser,
+    withAuthenticatedActor as withAuth,
+    withAdminAuthenticatedActor as withAdminAuth,
+    getOptionalAuthenticatedActorId as getOptionalUserId,
+    type AuthenticatedActor as AuthenticatedUser,
+} from '@/infrastructure/auth/authenticated-actor';
 
 jest.mock("@/auth");
 
@@ -73,7 +74,7 @@ describe('Auth Wrapper Utils', () => {
         test('debería lanzar error si email no está verificado (por defecto)', async () => {
             mockAuth.mockResolvedValue(unverifiedSession);
 
-            await expect(getAuthenticatedUser()).rejects.toThrow(UserNotLoggedError);
+            await expect(getAuthenticatedUser()).rejects.toThrow(EmailUnverifiedError);
         });
 
         test('debería permitir email no verificado si requireEmailVerified es false', async () => {
@@ -82,12 +83,13 @@ describe('Auth Wrapper Utils', () => {
             const result = await getAuthenticatedUser({ requireEmailVerified: false });
 
             expect(result.id).toBe('user-456');
+            expect(result.emailVerified).toBeNull();
         });
 
         test('debería lanzar error si requiere admin y usuario no es admin', async () => {
             mockAuth.mockResolvedValue(validSession);
 
-            await expect(getAuthenticatedUser({ requireAdmin: true })).rejects.toThrow(UserNotLoggedError);
+            await expect(getAuthenticatedUser({ requireAdmin: true })).rejects.toThrow(InsufficientRoleError);
         });
 
         test('debería retornar usuario admin cuando se requiere admin', async () => {
@@ -238,7 +240,7 @@ describe('Auth Wrapper Utils', () => {
             const mockFn = jest.fn();
             const wrappedFn = withAdminAuth(mockFn);
 
-            await expect(wrappedFn()).rejects.toThrow(UserNotLoggedError);
+            await expect(wrappedFn()).rejects.toThrow(InsufficientRoleError);
             expect(mockFn).not.toHaveBeenCalled();
         });
 

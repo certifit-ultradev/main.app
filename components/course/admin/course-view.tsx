@@ -1,6 +1,6 @@
 "use client";
 
-import { CourseData, QuizModule } from "@/utils/types";
+import type { CourseEditorDto } from '@/application/courses/course.dto';
 import { cn } from "@/lib/utils";
 import Image from 'next/image'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,8 +10,10 @@ import { StepProgress } from "@/components/progress/step-progress";
 import { CheckIcon } from "@/components/svg/certifit-icons";
 
 type CourseViewProps = {
-    data: CourseData;
+    data: CourseEditorDto;
 };
+
+type EditorQuiz = NonNullable<CourseEditorDto['modules'][number]['quiz']>;
 
 export const AdminCourseView = ({ data }: CourseViewProps) => {
     const [selectedClass, setSelectedClass] = useState<{ moduleIndex: number; classIndex: number; classId: number | undefined } | null>(null);
@@ -34,10 +36,11 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
         ? data.modules?.[selectedClass.moduleIndex]?.classes?.[selectedClass.classIndex]
         : null;
     const selectedQuizData = selectedQuiz ? data.modules?.[selectedQuiz.moduleIndex!].quiz : null;
+    const currentAuthorQuestion = selectedQuizData?.questions[quizState.currentQuestion];
 
 
     const handleStartQuiz = () => setQuizState({ started: true, finished: false, currentQuestion: 0 });
-    const handleNextQuestion = (quiz: QuizModule) => {
+    const handleNextQuestion = (quiz: EditorQuiz) => {
         if (quizState.currentQuestion < (quiz.questions?.length ?? 0) - 1) {
             setQuizState((s) => ({ ...s, currentQuestion: s.currentQuestion + 1 }));
         } else {
@@ -61,7 +64,7 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
                 </p>
                 <div className={cn("space-y-4")} id="course-items-container">
                     {data.modules?.map((module, moduleIndex) => (
-                        <div key={moduleIndex}>
+                        <div key={module.id}>
                             <h3 className={cn("font-semibold text-gray-700 mb-2")}>
                                 Módulo #{moduleIndex + 1} {module.title}
                             </h3>
@@ -71,7 +74,7 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
                                     selectedClass.moduleIndex === moduleIndex &&
                                     selectedClass.classIndex === classIndex;
                                 return (
-                                    <div key={classIndex} className={cn("mb-4")}>
+                                    <div key={cls.id} className={cn("mb-4")}>
                                         <button
                                             id={`class-${moduleIndex}-${classIndex}`}
                                             onClick={() => {
@@ -186,7 +189,7 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
                                                 {selectedQuizData.questions[quizState.currentQuestion].options?.map((option, index) => {
                                                     const letter = String.fromCharCode(97 + index); // a=97
                                                     return (
-                                                        <div key={index} className={cn('flex items-start mb-2')}>
+                                                        <div key={option.id} className={cn('flex items-start mb-2')}>
                                                             <span className={cn('mr-2 font-semibold')}>{letter})</span>
                                                             <span className={cn('text-left')}>{option.value}</span>
                                                             {option.isCorrect && <span className={cn('ml-2 text-green-600 font-bold')}>Respuesta correcta</span>}
@@ -200,10 +203,8 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
                                                 <div className={cn('flex justify-center')}>
                                                     <span className={cn('flex items-center')}>Pregunta abierta</span>
                                                 </div>
-                                                <div className={cn('w-full px-4 py-2 border border-gray-300 rounded-md bg-white text-left')}>{selectedQuizData.questions[quizState.currentQuestion].options?.[0]?.value ?? ""}</div>
-                                                {selectedQuizData.questions[quizState.currentQuestion].options?.[0]?.isCorrect && (
-                                                    <span className={cn('ml-2 text-green-600 font-bold')}>Respuesta correcta</span>
-                                                )}
+                                                <div className={cn('w-full px-4 py-2 border border-gray-300 rounded-md bg-white text-left')}>{currentAuthorQuestion?.type === 'text' ? currentAuthorQuestion.expectedAnswer.value : ''}</div>
+                                                <span className={cn('ml-2 text-green-600 font-bold')}>Respuesta correcta</span>
                                             </div>
                                         )}
                                         <div className={cn('inline-flex mb-4 justify-center w-full gap-2 mt-4')}>

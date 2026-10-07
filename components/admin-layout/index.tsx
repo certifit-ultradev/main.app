@@ -23,8 +23,9 @@ function Layout(props: LayoutProps): JSX.Element {
         const label = getSegmentName(seg);
         const isLast = index === segments.length - 1;
         const maybeID = isLikelyID(seg);
+        const id = segments.slice(0, index + 1).join('/');
         if (isLast || maybeID) {
-            return { label };
+            return { id, label };
         } else {
             const href =
                 "/" +
@@ -33,7 +34,7 @@ function Layout(props: LayoutProps): JSX.Element {
                     .map((s) => fixRoute(s))
                     .join("/");
 
-            return { label, href };
+            return { id, label, href };
         }
     });
 
