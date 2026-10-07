@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ResetSchema } from "@/utils/schemas";
+import { ResetSchema } from '@/features/auth/auth-form.schema';
 import { ErrorMessage } from "@hookform/error-message";
 import { resetPassword } from "@/actions/auth/reset-password";
 import SubmitButton from "../submitButton";
@@ -37,10 +37,10 @@ export const PasswordResetForm = () => {
         startTransition(() => {
             resetPassword(fromData).then((result) => {
                 setIsLoading(false);
-                if (result.success) {
+                if (result.ok) {
                     setSuccess(result.message);
                 } else {
-                    setError(result.message);
+                    setError(result.error.message);
                 }
             });
         });

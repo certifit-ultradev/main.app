@@ -1,16 +1,8 @@
-import { logPrismaError } from "@/exceptions/error-encoder";
 import { getTransaction } from "@/repository/wompi-api";
+import { executeService } from "@/utils/service-wrapper";
+import type { PaymentTransactionRecord } from '@/application/payments/payment.records';
 
-/**
- * 
- * @param trxId 
- * @returns 
- */
-export const fetchTransaction = async (trxId: string) => {
-    try {
-        return await getTransaction(trxId);
-    } catch (error) {
-        logPrismaError(error);
-        throw error;
-    }
+/** Fetches the validated gateway projection for payment registration. */
+export const fetchTransaction = async (trxId: string): Promise<PaymentTransactionRecord> => {
+    return executeService(() => getTransaction(trxId));
 }

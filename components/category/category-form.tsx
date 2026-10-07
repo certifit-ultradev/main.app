@@ -6,21 +6,20 @@ import { FormSuccess } from "../form/form-success";
 import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
-import { CreateCategorySchema, EditCategorySchema } from "@/utils/schemas";
+import { CreateCategorySchema, EditCategorySchema } from '@/features/categories/category-form.schema';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CourseCategoryData } from "@/utils/types";
 import SubmitButton from "../submitButton";
 import Modal from "../modal";
 import { useRouter } from 'next/navigation';
 import { edit, register as registerCategory } from "@/actions/category/register";
+import type { CategoryDto } from '@/interfaces/actions/categories/category.contract';
 
-
-interface CategoryFormProps<T> {
-    data: T;
+interface CategoryFormProps {
+    data: Pick<CategoryDto, 'name'> & Partial<Pick<CategoryDto, 'id'>>;
 }
 
-export const CategoryCreateEditForm = ({ data }: CategoryFormProps<CourseCategoryData>) => {
+export const CategoryCreateEditForm = ({ data }: CategoryFormProps) => {
     const [error, setError] = useState<string | undefined>();
     const [success, setSuccess] = useState<string | undefined>();
     const [isOpen, setIsOpen] = useState(false);
@@ -42,51 +41,30 @@ export const CategoryCreateEditForm = ({ data }: CategoryFormProps<CourseCategor
     });
 
     useEffect(() => {
-        const initializeForm = async () => {
-            try {
-                reset({
-                    name: data.name
-                });
-            } catch (error) {
-                console.error("Error al inicializar el formulario:", error);
-            }
-        };
-
-        initializeForm();
-    }, [data, reset]);
+        reset({ name: data.name });
+    }, [data.name, reset]);
 
 
-    const onSubmit = (formData: z.infer<typeof schemaRequired>) => {
+    const onSubmit = async (formData: z.infer<typeof schemaRequired>) => {
         setIsLoading(true);
         setError('');
         setSuccess('');
 
-        // Actualizamos los datos con el número de teléfono completo
         try {
-            if (!data.id) {
-                registerCategory({ data: { ...formData } }).then((data) => {
-                    setIsLoading(false);
-                    if (data?.success) {
-                        setSuccess(data.message);
-                        setIsOpen(true);
-                    } else {
-                        setError(data.error);
-                    }
-                }).catch(() => setError('Algo ha pasado, intenta mas tarde!'));
+            const result = data.id === undefined
+                ? await registerCategory({ name: formData.name ?? data.name })
+                : await edit({ id: data.id, name: formData.name ?? data.name });
+
+            if (result.ok) {
+                setSuccess(result.message);
+                setIsOpen(true);
             } else {
-                edit({ data: { ...formData, id: data.id } }).then((data) => {
-                    setIsLoading(false);
-                    if (data?.success) {
-                        setSuccess(data.message);
-                        setIsOpen(true);
-                    } else {
-                        setError(data.error);
-                    }
-                }).catch(() => setError('Algo ha pasado, intenta mas tarde!'));
+                setError(result.error.message);
             }
-        } catch (error) {
+        } catch {
             setError('Algo ha pasado, intenta mas tarde!');
-            console.error(error);
+        } finally {
+            setIsLoading(false);
         }
     };
 

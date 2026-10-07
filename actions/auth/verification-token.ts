@@ -1,32 +1,27 @@
 "use server";
 
-import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
 import { editUserById, getUserByEmail } from "@/services/user";
-import { getVerificationTokenByToken, removeVerificationToken, sendVerificationEmailWithToken } from "@/services/verification-token";
-import { ServerActionResponse } from "@/utils/types"
+import { getVerificationTokenByToken, removeVerificationToken, requestEmailVerification } from "@/services/verification-token";
+import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/actions/action-result';
+import { VerificationEmailInputSchema, VerificationTokenInputSchema } from '@/interfaces/actions/auth.contract';
+import { validateActionInput } from '@/interfaces/actions/validation';
 
 /**
  * 
  * @param email 
  * @returns 
  */
-export const sendVerificationToken = async (email: string): Promise<ServerActionResponse<null>> => {
-    try {
-        const verifyToken = await sendVerificationEmailWithToken(email);
-        if (!verifyToken.success) {
-            return {
-                success: false,
-                error: "Fallo la verificación"
-            };
-        }
+/** Public action: its acknowledgement does not reveal account state. */
+export const sendVerificationToken = async (input: unknown): Promise<ActionResult<null>> => {
+    const parsedInput = validateActionInput(VerificationEmailInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
 
-        return {
-            success: true,
-            message: "Se ha enviado correctamente el correo de activación."
-        };
-    } catch (error) {
-        return mapErrorToServerActionResponse(error);
+    try {
+        await requestEmailVerification(parsedInput.data.email);
+    } catch {
+        // Public response remains identical for delivery failures and unknown accounts.
     }
+    return actionSuccess(null, 'Si existe una cuenta pendiente de verificación, recibirás un correo de activación.');
 }
 
 /**
@@ -34,47 +29,39 @@ export const sendVerificationToken = async (email: string): Promise<ServerAction
  * @param token 
  * @returns 
  */
-export const verifyEmail = async (token: string): Promise<ServerActionResponse<null>> => {
+/** Public action authorized by a one-time token rather than a login session. */
+export const verifyEmail = async (input: unknown): Promise<ActionResult<null>> => {
+    const parsedInput = validateActionInput(VerificationTokenInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
+
     try {
-        const existingToken = await getVerificationTokenByToken(token);
+        const existingToken = await getVerificationTokenByToken(parsedInput.data.token);
 
         if (!existingToken) {
-            return {
-                success: false,
-                error: "El token no existe"
-            };
+            return actionFailure('NOT_FOUND', 'El enlace de verificación no es válido o expiró.');
         }
 
         const hasExpired = new Date(existingToken.expires) < new Date();
         if (hasExpired) {
-            return {
-                success: false,
-                error: "El token ya expiro!"
-            };
+            return actionFailure('NOT_FOUND', 'El enlace de verificación no es válido o expiró.');
         }
 
         const existingUser = await getUserByEmail(existingToken.email);
         if (!existingUser) {
-            return {
-                success: false,
-                error: "El correo no existe!"
-            };
+            return actionFailure('NOT_FOUND', 'El enlace de verificación no es válido o expiró.');
         }
 
-        const confirmEmail = await editUserById(existingUser.id!, {
+        const confirmEmail = await editUserById(existingUser.id, {
             emailVerified: new Date(),
             email: existingToken.email,
         });
 
         if (confirmEmail && existingToken.id) {
-            const result = await removeVerificationToken(existingToken.token);
-            if (!result.success) {
-                return { success: false, message: "Ocurrio un error" };
-            }
+            await removeVerificationToken(existingToken.id);
         }
 
-        return { success: true, message: "Email verificado!" };
-    } catch (error) {
-        return mapErrorToServerActionResponse(error);
+        return actionSuccess(null, 'Email verificado.');
+    } catch {
+        return actionFailure('UNEXPECTED', 'No fue posible verificar el correo.');
     }
 }

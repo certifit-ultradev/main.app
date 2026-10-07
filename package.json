@@ -7,9 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "ts-node prisma/seed.ts",
+    "seed": "tsx prisma/seed.ts",
     "test": "jest",
+    "typecheck": "tsc --noEmit",
+    "architecture:check": "node --test scripts/__test__/*.test.mjs && node scripts/check-architecture-boundaries.mjs",
     "postinstall": "prisma generate --no-engine"
+  },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.0",

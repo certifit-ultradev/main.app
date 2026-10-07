@@ -3,7 +3,7 @@
 import { NextPage } from "next";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import { CourseData } from "@/utils/types";
+import type { CourseEditorFormValues } from '@/features/courses/editor/course-editor-form.types';
 import { CourseStepProgress } from "@/components/course/progress-form";
 import { CourseBasicForm } from "@/components/course/basic-form";
 import { CourseClassesForm } from "@/components/course/classes-form";
@@ -11,16 +11,16 @@ import { CourseReviewForm } from "@/components/course/review-form";
 
 const CreateCoursesPage: NextPage = () => {
     const [step, setStep] = useState<number>(1);
-    const [data, setData] = useState<CourseData>({
+    const [data, setData] = useState<CourseEditorFormValues>({
         title: '',
         price: 0.0,
         courseImage: '',
         instructorName: '',
         instructorPhoto: '',
-        category: { name: '' },
+        category: null,
         description: '',
         expiresAt: '',
-        modules: [{ title: '', minRequiredPoints: 0, classes: [{ title: '', description: '', videoSize:0, videoDuration:0 }], quiz: { title: '', description: '', questions: [] } }]
+        modules: [{ title: '', minRequiredPoints: 0, classes: [{ title: '', description: '', video: null, videoSize: 0, videoDuration: 0 }], quiz: { title: '', description: '', questions: [] } }]
     });
 
     const nextStep = () => setStep(step + 1);
@@ -38,7 +38,7 @@ const CreateCoursesPage: NextPage = () => {
                     <CourseClassesForm previousStep={previousStep} nextStep={nextStep} setData={setData} data={data} />
                 )}
                 {step === 3 && (
-                    <CourseReviewForm previousStep={previousStep} nextStep={nextStep} data={data} originalData={data} />
+                    <CourseReviewForm previousStep={previousStep} nextStep={nextStep} data={data} />
                 )}
             </div>
         </div>

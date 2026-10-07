@@ -1,5 +1,6 @@
 import { mapErrorToAPIResponse } from '@/exceptions/error-encoder';
 import { getUserCourses } from '@/services/courses';
+import { apiSuccess } from '@/interfaces/http/api-response';
 
 /**
  * @returns 
@@ -7,7 +8,7 @@ import { getUserCourses } from '@/services/courses';
 export async function GET() {
     try {
         const userCourses = await getUserCourses();
-        return Response.json(userCourses);
+        return Response.json(apiSuccess(userCourses));
     } catch (error) {
         return mapErrorToAPIResponse(error);
     }

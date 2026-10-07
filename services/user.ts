@@ -1,7 +1,9 @@
-import { DataPaginated, RegisterUser, RequestDataPaginated, UserCreateData } from "@/utils/types"
-import { User } from "@/models/user"
 import { allUsers, countAllUsers, createUser, findUserByEmail, findUserById, findUserByPhoneNumber, updateUserById } from "@/repository/users"
-import { logPrismaError } from "@/exceptions/error-encoder";
+import { executeService } from "@/utils/service-wrapper";
+import { bcryptPasswordHasher } from '@/infrastructure/identity/bcrypt-password-hasher';
+import type { AdminUserDto, AdminUserPageDto } from '@/application/users/user.dto';
+import type { CreateUserCommand, UpdateUserCommand } from '@/application/users/user.commands';
+import type { PersistedUserRecord } from '@/application/users/user.records';
 
 export const USERS_PAGE_SIZE = 10;
 
@@ -10,27 +12,45 @@ export const USERS_PAGE_SIZE = 10;
  * @param page 
  * @returns 
  */
-export const getAllUsers = async (request: RequestDataPaginated): Promise<DataPaginated<User>> => {
-    try {
-        const pagedUsers = await allUsers(request.page, USERS_PAGE_SIZE);
-        const totalUsers = await countAllUsers();
-        const totalPages = Math.ceil(totalUsers / USERS_PAGE_SIZE);
-
-        return {
-            data: pagedUsers,
-            page: request.page,
-            lastPage: totalPages,
-            total: totalPages
-        }
-    } catch (error) {
-        logPrismaError(error);
-        return {
-            data: [],
-            page: 1,
-            lastPage: 1,
-            total: 0
-        };
+const toAdminUserDto = (user: PersistedUserRecord): AdminUserDto => {
+    if (!user.id) throw new Error('El usuario persistido no tiene identificador.');
+    const identificationType = user.identificationType;
+    if (identificationType !== null && identificationType !== 'CC' && identificationType !== 'TI'
+        && identificationType !== 'CE' && identificationType !== 'NIT' && identificationType !== 'PAS') {
+        throw new Error('El usuario persistido tiene un tipo de identificación inválido.');
     }
+
+    return {
+        id: user.id,
+        name: user.name,
+        lastName: user.lastName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        isAdmin: user.isAdmin,
+        emailVerified: user.emailVerified?.toISOString() ?? null,
+        identification: user.identification ?? null,
+        identificationType,
+        createdAt: user.createdAt?.toISOString() ?? null,
+        updatedAt: user.updatedAt?.toISOString() ?? null,
+    };
+};
+
+/** Administrative read boundary: returns a serializable projection without credentials. */
+export const listAdminUsers = async (request: { page: number }): Promise<AdminUserPageDto> => {
+    return executeService(
+        async () => {
+            const pagedUsers = await allUsers(request.page, USERS_PAGE_SIZE);
+            const totalUsers = await countAllUsers();
+            const totalPages = Math.ceil(totalUsers / USERS_PAGE_SIZE);
+
+            return {
+                data: pagedUsers.map(toAdminUserDto),
+                page: request.page,
+                lastPage: totalPages,
+                total: totalPages
+            };
+        }
+    );
 }
 
 /**
@@ -38,13 +58,8 @@ export const getAllUsers = async (request: RequestDataPaginated): Promise<DataPa
  * @param id 
  * @returns 
  */
-export const getUserByEmail = async (email: string): Promise<User | null> => {
-    try {
-        return await findUserByEmail(email)
-    } catch (error) {
-        logPrismaError(error);
-        throw error;
-    }
+export const getUserByEmail = async (email: string): Promise<PersistedUserRecord | null> => {
+    return executeService(() => findUserByEmail(email));
 }
 
 /**
@@ -52,13 +67,8 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
  * @param phoneNumber 
  * @returns 
  */
-export const getUserByPhoneNumber = async (phoneNumber: string): Promise<User | null> => {
-    try {
-        return await findUserByPhoneNumber(phoneNumber);
-    } catch (error) {
-        logPrismaError(error);
-        throw error;
-    }
+export const getUserByPhoneNumber = async (phoneNumber: string): Promise<PersistedUserRecord | null> => {
+    return executeService(() => findUserByPhoneNumber(phoneNumber));
 }
 
 /**
@@ -66,13 +76,20 @@ export const getUserByPhoneNumber = async (phoneNumber: string): Promise<User | 
  * @param id 
  * @returns 
  */
-export const getUserById = async (id: string): Promise<User | null> => {
-    try {
-        return await findUserById(id);
-    } catch (error) {
-        logPrismaError(error);
-        throw error;
-    }
+/** Administrative read boundary: returns a serializable projection without credentials. */
+export const getAdminUserById = async (id: string): Promise<AdminUserDto | null> => {
+    return executeService(async () => {
+        const user = await findUserById(id);
+        if (!user) return null;
+        return toAdminUserDto(user);
+    });
+}
+
+/** Administrative existence check that does not expose the persistence model. */
+export const userExistsByEmail = async (email: string): Promise<boolean> => {
+    return executeService(async () => {
+        return (await findUserByEmail(email)) !== null;
+    });
 }
 
 /**
@@ -80,23 +97,18 @@ export const getUserById = async (id: string): Promise<User | null> => {
  * @param userInfo 
  * @returns 
  */
-export const registerUser = async (userInfo: RegisterUser | UserCreateData): Promise<User | null> => {
-    try {
-        return await createUser(new User({
-            name: userInfo.name,
-            lastName: userInfo.lastName,
-            password: userInfo.password,
-            isAdmin: false,
-            email: userInfo.email,
-            emailVerified: null,
-            identification: userInfo.identification,
-            identificationType: userInfo.identificationType,
-            phoneNumber: userInfo.phoneNumber,
-        }));
-    } catch (error) {
-        logPrismaError(error);
-        throw error;
-    }
+export const registerUser = async (userInfo: CreateUserCommand): Promise<PersistedUserRecord> => {
+    return executeService(async () => createUser({
+        name: userInfo.name,
+        lastName: userInfo.lastName,
+        passwordHash: await bcryptPasswordHasher.hash(userInfo.password),
+        isAdmin: false,
+        email: userInfo.email,
+        emailVerified: null,
+        identification: userInfo.identification,
+        identificationType: userInfo.identificationType,
+        phoneNumber: userInfo.phoneNumber,
+    }));
 }
 
 /**
@@ -105,11 +117,12 @@ export const registerUser = async (userInfo: RegisterUser | UserCreateData): Pro
  * @param userInfo 
  * @returns 
  */
-export const editUserById = async (id: string, userInfo: Partial<User>): Promise<User> => {
-    try {
-        return await updateUserById(id, userInfo);
-    } catch (error) {
-        logPrismaError(error);
-        throw error;
-    }
+export const editUserById = async (id: string, userInfo: UpdateUserCommand): Promise<PersistedUserRecord> => {
+    return executeService(async () => {
+        const { password, ...profile } = userInfo;
+        return updateUserById(id, {
+            ...profile,
+            ...(password ? { passwordHash: await bcryptPasswordHasher.hash(password) } : {}),
+        });
+    });
 }

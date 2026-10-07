@@ -2,6 +2,28 @@
 
 ## [unreleased]
 
+### Added
+
+- Added separate course catalog, student-learning, and editor DTOs, with distinct text and multiple-choice quiz contracts.
+- Added migrations for atomic course-progress constraints and a dedicated expected-answer column for text questions; the text-answer migration still requires deployment and data verification.
+- Added typed action and HTTP response contracts, request validation, and explicit mappings for authentication, authorization, payment-provider, and validation errors.
+- Added contract, service, repository, and UI tests, plus CI checks for architecture boundaries, TypeScript, and Jest.
+
+### Changed
+
+- Split the monolithic course repository into focused catalog, editor, progress, and analytics adapters, with business rules and DTO mapping at explicit layer boundaries.
+- Reworked the course editor around immutable module updates, serializable drafts, browser-only file handling, and a scoped Blob upload adapter.
+- Moved password reset, identity tokens, password hashing, and email delivery behind application ports and infrastructure adapters.
+- Reworked payment and Wompi integration around typed commands, validated provider responses, and a verified, idempotent webhook.
+
+### Fixed
+
+- Prevented student course and quiz responses from exposing correct answers, grading fields, or text solutions; quiz scoring and enrollment checks remain server-side.
+- Made course progress and quiz-answer persistence idempotent and handled courses without classes without invalid progress values.
+- Distinguished malformed JSON from invalid input, missing sessions from insufficient permissions, and payment-provider failures from purchase conflicts without leaking internal details.
+- Prevented account enumeration in public verification and password-reset flows, and replaced sensitive request logging with structured safe events.
+- Validated remote responses in course, quiz, progress, analytics, and checkout clients before rendering or advancing the UI.
+
 ## 1.1.16
 
 ### Fixed

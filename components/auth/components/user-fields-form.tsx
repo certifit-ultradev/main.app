@@ -3,13 +3,13 @@
 import { ErrorMessage } from '@hookform/error-message';
 import { Control, Controller, FieldErrors, UseFormRegister } from 'react-hook-form';
 import { cn } from '@/lib/utils';
-import { RegisterUserFirstStep } from '@/utils/types';
+import type { RegistrationProfileFormValues } from '@/features/auth/registration/registration-form.types';
 import PhoneInput from 'react-phone-input-2';
 
 interface RegisterFormProps {
-    errors: FieldErrors<RegisterUserFirstStep>
-    control: Control<RegisterUserFirstStep>
-    register: UseFormRegister<RegisterUserFirstStep>
+    errors: FieldErrors<RegistrationProfileFormValues>
+    control: Control<RegistrationProfileFormValues>
+    register: UseFormRegister<RegistrationProfileFormValues>
 };
 
 export const BasicFieldsForm = ({ register, control, errors }: RegisterFormProps) => {

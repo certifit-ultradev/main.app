@@ -21,12 +21,13 @@ const VerifyEmailPage = () => {
             return;
         }
 
-        verifyEmail(token)
+        verifyEmail({ token })
             .then((data) => {
-                if (data.success) {
+                if (data.ok) {
                     setSuccess(data.message);
+                } else {
+                    setError(data.error.message);
                 }
-                setError(data.error);
             })
             .catch(() => {
                 setError('Ocurrio un error!');

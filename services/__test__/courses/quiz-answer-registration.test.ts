@@ -1,340 +1,84 @@
-import { logPrismaError } from "@/exceptions/error-encoder";
-import { UserNotLoggedError } from "@/exceptions/user-not-logged";
-import {
-    findUserCourseWithModulesByCanonicalId,
-    createQuestionAnswer
-} from "@/repository/courses";
+import { auth } from '@/auth';
+import { logPrismaError } from '@/exceptions/error-encoder';
+import { UserNotLoggedError } from '@/exceptions/user-not-logged';
+import { prismaCourseProgressWritePort } from '@/repository/course-progress.prisma';
 import { registerQuestionAnswer } from '@/services/courses';
-import { auth } from "@/auth";
-import { mockSession, setupMocks, clearAllMocks } from './setup';
+import { clearAllMocks, setupMocks } from './setup';
 
-jest.mock('@/repository/courses');
-jest.mock('@/exceptions/error-encoder');
 jest.mock('@/auth');
-jest.mock('@/models/user-quiz-answer');
+jest.mock('@/exceptions/error-encoder');
+jest.mock('@/repository/course-progress.prisma', () => ({
+    prismaCourseProgressWritePort: {
+        upsertClassProgress: jest.fn(), completeModule: jest.fn(), findQuizQuestion: jest.fn(),
+        upsertQuizAnswer: jest.fn(), recordQuizAttempt: jest.fn(),
+    },
+}));
+
+const multipleQuestion = {
+    id: 10, type: 'multiple' as const, points: 10,
+    options: [
+        { id: 20, value: 'Correcta', isCorrect: true },
+        { id: 21, value: 'Incorrecta', isCorrect: false },
+    ],
+};
 
 describe('Courses Service - Quiz Answer Registration', () => {
-    beforeEach(() => {
-        setupMocks(logPrismaError as jest.Mock, auth as jest.Mock);
+    beforeEach(() => setupMocks(logPrismaError as jest.Mock, auth as jest.Mock));
+    afterEach(clearAllMocks);
+
+    it('calcula en aplicación y persiste una respuesta de selección por alcance', async () => {
+        (prismaCourseProgressWritePort.findQuizQuestion as jest.Mock).mockResolvedValue(multipleQuestion);
+        await expect(registerQuestionAnswer({
+            canonicalId: 'course-123', moduleId: 3, quizId: 5, questionId: 10,
+            kind: 'multiple_choice', optionId: 20,
+        })).resolves.toEqual({ success: true });
+
+        expect(prismaCourseProgressWritePort.upsertQuizAnswer).toHaveBeenCalledWith(
+            { userId: 'user-123', canonicalId: 'course-123', moduleId: 3, quizId: 5, questionId: 10 },
+            { answer: 'Correcta', correct: 'Correcta', isCorrect: true, points: 10 },
+        );
     });
 
-    afterEach(() => {
-        clearAllMocks();
+    it('calcula la corrección de texto sin aceptar optionId ficticio', async () => {
+        (prismaCourseProgressWritePort.findQuizQuestion as jest.Mock).mockResolvedValue({
+            id: 10, type: 'text', points: 8,
+            expectedAnswer: 'Respuesta Correcta',
+        });
+
+        await registerQuestionAnswer({
+            canonicalId: 'course-123', moduleId: 3, quizId: 5, questionId: 10,
+            kind: 'text', answer: 'Respuesta Correcta',
+        });
+
+        expect(prismaCourseProgressWritePort.upsertQuizAnswer).toHaveBeenCalledWith(
+            expect.any(Object),
+            { answer: 'Respuesta Correcta', correct: 'Respuesta Correcta', isCorrect: true, points: 8 },
+        );
     });
 
-    const createMockCourseWithQuiz = (questionType: 'text' | 'multiple') => ({
-        id: 1,
-        canonicalId: 'course-123',
-        userCourse: [{ id: 1 }],
-        courseModules: [
-            {
-                id: 3,
-                moduleQuiz: [
-                    {
-                        id: 5,
-                        quizQuestion: [
-                            {
-                                id: 10,
-                                type: questionType,
-                                points: 10,
-                                possibleAnswerQuestion: [
-                                    {
-                                        id: 20,
-                                        questionId: 10,
-                                        value: 'Respuesta Correcta',
-                                        isCorrect: true
-                                    },
-                                    {
-                                        id: 21,
-                                        questionId: 10,
-                                        value: 'Respuesta Incorrecta',
-                                        isCorrect: false
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            }
-        ]
+    it('rechaza una pregunta que no pertenece al alcance solicitado', async () => {
+        (prismaCourseProgressWritePort.findQuizQuestion as jest.Mock).mockResolvedValue(null);
+
+        await expect(registerQuestionAnswer({
+            canonicalId: 'course-123', moduleId: 3, quizId: 5, questionId: 10,
+            kind: 'text', answer: 'x',
+        })).rejects.toThrow('Pregunta inválida para el quiz');
+        expect(prismaCourseProgressWritePort.upsertQuizAnswer).not.toHaveBeenCalled();
     });
 
-    describe('registerQuestionAnswer', () => {
-        test('debería registrar respuesta correcta para pregunta tipo multiple', async () => {
-            const mockCourse = createMockCourseWithQuiz('multiple');
-            const answerData = {
-                canonicalId: 'course-123',
-                moduleId: 3,
-                quizId: 5,
-                questionId: 10,
-                optionId: 20,
-                answer: 'Respuesta Correcta'
-            };
+    it('rechaza una variante de respuesta que no corresponde al tipo de pregunta', async () => {
+        (prismaCourseProgressWritePort.findQuizQuestion as jest.Mock).mockResolvedValue(multipleQuestion);
 
-            const mockCreatedAnswer = {
-                id: 1,
-                userCourseId: 1,
-                questionId: 10,
-                quizId: 5,
-                answer: 'Respuesta Correcta',
-                correct: 'Respuesta Correcta',
-                isCorrect: true,
-                points: 10
-            };
+        await expect(registerQuestionAnswer({
+            canonicalId: 'course-123', moduleId: 3, quizId: 5, questionId: 10,
+            kind: 'text', answer: 'Correcta',
+        })).rejects.toThrow('El tipo de respuesta no coincide con la pregunta');
+    });
 
-            (findUserCourseWithModulesByCanonicalId as jest.Mock).mockResolvedValue(mockCourse);
-            (createQuestionAnswer as jest.Mock).mockResolvedValue(mockCreatedAnswer);
+    it('no permite registrar respuestas sin sesión autenticada', async () => {
+        (auth as jest.Mock).mockResolvedValue(null);
 
-            const result = await registerQuestionAnswer(answerData as any);
-
-            expect(result).toEqual({ success: true });
-            expect(createQuestionAnswer).toHaveBeenCalled();
-        });
-
-        test('debería registrar respuesta incorrecta para pregunta tipo multiple', async () => {
-            const mockCourse = createMockCourseWithQuiz('multiple');
-            const answerData = {
-                canonicalId: 'course-123',
-                moduleId: 3,
-                quizId: 5,
-                questionId: 10,
-                optionId: 21,
-                answer: 'Respuesta Incorrecta'
-            };
-
-            const mockCreatedAnswer = {
-                id: 1,
-                userCourseId: 1,
-                questionId: 10,
-                quizId: 5,
-                answer: 'Respuesta Incorrecta',
-                correct: 'Respuesta Correcta',
-                isCorrect: false,
-                points: 0
-            };
-
-            (findUserCourseWithModulesByCanonicalId as jest.Mock).mockResolvedValue(mockCourse);
-            (createQuestionAnswer as jest.Mock).mockResolvedValue(mockCreatedAnswer);
-
-            const result = await registerQuestionAnswer(answerData as any);
-
-            expect(result).toEqual({ success: true });
-        });
-
-        test('debería registrar respuesta correcta para pregunta tipo text', async () => {
-            const mockCourse = createMockCourseWithQuiz('text');
-            const answerData = {
-                canonicalId: 'course-123',
-                moduleId: 3,
-                quizId: 5,
-                questionId: 10,
-                optionId: 20,
-                answer: 'Respuesta Correcta'
-            };
-
-            mockCourse.courseModules![0].moduleQuiz![0].quizQuestion![0].possibleAnswerQuestion![0].value = 'Respuesta Correcta';
-
-            (findUserCourseWithModulesByCanonicalId as jest.Mock).mockResolvedValue(mockCourse);
-            (createQuestionAnswer as jest.Mock).mockResolvedValue({
-                id: 1,
-                isCorrect: true,
-                points: 10
-            });
-
-            const result = await registerQuestionAnswer(answerData as any);
-
-            expect(result).toEqual({ success: true });
-        });
-
-        test('debería registrar respuesta incorrecta para pregunta tipo text', async () => {
-            const mockCourse = createMockCourseWithQuiz('text');
-            const answerData = {
-                canonicalId: 'course-123',
-                moduleId: 3,
-                quizId: 5,
-                questionId: 10,
-                optionId: 20,
-                answer: 'Respuesta Incorrecta'
-            };
-
-            mockCourse.courseModules![0].moduleQuiz![0].quizQuestion![0].possibleAnswerQuestion![0].value = 'Respuesta Correcta';
-
-            (findUserCourseWithModulesByCanonicalId as jest.Mock).mockResolvedValue(mockCourse);
-            (createQuestionAnswer as jest.Mock).mockResolvedValue({
-                id: 1,
-                isCorrect: false,
-                points: 0
-            });
-
-            const result = await registerQuestionAnswer(answerData as any);
-
-            expect(result).toEqual({ success: true });
-        });
-
-        test('debería lanzar error si el usuario no está logueado', async () => {
-            (auth as jest.Mock).mockResolvedValue(null);
-
-            await expect(registerQuestionAnswer({} as any))
-                .rejects
-                .toThrow(UserNotLoggedError);
-        });
-
-        test('debería lanzar error si el email no está verificado', async () => {
-            (auth as jest.Mock).mockResolvedValue({
-                user: {
-                    id: 'user-123',
-                    emailVerified: null
-                }
-            });
-
-            await expect(registerQuestionAnswer({} as any))
-                .rejects
-                .toThrow(UserNotLoggedError);
-        });
-
-        test('debería lanzar error si el curso no pertenece al usuario', async () => {
-            const mockCourse = {
-                id: 1,
-                canonicalId: 'course-123',
-                userCourse: null
-            };
-
-            (findUserCourseWithModulesByCanonicalId as jest.Mock).mockResolvedValue(mockCourse);
-
-            await expect(registerQuestionAnswer({ canonicalId: 'course-123' } as any))
-                .rejects
-                .toThrow('El curso no le pertenece al usuario');
-        });
-
-        test('debería lanzar error si el módulo es inválido', async () => {
-            const mockCourse = {
-                id: 1,
-                canonicalId: 'course-123',
-                userCourse: [{ id: 1 }],
-                courseModules: [{ id: 999 }]
-            };
-
-            const answerData = {
-                canonicalId: 'course-123',
-                moduleId: 3
-            };
-
-            (findUserCourseWithModulesByCanonicalId as jest.Mock).mockResolvedValue(mockCourse);
-
-            await expect(registerQuestionAnswer(answerData as any))
-                .rejects
-                .toThrow('Modulo invalido');
-        });
-
-        test('debería lanzar error si el quiz es inválido', async () => {
-            const mockCourse = {
-                id: 1,
-                canonicalId: 'course-123',
-                userCourse: [{ id: 1 }],
-                courseModules: [
-                    {
-                        id: 3,
-                        moduleQuiz: [{ id: 999 }]
-                    }
-                ]
-            };
-
-            const answerData = {
-                canonicalId: 'course-123',
-                moduleId: 3,
-                quizId: 5
-            };
-
-            (findUserCourseWithModulesByCanonicalId as jest.Mock).mockResolvedValue(mockCourse);
-
-            await expect(registerQuestionAnswer(answerData as any))
-                .rejects
-                .toThrow('Quiz invalido');
-        });
-
-        test('debería lanzar error si la pregunta es inválida', async () => {
-            const mockCourse = {
-                id: 1,
-                canonicalId: 'course-123',
-                userCourse: [{ id: 1 }],
-                courseModules: [
-                    {
-                        id: 3,
-                        moduleQuiz: [
-                            {
-                                id: 5,
-                                quizQuestion: [{ id: 999 }]
-                            }
-                        ]
-                    }
-                ]
-            };
-
-            const answerData = {
-                canonicalId: 'course-123',
-                moduleId: 3,
-                quizId: 5,
-                questionId: 10
-            };
-
-            (findUserCourseWithModulesByCanonicalId as jest.Mock).mockResolvedValue(mockCourse);
-
-            await expect(registerQuestionAnswer(answerData as any))
-                .rejects
-                .toThrow('Pregunta invalida');
-        });
-
-        test('debería retornar error si la creación de la respuesta falla', async () => {
-            const mockCourse = createMockCourseWithQuiz('multiple');
-            const answerData = {
-                canonicalId: 'course-123',
-                moduleId: 3,
-                quizId: 5,
-                questionId: 10,
-                optionId: 20,
-                answer: 'Respuesta'
-            };
-
-            (findUserCourseWithModulesByCanonicalId as jest.Mock).mockResolvedValue(mockCourse);
-            (createQuestionAnswer as jest.Mock).mockResolvedValue(null);
-
-            const result = await registerQuestionAnswer(answerData as any);
-
-            expect(result).toEqual({
-                success: false,
-                message: 'No se pudo guardar la respuesta de la pregunta'
-            });
-        });
-
-        test('debería calcular puntos correctamente según si es correcta', async () => {
-            const mockCourse = createMockCourseWithQuiz('multiple');
-            const answerData = {
-                canonicalId: 'course-123',
-                moduleId: 3,
-                quizId: 5,
-                questionId: 10,
-                optionId: 20,
-                answer: 'Respuesta Correcta'
-            };
-
-            (findUserCourseWithModulesByCanonicalId as jest.Mock).mockResolvedValue(mockCourse);
-            (createQuestionAnswer as jest.Mock).mockResolvedValue({ id: 1 });
-
-            await registerQuestionAnswer(answerData as any);
-
-            // Verificar que se llamó con los datos correctos
-            expect(createQuestionAnswer).toHaveBeenCalled();
-        });
-
-        test('debería loguear y propagar errores', async () => {
-            const error = new Error('Database error');
-            (findUserCourseWithModulesByCanonicalId as jest.Mock).mockRejectedValue(error);
-
-            await expect(registerQuestionAnswer({ canonicalId: 'course-123' } as any))
-                .rejects
-                .toThrow('Database error');
-            
-            expect(logPrismaError).toHaveBeenCalledWith(error);
-        });
+        await expect(registerQuestionAnswer({} as never)).rejects.toThrow(UserNotLoggedError);
+        expect(prismaCourseProgressWritePort.findQuizQuestion).not.toHaveBeenCalled();
     });
 });

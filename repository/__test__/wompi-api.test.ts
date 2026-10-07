@@ -1,395 +1,152 @@
-import { TransactionError } from "@/exceptions/transaction-error";
-import { Transaction } from "@/models/transaction";
+import { resetEnvCache } from '@/config/env';
+import type { TransactionWompiResponse } from '@/infrastructure/payments/wompi.types';
 import { getTransaction } from '@/repository/wompi-api';
-import { TransactionWompiResponse } from "@/utils/types";
 
-// Mock global fetch
 global.fetch = jest.fn();
 
-jest.mock('@/models/transaction');
+const responseFor = (overrides: Partial<TransactionWompiResponse['data']> = {}): TransactionWompiResponse => ({
+    data: {
+        id: 'trx-123',
+        created_at: new Date('2025-01-15T00:00:00.000Z'),
+        amount_in_cents: 10000000,
+        status: 'APPROVED',
+        reference: 'ref-xyz',
+        customer_email: 'customer@test.com',
+        currency: 'COP',
+        payment_method_type: 'NEQUI',
+        payment_method: { phone_number: '+573001234567' },
+        redirect_url: 'https://example.com/success',
+        payment_link_id: 'link-123',
+        ...overrides,
+    },
+});
 
-describe('Wompi API Repository Tests', () => {
+const mockResponse = (payload: unknown): void => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValue(payload),
+    });
+};
+
+describe('Wompi API repository', () => {
     const originalEnv = process.env;
 
     beforeEach(() => {
-        jest.resetModules();
-        process.env = { ...originalEnv };
+        process.env = { ...originalEnv, APP_ENV: 'DEV' };
+        resetEnvCache();
+        jest.clearAllMocks();
     });
 
     afterEach(() => {
-        jest.clearAllMocks();
         process.env = originalEnv;
+        resetEnvCache();
     });
 
-    describe('getTransaction', () => {
-        test('debería obtener información de una transacción exitosamente', async () => {
-            const trxId = 'trx-12345-abc';
-            const mockWompiResponse: TransactionWompiResponse = {
-                data: {
-                    id: trxId,
-                    created_at: new Date('2025-01-15'),
-                    amount_in_cents: 10000000,
-                    status: 'APPROVED',
-                    reference: 'ref-xyz-789',
-                    customer_email: 'customer@test.com',
-                    currency: 'COP',
-                    payment_method_type: 'NEQUI',
-                    payment_method: {
-                        phone_number: '+57 300 1234567'
-                    },
-                    redirect_url: 'https://example.com/success',
-                    payment_link_id: 'link-abc-123'
-                }
-            };
+    it('returns only the five fields needed by payment registration', async () => {
+        mockResponse(responseFor());
 
-            const mockTransaction = new Transaction({
-                id: trxId,
-                createdAt: new Date('2025-01-15'),
-                amountInCents: 10000000,
-                status: 'APPROVED',
-                reference: 'ref-xyz-789',
-                customerEmail: 'customer@test.com',
-                currency: 'COP',
-                paymentMethodType: 'NEQUI',
-                paymentMethod: '+57 300 1234567',
-                redirectUrl: 'https://example.com/success',
-                paymentLinkId: 'link-abc-123'
-            });
-
-            (global.fetch as jest.Mock).mockResolvedValue({
-                ok: true,
-                json: jest.fn().mockResolvedValue(mockWompiResponse),
-                status: 200,
-            });
-
-            (Transaction.fromWompiResponse as jest.Mock).mockReturnValue(mockTransaction);
-
-            const result = await getTransaction(trxId);
-
-            expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining(`/transactions/${trxId}`),
-                expect.objectContaining({
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                })
-            );
-            expect(Transaction.fromWompiResponse).toHaveBeenCalledWith(mockWompiResponse);
-            expect(result).toBe(mockTransaction);
+        await expect(getTransaction('trx-123')).resolves.toEqual({
+            id: 'trx-123',
+            reference: 'ref-xyz',
+            status: 'APPROVED',
+            paymentMethodType: 'NEQUI',
+            createdAt: new Date('2025-01-15T00:00:00.000Z'),
         });
+        expect(global.fetch).toHaveBeenCalledWith(
+            expect.stringContaining('/transactions/trx-123'),
+            { method: 'GET', headers: { 'Content-Type': 'application/json' } },
+        );
+    });
 
-        test('debería usar URL sandbox cuando APP_ENV no es PROD', async () => {
-            process.env.APP_ENV = 'DEV';
-            const trxId = 'trx-sandbox-test';
+    it('normalizes the ISO date in a JSON response', async () => {
+        mockResponse({ data: { ...responseFor().data, created_at: '2025-03-20T10:11:12.000Z' } });
 
-            const mockWompiResponse: TransactionWompiResponse = {
-                data: {
-                    id: trxId,
-                    created_at: new Date(),
-                    amount_in_cents: 5000000,
-                    status: 'PENDING',
-                    reference: 'ref-123',
-                    customer_email: 'test@test.com',
-                    currency: 'COP',
-                    payment_method_type: 'PSE',
-                    payment_method: {
-                        phone_number: '+57 310 0000000'
-                    },
-                    redirect_url: 'https://example.com',
-                    payment_link_id: 'link-123'
-                }
-            };
+        const transaction = await getTransaction('trx-iso');
+        expect(transaction.createdAt).toEqual(new Date('2025-03-20T10:11:12.000Z'));
+    });
 
-            (global.fetch as jest.Mock).mockResolvedValue({
-                ok: true,
-                json: jest.fn().mockResolvedValue(mockWompiResponse),
-                status: 200,
-            });
+    it('does not expose extra Wompi fields or customer information', async () => {
+        mockResponse({ ...responseFor(), secret: 'private', data: { ...responseFor().data, secret: 'private' } });
 
-            (Transaction.fromWompiResponse as jest.Mock).mockReturnValue({} as Transaction);
+        const transaction = await getTransaction('trx-123');
+        expect(Object.keys(transaction).sort()).toEqual(['createdAt', 'id', 'paymentMethodType', 'reference', 'status']);
+        expect(JSON.stringify(transaction)).not.toContain('customer@test.com');
+        expect(JSON.stringify(transaction)).not.toContain('private');
+    });
 
-            await getTransaction(trxId);
+    it.each(['DEV', undefined])('uses sandbox when APP_ENV is %s', async (appEnv) => {
+        if (appEnv === undefined) delete process.env.APP_ENV;
+        else process.env.APP_ENV = appEnv;
+        resetEnvCache();
+        mockResponse(responseFor());
 
-            expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining('sandbox.wompi.co'),
-                expect.any(Object)
-            );
+        await getTransaction('trx-sandbox');
+        expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('sandbox.wompi.co'), expect.any(Object));
+    });
+
+    it('uses production when APP_ENV is PROD', async () => {
+        process.env.APP_ENV = 'PROD';
+        resetEnvCache();
+        mockResponse(responseFor());
+
+        await getTransaction('trx-production');
+        expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('production.wompi.co'), expect.any(Object));
+    });
+
+    it.each([400, 401, 403, 404, 500, 503])('classifies upstream HTTP status %i without leaking details', async (status) => {
+        (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status });
+
+        await expect(getTransaction('trx-error')).rejects.toMatchObject({
+            name: 'PaymentProviderError',
+            kind: status === 404 ? 'transaction_not_found' : 'upstream_error',
         });
+    });
 
-        test('debería usar URL sandbox por defecto cuando APP_ENV no está definida', async () => {
-            delete process.env.APP_ENV;
-            const trxId = 'trx-default-test';
+    it.each([
+        { data: { id: 'trx-invalid', created_at: 'not-a-date' } },
+        { data: { ...responseFor().data, reference: '' } },
+        { data: { ...responseFor().data, payment_method: null } },
+        { data: { ...responseFor().data, created_at: '2025-13-99T00:00:00.000Z' } },
+        { data: { ...responseFor().data, status: 'UNKNOWN' } },
+        null,
+    ])('rejects malformed provider payloads', async (payload) => {
+        mockResponse(payload);
 
-            const mockWompiResponse: TransactionWompiResponse = {
-                data: {
-                    id: trxId,
-                    created_at: new Date(),
-                    amount_in_cents: 7500000,
-                    status: 'APPROVED',
-                    reference: 'ref-default',
-                    customer_email: 'default@test.com',
-                    currency: 'COP',
-                    payment_method_type: 'CARD',
-                    payment_method: {
-                        phone_number: '+57 320 0000000'
-                    },
-                    redirect_url: 'https://default.example.com',
-                    payment_link_id: 'link-default'
-                }
-            };
-
-            (global.fetch as jest.Mock).mockResolvedValue({
-                ok: true,
-                json: jest.fn().mockResolvedValue(mockWompiResponse),
-                status: 200,
-            });
-
-            (Transaction.fromWompiResponse as jest.Mock).mockReturnValue({} as Transaction);
-
-            await getTransaction(trxId);
-
-            expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining('sandbox.wompi.co'),
-                expect.any(Object)
-            );
+        await expect(getTransaction('trx-invalid')).rejects.toMatchObject({
+            name: 'PaymentProviderError', kind: 'invalid_response',
         });
+    });
 
-        test('debería lanzar TransactionError cuando la respuesta no es ok', async () => {
-            const trxId = 'trx-error-404';
-
-            (global.fetch as jest.Mock).mockResolvedValue({
-                ok: false,
-                status: 404,
-            });
-
-            await expect(getTransaction(trxId))
-                .rejects
-                .toThrow(TransactionError);
-            
-            await expect(getTransaction(trxId))
-                .rejects
-                .toThrow('Error Wompi: Status 404');
+    it('classifies invalid JSON as a provider response failure', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true, status: 200, json: jest.fn().mockRejectedValue(new SyntaxError('private payload')),
         });
-
-        test('debería lanzar TransactionError para diferentes códigos de error', async () => {
-            const errorCodes = [400, 401, 403, 500, 503];
-            const trxId = 'trx-error-test';
-
-            for (const statusCode of errorCodes) {
-                (global.fetch as jest.Mock).mockResolvedValue({
-                    ok: false,
-                    status: statusCode,
-                });
-
-                await expect(getTransaction(trxId))
-                    .rejects
-                    .toThrow(`Error Wompi: Status ${statusCode}`);
-            }
+        await expect(getTransaction('trx-json')).rejects.toMatchObject({
+            name: 'PaymentProviderError', kind: 'invalid_response',
         });
+    });
 
-        test('debería incluir Content-Type en los headers', async () => {
-            const trxId = 'trx-headers-test';
+    it('classifies network errors without exposing transport details', async () => {
+        (global.fetch as jest.Mock).mockRejectedValue(new Error('private gateway host'));
 
-            const mockWompiResponse: TransactionWompiResponse = {
-                data: {
-                    id: trxId,
-                    created_at: new Date(),
-                    amount_in_cents: 1000000,
-                    status: 'APPROVED',
-                    reference: 'ref-headers',
-                    customer_email: 'headers@test.com',
-                    currency: 'COP',
-                    payment_method_type: 'NEQUI',
-                    payment_method: {
-                        phone_number: '+57 300 9999999'
-                    },
-                    redirect_url: 'https://example.com',
-                    payment_link_id: 'link-headers'
-                }
-            };
-
-            (global.fetch as jest.Mock).mockResolvedValue({
-                ok: true,
-                json: jest.fn().mockResolvedValue(mockWompiResponse),
-                status: 200,
-            });
-
-            (Transaction.fromWompiResponse as jest.Mock).mockReturnValue({} as Transaction);
-
-            await getTransaction(trxId);
-
-            expect(global.fetch).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.objectContaining({
-                    headers: expect.objectContaining({
-                        'Content-Type': 'application/json',
-                    }),
-                })
-            );
+        await expect(getTransaction('trx-network')).rejects.toMatchObject({
+            name: 'PaymentProviderError', kind: 'unavailable',
         });
+    });
 
-        test('debería usar método GET en la petición', async () => {
-            const trxId = 'trx-method-test';
+    it.each(['APPROVED', 'DECLINED', 'PENDING', 'ERROR', 'VOIDED'] as const)(
+        'projects supported provider status %s', async (status) => {
+            mockResponse(responseFor({ status }));
 
-            const mockWompiResponse: TransactionWompiResponse = {
-                data: {
-                    id: trxId,
-                    created_at: new Date(),
-                    amount_in_cents: 2000000,
-                    status: 'DECLINED',
-                    reference: 'ref-method',
-                    customer_email: 'method@test.com',
-                    currency: 'COP',
-                    payment_method_type: 'PSE',
-                    payment_method: {
-                        phone_number: '+57 310 8888888'
-                    },
-                    redirect_url: 'https://example.com',
-                    payment_link_id: 'link-method'
-                }
-            };
+            await expect(getTransaction('trx-status')).resolves.toMatchObject({ status });
+        },
+    );
 
-            (global.fetch as jest.Mock).mockResolvedValue({
-                ok: true,
-                json: jest.fn().mockResolvedValue(mockWompiResponse),
-                status: 200,
-            });
+    it.each(['trx-1', 'trx-abc-xyz', 'transaction-12345'])('queries transaction id %s', async (id) => {
+        mockResponse(responseFor({ id }));
 
-            (Transaction.fromWompiResponse as jest.Mock).mockReturnValue({} as Transaction);
-
-            await getTransaction(trxId);
-
-            expect(global.fetch).toHaveBeenCalledWith(
-                expect.any(String),
-                expect.objectContaining({
-                    method: 'GET',
-                })
-            );
-        });
-
-        test('debería manejar diferentes transactionIds', async () => {
-            const transactionIds = ['trx-1', 'trx-abc-xyz', 'transaction-12345'];
-
-            for (const trxId of transactionIds) {
-                const mockWompiResponse: TransactionWompiResponse = {
-                    data: {
-                        id: trxId,
-                        created_at: new Date(),
-                        amount_in_cents: 3000000,
-                        status: 'APPROVED',
-                        reference: `ref-${trxId}`,
-                        customer_email: 'test@test.com',
-                        currency: 'COP',
-                        payment_method_type: 'NEQUI',
-                        payment_method: {
-                            phone_number: '+57 300 0000000'
-                        },
-                        redirect_url: 'https://example.com',
-                        payment_link_id: 'link-test'
-                    }
-                };
-
-                (global.fetch as jest.Mock).mockResolvedValue({
-                    ok: true,
-                    json: jest.fn().mockResolvedValue(mockWompiResponse),
-                    status: 200,
-                });
-
-                (Transaction.fromWompiResponse as jest.Mock).mockReturnValue({} as Transaction);
-
-                await getTransaction(trxId);
-
-                expect(global.fetch).toHaveBeenCalledWith(
-                    expect.stringContaining(`/transactions/${trxId}`),
-                    expect.any(Object)
-                );
-            }
-        });
-
-        test('debería parsear correctamente el JSON de la respuesta', async () => {
-            const trxId = 'trx-json-test';
-            const mockWompiResponse: TransactionWompiResponse = {
-                data: {
-                    id: trxId,
-                    created_at: new Date('2025-03-20'),
-                    amount_in_cents: 15000000,
-                    status: 'APPROVED',
-                    reference: 'ref-json-test',
-                    customer_email: 'json@test.com',
-                    currency: 'COP',
-                    payment_method_type: 'BANCOLOMBIA',
-                    payment_method: {
-                        phone_number: '+57 315 7777777'
-                    },
-                    redirect_url: 'https://json.example.com',
-                    payment_link_id: 'link-json-test'
-                }
-            };
-
-            const mockJsonFn = jest.fn().mockResolvedValue(mockWompiResponse);
-
-            (global.fetch as jest.Mock).mockResolvedValue({
-                ok: true,
-                json: mockJsonFn,
-                status: 200,
-            });
-
-            (Transaction.fromWompiResponse as jest.Mock).mockReturnValue({} as Transaction);
-
-            await getTransaction(trxId);
-
-            expect(mockJsonFn).toHaveBeenCalled();
-            expect(Transaction.fromWompiResponse).toHaveBeenCalledWith(mockWompiResponse);
-        });
-
-        test('debería manejar errores de red', async () => {
-            const trxId = 'trx-network-error';
-            const networkError = new Error('Network request failed');
-
-            (global.fetch as jest.Mock).mockRejectedValue(networkError);
-
-            await expect(getTransaction(trxId))
-                .rejects
-                .toThrow('Network request failed');
-        });
-
-        test('debería manejar respuestas con diferentes estados de transacción', async () => {
-            const statuses = ['APPROVED', 'DECLINED', 'PENDING', 'ERROR', 'VOIDED'];
-            const trxId = 'trx-status-test';
-
-            for (const status of statuses) {
-                const mockWompiResponse: TransactionWompiResponse = {
-                    data: {
-                        id: trxId,
-                        created_at: new Date(),
-                        amount_in_cents: 5000000,
-                        status: status,
-                        reference: `ref-${status}`,
-                        customer_email: 'status@test.com',
-                        currency: 'COP',
-                        payment_method_type: 'NEQUI',
-                        payment_method: {
-                            phone_number: '+57 300 1111111'
-                        },
-                        redirect_url: 'https://example.com',
-                        payment_link_id: 'link-status'
-                    }
-                };
-
-                (global.fetch as jest.Mock).mockResolvedValue({
-                    ok: true,
-                    json: jest.fn().mockResolvedValue(mockWompiResponse),
-                    status: 200,
-                });
-
-                const mockTransaction = { status } as Transaction;
-                (Transaction.fromWompiResponse as jest.Mock).mockReturnValue(mockTransaction);
-
-                const result = await getTransaction(trxId);
-
-                expect(result.status).toBe(status);
-            }
-        });
+        await expect(getTransaction(id)).resolves.toMatchObject({ id });
+        expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining(`/transactions/${id}`), expect.any(Object));
     });
 });
