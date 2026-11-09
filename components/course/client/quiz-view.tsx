@@ -1,5 +1,12 @@
 import { cn } from '@/lib/utils';
-import { QuizModule, ResultQuizScore } from '@/utils/types';
+import type { StudentQuizDto } from '@/application/courses/student-course.dto';
+import type { QuizAttemptResultResponse, SubmitQuizAnswerRequest } from '@/interfaces/http/courses/quiz.contract';
+import {
+    calculateQuizAttempt,
+    loadLastQuizAttempt,
+    loadQuizAnswers,
+    saveQuizAnswer,
+} from '@/components/course/client/quiz-http-client';
 import React, { useEffect, useState } from 'react';
 import { InfoOutlined } from '@mui/icons-material';
 import SubmitButton from '@/components/submitButton';
@@ -9,17 +16,12 @@ import { CheckIcon, XIcon } from '@/components/svg/certifit-icons';
 
 
 interface QuizProps {
-    quiz: QuizModule;
+    quiz: StudentQuizDto;
     quizIndex: number;
     courseCanonicalId: string;
     minRequiredPoints: number;
     onQuizFinish: (score: number, passed: boolean) => void;
 }
-
-type FetchedAnswer = {
-    questionId: number;
-    answer: string;
-};
 
 export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequiredPoints, onQuizFinish }: QuizProps) => {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -27,36 +29,30 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
     const [isStarted, setIsStarted] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [score, setScore] = useState<ResultQuizScore|null>(null);
+    const [score, setScore] = useState<QuizAttemptResultResponse | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedOptionIds, setSelectedOptionIds] = useState<Record<number, number>>({});
 
     const currentQuestion = quiz.questions?.[currentQuestionIndex];
 
     useEffect(() => {
-        fetch(`/api/courses/${courseCanonicalId}/quizzes/${quiz.id}`, {
-            method: 'GET'
-        }).then(async (response) => {
-            const fetchedAnswers: FetchedAnswer[] = await response.json();
-            setAnswers(
-                fetchedAnswers.reduce((acc: Record<number, string>, curr: FetchedAnswer) => {
-                    acc[curr.questionId] = curr.answer;
-                    return acc;
-                }, {} as Record<number, string>)
-            );
-            fetch(`/api/courses/${courseCanonicalId}/quizzes/${quiz.id}/last-result`, {
-                method: 'GET'
-            }).then(async (response) => {
-                const lastResult = await response.json();
-                if (lastResult.passed != undefined) {
+        let cancelled = false;
+
+        void Promise.all([loadQuizAnswers(courseCanonicalId, quiz.id), loadLastQuizAttempt(courseCanonicalId, quiz.id)])
+            .then(([fetchedAnswers, lastResult]) => {
+                if (cancelled) return;
+                setAnswers(Object.fromEntries(fetchedAnswers.map((answer) => [answer.questionId, answer.answer])));
+                if (lastResult) {
                     setIsFinished(true);
                     setIsStarted(false);
-                    setScore({
-                        pass: lastResult.passed,
-                        questionCount:0,
-                        totalScore: lastResult.result
-                    });
+                    setScore({ pass: lastResult.passed, questionCount: 0, totalScore: lastResult.result });
                 }
+            })
+            .catch(() => {
+                if (!cancelled) setError('No fue posible cargar el estado guardado del quiz.');
             });
-        });
+
+        return () => { cancelled = true; };
     }, [courseCanonicalId, quiz.id]);
 
     useEffect(() => {
@@ -66,43 +62,92 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
             setIsLoading(false);
             setScore(null);
             setCurrentQuestionIndex(0);
+            setError(null);
+            setSelectedOptionIds({});
         }
     }, [quiz]);
 
-    const handleAnswerChange = (questionId: number, optionId: number, answer: string) => {
+    const handleMultipleChoiceAnswer = (questionId: number, optionId: number, answer: string) => {
         setAnswers((prevAnswers) => ({
             ...prevAnswers,
             [questionId]: answer,
         }));
-
-        fetch('/api/courses/quiz-answer', {
-            method: 'POST', body: JSON.stringify({
-                canonicalId: courseCanonicalId, questionId, quizId: quiz.id, moduleId: quiz.courseModuleId, optionId, answer
-            })
-        });
+        setSelectedOptionIds((previous) => ({ ...previous, [questionId]: optionId }));
     };
 
-    const calculateScore = () => {
-        fetch('/api/courses/calculate-quiz-score', {
-            method: 'POST', body: JSON.stringify({
-                canonicalId: courseCanonicalId, quizId: quiz.id, moduleId: quiz.courseModuleId
-            })
-        }).then(async (response) => {
-            const result = await response.json();
-            setIsLoading(false)
-            setIsFinished(true);
-            setIsStarted(false);
-            setScore(result);
-        });
+    const handleTextAnswer = (questionId: number, answer: string) => {
+        setAnswers((prevAnswers) => ({ ...prevAnswers, [questionId]: answer }));
     };
 
-    const handleNextQuestion = () => {
+    const persistCurrentAnswer = async (): Promise<boolean> => {
+        if (!currentQuestion) return false;
+        const answer = answers[currentQuestion.id]?.trim();
+        if (!answer) {
+            setError('Debes responder la pregunta antes de continuar.');
+            return false;
+        }
+
+        try {
+            if (currentQuestion.type === 'multiple') {
+                const optionId = selectedOptionIds[currentQuestion.id];
+                if (!optionId) return true;
+                const command: SubmitQuizAnswerRequest = {
+                    canonicalId: courseCanonicalId,
+                    questionId: currentQuestion.id,
+                    quizId: quiz.id,
+                    moduleId: quiz.courseModuleId,
+                    kind: 'multiple_choice',
+                    optionId,
+                };
+                await saveQuizAnswer(command);
+                return true;
+            }
+
+            await saveQuizAnswer({
+                canonicalId: courseCanonicalId,
+                questionId: currentQuestion.id,
+                quizId: quiz.id,
+                moduleId: quiz.courseModuleId,
+                kind: 'text',
+                answer,
+            });
+            return true;
+        } catch {
+            setError('No fue posible guardar la respuesta. Inténtalo nuevamente.');
+            return false;
+        }
+    };
+
+    const handleNextQuestion = async () => {
+        if (isLoading || !currentQuestion) return;
+        setError(null);
+        setIsLoading(true);
+        const saved = await persistCurrentAnswer();
+        if (!saved) {
+            setIsLoading(false);
+            return;
+        }
+
         const isLast = currentQuestionIndex < (quiz.questions?.length || 0) - 1;
         if (isLast) {
             setCurrentQuestionIndex(currentQuestionIndex + 1);
-        } else {
-            setIsLoading(true);
-            calculateScore();
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            const result = await calculateQuizAttempt({
+                canonicalId: courseCanonicalId,
+                quizId: quiz.id,
+                moduleId: quiz.courseModuleId,
+            });
+            setIsFinished(true);
+            setIsStarted(false);
+            setScore(result);
+        } catch {
+            setError('No fue posible calcular el resultado del quiz. Inténtalo nuevamente.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -118,7 +163,7 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
             return;
         }
 
-        if (score.totalScore >= minRequiredPoints) {
+        if (score.pass) {
             onQuizFinish(score.totalScore, score.pass);
         } else {
             setCurrentQuestionIndex(0);
@@ -130,10 +175,12 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
         setCurrentQuestionIndex(0);
         setIsFinished(false)
         setIsStarted(true)
+        setError(null);
     }
 
     return (
         <div>
+            {error && <p role="alert" className={cn('mb-4 rounded-md bg-red-50 p-3 text-red-700')}>{error}</p>}
             {!isStarted && !isFinished && !score && (
                 <div className={cn('w-full border border-[#ececec] bg-[#ececec] rounded-2xl p-6 overflow-y-auto max-h-[70vh]')}>
                     <h2 className={cn('text-2xl font-bold mb-4')}>Quiz #{quizIndex + 1} - {quiz.title}</h2>
@@ -166,17 +213,17 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
                                 <div className={cn('flex justify-center')}>
                                     <span className={cn('flex items-center')}>Selección multiple <InfoOutlined width={20} height={20} className={cn('text-5xl text text-[#2A8940]')} /> </span>
                                 </div>
-                                {currentQuestion.options?.map((option, index) => (
-                                    <label key={index} className={cn('block')}>
+                                {currentQuestion.options?.map((option) => (
+                                    <label key={option.id} className={cn('block')}>
                                         <input
                                             type='radio'
                                             name={`question-${currentQuestion.id}`}
                                             value={option.value}
                                             checked={answers[currentQuestion.id ?? 0] === option.value}
-                                            onChange={() => handleAnswerChange(currentQuestion.id ?? 0, option.id ?? 0, option.value)}
+                                            onChange={() => handleMultipleChoiceAnswer(currentQuestion.id, option.id, option.value)}
                                             className={cn('mr-2')}
                                         />
-                                        {`${option.value} ${option.isCorrect ? ' - Esta es la respuesta correcta' : ''}`}
+                                        {option.value}
                                     </label>
                                 ))}
                             </div>
@@ -189,8 +236,7 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
                                 <textarea
                                     value={answers[currentQuestion.id ?? 0] ?? ""}
                                     onChange={(e) => {
-                                        const optionId = currentQuestion.options?.[0]?.id ?? 0;
-                                        handleAnswerChange(currentQuestion.id ?? 0, optionId, e.target.value);
+                                        handleTextAnswer(currentQuestion.id, e.target.value);
                                     }}
                                     className={cn('w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0BBBE7]')}
                                     placeholder='Escribe tu respuesta aquí...'
@@ -220,7 +266,7 @@ export const ClientQuizView = ({ quiz, quizIndex, courseCanonicalId, minRequired
 
             {isFinished && score && (
                 <>
-                    { score.totalScore >= minRequiredPoints ? (
+                    {score.pass ? (
                         <div className={cn('bg-gray-100 p-6 rounded-3xl mb-4')}>
                             <h2 className={cn('text-2xl font-bold mb-4')}>Quiz #{quiz.id} - {quiz.title}</h2>
                             <div className={cn('flex flex-col items-center bg-gray-200 p-6 rounded-3xl mb-6')}>

@@ -1,84 +1,54 @@
-"use server"
+'use server';
 
-import { auth } from "@/auth";
-import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
-import { UserNotLoggedError } from "@/exceptions/user-not-logged";
-import { getPasswordResetTokenByToken, removePasswordResetToken } from "@/services/password-token";
-import { editUserById, getUserByEmail } from "@/services/user";
-import { NewPasswordSchema } from "@/utils/schemas";
-import { ServerActionResponse } from "@/utils/types";
-import { z } from "zod";
+import { editUserById } from '@/services/user';
+import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/actions/action-result';
+import { withAuthenticatedAction } from '@/interfaces/actions/action-context';
+import { NewPasswordInputSchema, ResetPasswordWithTokenInputSchema } from '@/interfaces/actions/auth.contract';
+import { validateActionInput } from '@/interfaces/actions/validation';
+import { resetPasswordWithToken } from '@/services/password-reset';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
-/**
- * 
- * @param values 
- * @param token 
- * @returns 
- */
-export const newPassword = async (
-    values: z.infer<typeof NewPasswordSchema>,
-    token?: string | null
-): Promise<ServerActionResponse<null>> => {
+/** Public reset action authorized by a one-time token. */
+export async function newPassword(values: unknown, token?: unknown): Promise<ActionResult<null>> {
+    const parsedInput = validateActionInput(ResetPasswordWithTokenInputSchema, {
+        ...(typeof values === 'object' && values !== null ? values : {}),
+        token,
+    });
+    if (!parsedInput.ok) return parsedInput;
+
     try {
-        if (!token) {
-            return { error: "El token no puede estar vacío!" };
+        const result = await resetPasswordWithToken({
+            token: parsedInput.data.token,
+            password: parsedInput.data.password,
+        });
+
+        switch (result.status) {
+            case 'success':
+                return actionSuccess(null, 'Contraseña actualizada correctamente.');
+            case 'expired_token':
+                return actionFailure('NOT_FOUND', 'El enlace de restablecimiento expiró.');
+            case 'invalid_token':
+            case 'user_missing':
+                return actionFailure('NOT_FOUND', 'El enlace de restablecimiento no es válido.');
         }
-
-        const validatedFields = NewPasswordSchema.safeParse(values);
-        if (!validatedFields.success) {
-            return { error: "Contraseña invalida!" };
-        }
-
-        const { password } = validatedFields.data;
-
-        const existingToken = await getPasswordResetTokenByToken(token);
-        if (!existingToken) {
-            return { success: false, error: "El token es invalido!" };
-        }
-
-        const hasExpired = new Date(existingToken.expires) < new Date();
-        if (hasExpired) {
-            return { success: false, error: "El Token a expirado" };
-        }
-
-        const existingUser = await getUserByEmail(existingToken.email);
-        if (!existingUser) {
-            return { success: false, error: "El correo no existe!" };
-        }
-
-        await removePasswordResetToken(token);
-        await editUserById(existingUser.id as string, { password });
-
-        return { success: true, message: "Contraseña actualizada!" };
-    } catch (error) {
-        return mapErrorToServerActionResponse(error);
+    } catch {
+        safeLogger.error('action.auth.password_reset.consume.failed');
+        return actionFailure('UNEXPECTED', 'No fue posible actualizar la contraseña.');
     }
 }
 
-/**
- * 
- * @param values 
- * @returns 
- */
-export const newPasswordForLoggedUser = async (
-    values: z.infer<typeof NewPasswordSchema>,
-): Promise<ServerActionResponse<null>> => {
-    try {
-        const validatedFields = NewPasswordSchema.safeParse(values);
-        if (!validatedFields.success) {
-            return { error: "Contraseña invalida!" };
-        }
-        const { password } = validatedFields.data;
+/** Authenticated action: resolve the immutable actor once before editing. */
+export async function newPasswordForLoggedUser(input: unknown): Promise<ActionResult<null>> {
+    const parsedInput = validateActionInput(NewPasswordInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
 
-        const session = await auth();
-        const userID = session?.user.id;
-        if (!userID) {
-            throw new UserNotLoggedError("El usuario debe loguearse");
+    return withAuthenticatedAction(async ({ actor }) => {
+        try {
+            await editUserById(actor.userId, { password: parsedInput.data.password });
+            return actionSuccess(null, 'Contraseña actualizada correctamente.');
+        } catch {
+            safeLogger.error('action.auth.password_change.failed');
+            return actionFailure('UNEXPECTED', 'No fue posible actualizar la contraseña.');
         }
-
-        await editUserById(userID, { password });
-        return { success: true, message: "Contraseña actualizada!" };
-    } catch (error) {
-        return mapErrorToServerActionResponse(error);
-    }
+    });
 }

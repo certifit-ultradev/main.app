@@ -2,6 +2,7 @@ import { Loader } from '@/components/loader'
 import { SubmitButtonProps } from './types'
 import { cn } from '@/lib/utils'
 import { Button } from '../ui/button'
+import type { JSX } from 'react'
 
 function SubmitButton(props: SubmitButtonProps): JSX.Element {
     const { label, isLoading, customClass = 'w-full bg-[#0BBBE7] text-white py-2 rounded-full hover:bg-[#009fdf] transition-colors', disabled, onClick } = props

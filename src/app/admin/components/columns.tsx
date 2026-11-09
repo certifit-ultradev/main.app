@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { CourseList } from "@/utils/types";
+import type { CourseEditorListItemDto } from '@/application/courses/course-read.ports';
 import { ColumnDef } from "@tanstack/react-table"
 import { MoreVertical } from "lucide-react";
 import { useRouter } from "next/navigation"
@@ -13,7 +13,7 @@ interface CreateCourseColumnsProps {
     onDeactivate: (id: number) => Promise<void>;
 }
 
-export function CreateCourseDataTableColumns({ onActivate, onDeactivate }: CreateCourseColumnsProps): ColumnDef<CourseList>[] {
+export function CreateCourseDataTableColumns({ onActivate, onDeactivate }: CreateCourseColumnsProps): ColumnDef<CourseEditorListItemDto>[] {
     const router = useRouter();
     return [
         {
@@ -68,9 +68,9 @@ export function CreateCourseDataTableColumns({ onActivate, onDeactivate }: Creat
                             <DropdownMenuItem className='hover:bg-gray-100' onClick={async () => {
                                 // Llamamos a la función onActivate pasada desde el padre
                                 if (!course.isActive) {
-                                    await onActivate(course.id as number);
+                                    await onActivate(course.id);
                                 } else {
-                                    await onDeactivate(course.id as number);                                    
+                                    await onDeactivate(course.id);
                                 }
                             }}>{course.isActive ? 'Desactivar' : 'Activar'} curso</DropdownMenuItem>
                         </DropdownMenuContent>

@@ -1,45 +1,24 @@
 'use server';
 
-import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
-import { sendPasswordResetEmail } from "@/repository/nodemailer";
-import { generatePasswordResetTokenByEmail } from "@/services/password-token";
-import { getUserByEmail } from "@/services/user";
-import { ResetSchema } from "@/utils/schemas";
-import { ServerActionResponse } from "@/utils/types";
-import { z } from "zod";
+import { actionSuccess, type ActionResult } from '@/interfaces/actions/action-result';
+import { PasswordResetRequestInputSchema } from '@/interfaces/actions/auth.contract';
+import { validateActionInput } from '@/interfaces/actions/validation';
+import { requestPasswordReset } from '@/services/password-reset';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
-/**
- * 
- * @param values 
- * @returns 
- */
-export const resetPassword = async (values: z.infer<typeof ResetSchema>): Promise<ServerActionResponse<null>> => {
+const neutralMessage = 'Si existe una cuenta con ese correo, recibirás instrucciones para restablecer tu contraseña.';
+
+/** Public action: never discloses whether an email belongs to an account. */
+export async function resetPassword(input: unknown): Promise<ActionResult<null>> {
+    const parsedInput = validateActionInput(PasswordResetRequestInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
+
     try {
-        const validatedFields = ResetSchema.safeParse(values);
-        if (!validatedFields.success) {
-            return { success: false, error: "Correo invalido" };
-        }
-    
-        const { email } = validatedFields.data;
-    
-        const existingUser = await getUserByEmail(email);
-    
-        if (!existingUser) {
-            return { success: false, error: "El correo no existe" };
-        }
-    
-        const passwordResetToken = await generatePasswordResetTokenByEmail(email);
-        if (!passwordResetToken) {
-            return { success: false, error: "No se pudo generar el token" }
-        }
-
-        await sendPasswordResetEmail(
-            passwordResetToken.email,
-            passwordResetToken.token
-        );
-    
-        return { success: true, message: "Correo enviado!" };    
-    } catch (error) {
-        return mapErrorToServerActionResponse(error);
+        await requestPasswordReset(parsedInput.data.email);
+    } catch {
+        // Keep the externally visible response identical to avoid account enumeration.
+        safeLogger.error('action.auth.password_reset.request.failed');
     }
+
+    return actionSuccess(null, neutralMessage);
 }

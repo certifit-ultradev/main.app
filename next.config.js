@@ -21,11 +21,12 @@ const nextConfig = {
         },
     },
     experimental: {
-        forceSwcTransforms: true,
+        agentUpgrade: 'security',
         serverActions: {
-            bodySizeLimit: '900mb',
+            bodySizeLimit: '1000mb',
         }
-    }
+    },
+    allowedDevOrigins: ['192.168.253.242']
 }
 
 module.exports = nextConfig

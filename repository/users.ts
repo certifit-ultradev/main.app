@@ -1,8 +1,20 @@
-import { NotFoundError } from "@/exceptions/not-found";
 import { prisma } from "@/lib/prisma";
-import { User } from "@/models/user";
-import { UserCourse } from "@/models/user-course";
-import bcrypt from "bcryptjs";
+import type { CreatePersistedUserCommand, UpdatePersistedUserCommand } from '@/application/users/user.commands';
+import type { PersistedUserRecord, UserCourseEnrollmentRecord } from '@/application/users/user.records';
+import { Prisma } from '@/prisma/app/generated/prisma/client';
+import { UserExistError } from '@/exceptions/user-exist';
+import { safeLogger } from '@/shared/observability/safe-logger';
+
+const toUserRecord = (user: {
+    id: string; name: string; lastName: string; email: string; password: string | null; isAdmin: boolean;
+    emailVerified: Date | null; identification: string | null; identificationType: string | null;
+    phoneNumber: string; createdAt: Date; updatedAt: Date | null;
+}): PersistedUserRecord => ({
+    id: user.id, name: user.name, lastName: user.lastName, email: user.email, passwordHash: user.password,
+    isAdmin: user.isAdmin, emailVerified: user.emailVerified, identification: user.identification,
+    identificationType: user.identificationType, phoneNumber: user.phoneNumber,
+    createdAt: user.createdAt, updatedAt: user.updatedAt,
+});
 
 /**
  * This repository is responsible for managing the users in the database.
@@ -15,7 +27,7 @@ import bcrypt from "bcryptjs";
  * @param pageSize
  * @returns
  */
-export const allUsers = async (page: number, pageSize: number): Promise<User[]> => {
+export const allUsers = async (page: number, pageSize: number): Promise<PersistedUserRecord[]> => {
     if (page < 1) {
         page = 1;
     }
@@ -28,9 +40,7 @@ export const allUsers = async (page: number, pageSize: number): Promise<User[]> 
         return [];
     }
 
-    return users.map<User>((user) => {
-        return new User({ ...user })
-    })
+    return users.map(toUserRecord);
 }
 
 /**
@@ -38,15 +48,9 @@ export const allUsers = async (page: number, pageSize: number): Promise<User[]> 
  * @param phoneNumber 
  * @returns 
  */
-export const findUserByPhoneNumber = async (phoneNumber: string): Promise<User> => {
+export const findUserByPhoneNumber = async (phoneNumber: string): Promise<PersistedUserRecord | null> => {
     const user = await prisma.user.findFirst({ where: { phoneNumber } });
-    if (!user) {
-        throw new NotFoundError('Usuario no encontrado');
-    }
-
-    return new User({
-        ...user
-    });
+    return user ? toUserRecord(user) : null;
 };
 
 /**
@@ -62,13 +66,9 @@ export const countAllUsers = async (): Promise<number> => {
  * @param email 
  * @returns 
  */
-export const findUserByEmail = async (email: string): Promise<User> => {
+export const findUserByEmail = async (email: string): Promise<PersistedUserRecord | null> => {
     const user = await prisma.user.findFirst({ where: { email } });
-    if (!user) {
-        throw new NotFoundError('Usuario no encontrado');
-    }
-
-    return new User(user);
+    return user ? toUserRecord(user) : null;
 };
 
 /**
@@ -76,13 +76,9 @@ export const findUserByEmail = async (email: string): Promise<User> => {
  * @param id 
  * @returns 
  */
-export const findUserById = async (id: string): Promise<User> => {
+export const findUserById = async (id: string): Promise<PersistedUserRecord | null> => {
     const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) {
-        throw new NotFoundError('Usuario no encontrado');
-    }
-
-    return new User(user);
+    return user ? toUserRecord(user) : null;
 };
 
 /**
@@ -91,17 +87,22 @@ export const findUserById = async (id: string): Promise<User> => {
  * @param data 
  * @returns 
  */
-export const updateUserById = async (id: string, data: Partial<User>): Promise<User> => {
-    if (data.password) {
-        data.password = await bcrypt.hash(data.password, 10);
-    }
-
-    const { userCourse, ...updateData } = data;
+export const updateUserById = async (id: string, data: UpdatePersistedUserCommand): Promise<PersistedUserRecord> => {
+    const updateData = {
+        ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.lastName !== undefined ? { lastName: data.lastName } : {}),
+        ...(data.email !== undefined ? { email: data.email } : {}),
+        ...(data.phoneNumber !== undefined ? { phoneNumber: data.phoneNumber } : {}),
+        ...(data.identification !== undefined ? { identification: data.identification } : {}),
+        ...(data.identificationType !== undefined ? { identificationType: data.identificationType } : {}),
+        ...(data.emailVerified !== undefined ? { emailVerified: data.emailVerified } : {}),
+        ...(data.passwordHash !== undefined ? { password: data.passwordHash } : {}),
+    };
     const updatedUser = await prisma.user.update({
         where: { id },
         data: updateData,
     });
-    return new User(updatedUser);
+    return toUserRecord(updatedUser);
 }
 
 /**
@@ -109,27 +110,29 @@ export const updateUserById = async (id: string, data: Partial<User>): Promise<U
  * @param id 
  * @returns 
  */
-export const createUser = async (user: User): Promise<User | null> => {
-    if (user.password) {
-        user.password = await bcrypt.hash(user.password, 10);
-    }
-
-    const createdUser = await prisma.user.create({
-        data: {
-            name: user.name,
-            lastName: user.lastName,
-            password: user.password,
-            email: user.email,
-            isAdmin: user.isAdmin,
-            emailVerified: user.emailVerified,
-            identification: user.identification,
-            identificationType: user.identificationType,
-            phoneNumber: user.phoneNumber,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt
+export const createUser = async (user: CreatePersistedUserCommand): Promise<PersistedUserRecord> => {
+    try {
+        const createdUser = await prisma.user.create({
+            data: {
+                name: user.name,
+                lastName: user.lastName,
+                password: user.passwordHash,
+                email: user.email,
+                isAdmin: user.isAdmin,
+                emailVerified: user.emailVerified,
+                identification: user.identification,
+                identificationType: user.identificationType,
+                phoneNumber: user.phoneNumber,
+            }
+        });
+        return toUserRecord(createdUser);
+    } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+            throw new UserExistError('registro duplicado');
         }
-    });
-    return createdUser;
+        safeLogger.error('repository.user.create.failed');
+        throw error;
+    }
 }
 
 /**
@@ -137,33 +140,21 @@ export const createUser = async (user: User): Promise<User | null> => {
  * @param id 
  * @returns 
  */
-export const assignCourse = async (userId: string, courseId: number): Promise<UserCourse | null> => {
+export const assignCourse = async (userId: string, courseId: number): Promise<UserCourseEnrollmentRecord> => {
     const createdUserAssignation = await prisma.userCourse.create({
         data: {
             userId,
             courseId
         }
     });
-    return new UserCourse({
-        ...createdUserAssignation
-    });
+    return createdUserAssignation;
 }
 
-export const removeCourseFromUser = async (userId: string, courseId: number): Promise<void> => {
-    const userCourse = await prisma.userCourse.findFirst({
-        where: {
-            userId,
-            courseId
-        }
-    });
-
-    if (!userCourse) {
-        throw new NotFoundError('Asignación de curso no encontrada');
-    }
-
-    await prisma.userCourse.delete({
-        where: {
-            id: userCourse.id
-        }
-    });
-}
+/**
+ * Idempotent enrollment reversal. `false` means there was no enrollment to
+ * remove; database failures still reject instead of being hidden as absence.
+ */
+export const removeCourseFromUser = async (userId: string, courseId: number): Promise<boolean> => {
+    const result = await prisma.userCourse.deleteMany({ where: { userId, courseId } });
+    return result.count > 0;
+};

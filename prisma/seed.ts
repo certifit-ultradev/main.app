@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const prismaCli = new PrismaClient();
 
 async function main() {
+    console.log('Iniciando la inicialización de datos...');
     user();
 }
 
@@ -26,14 +27,14 @@ async function user() {
                 updatedAt: new Date()
             },
         });
-    } catch (error) {
-        console.error('Usuario no creado.', error);
+    } catch {
+        process.stderr.write('No fue posible crear el usuario inicial.\n');
     }
 }
 
 main()
-    .catch((e) => {
-        console.error(e);
+    .catch(() => {
+        process.stderr.write('La inicialización de datos falló.\n');
         process.exit(1);
     })
     .finally(async () => {

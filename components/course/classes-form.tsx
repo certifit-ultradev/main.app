@@ -1,36 +1,65 @@
-import { CourseData, CourseModule, ErrMap, ModuleClass, QuestionOption, QuizModule, QuizQuestions } from "@/utils/types";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import type {
+    CourseEditorClass,
+    CourseEditorFormValues,
+    CourseEditorOption,
+    CourseEditorQuestion,
+    CourseEditorQuiz,
+} from '@/features/courses/editor/course-editor-form.types';
+import { Dispatch, SetStateAction, useEffect, useReducer, useRef, useState } from "react";
 import { Tab, TabGroup, TabList, TabPanels, TabPanel } from '@headlessui/react';
 import { AddCircleOutline, DeleteForever } from "@mui/icons-material";
 import { Button } from '@/components/ui/button';
-import { CourseModulesSchema } from "@/utils/schemas";
+import { CourseModulesSchema } from '@/features/courses/editor/editor-form.schema.client';
 import { z } from "zod";
-import _ from "lodash";
 import { cn } from "@/lib/utils";
 import { ErrorMessage } from "@hookform/error-message";
-import { mapZodErrors } from "@/utils/zod-errors-mapper";
+import { mapEditorZodErrors, type EditorErrorMap } from '@/features/courses/editor/editor-form-errors';
+import {
+    courseEditorModulesReducer,
+    hydrateEditorModules,
+    type CourseEditorModulesAction,
+} from '@/features/courses/editor/course-editor-modules.reducer';
 
 interface CourseBasicFormProps {
-    data: CourseData;
-    setData: Dispatch<SetStateAction<CourseData>>;
-    nextStep: () => void;
+    data: CourseEditorFormValues;
+    setData: Dispatch<SetStateAction<CourseEditorFormValues>>;
+    nextStep: (modules: CourseEditorFormValues['modules']) => Promise<void> | void;
     previousStep: () => void;
+    isSaving?: boolean;
+    saveError?: string;
+    videoUploads?: VideoUploadStatus[];
+    contentPhase?: 'idle' | 'uploading' | 'saving' | 'error';
 };
 
-export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: CourseBasicFormProps) => {
-    const [errors, setErrors] = useState<ErrMap>({});
-    const [modules, setModules] = useState<CourseModule[]>([]);
+export type VideoUploadStatus = {
+    key: string;
+    moduleIndex: number;
+    classIndex: number;
+    fileName: string;
+    percentage: number;
+    status: 'pending' | 'uploading' | 'uploaded' | 'reused' | 'retry';
+};
+
+export const CourseClassesForm = ({
+    data, setData, nextStep, previousStep, isSaving = false, saveError,
+    videoUploads = [], contentPhase = 'idle',
+}: CourseBasicFormProps) => {
+    const [errors, setErrors] = useState<EditorErrorMap>({});
+    const [modules, dispatchModules] = useReducer(courseEditorModulesReducer, data.modules, hydrateEditorModules);
+    const uploadProgressRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
-        setModules(_.cloneDeep(data.modules ?? []));
+        dispatchModules({ type: 'hydrate', modules: data.modules });
     }, [data.modules]);
 
-    const addModule = () => {
-        setModules((prevModules) => [
-            ...prevModules,
-            { title: '', minRequiredPoints: 0, classes: [{ title: '', description: '' }], quiz: { title: '', description: '', questions: [] } },
-        ]);
-    };
+    useEffect(() => {
+        if (contentPhase === 'uploading') {
+            uploadProgressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [contentPhase]);
+
+    const dispatch = (action: CourseEditorModulesAction) => dispatchModules(action);
+    const addModule = () => dispatch({ type: 'addModule' });
 
     const validateModules = () => {
         try {
@@ -38,129 +67,81 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
             setErrors({});
         } catch (e) {
             if (e instanceof z.ZodError) {
-                setErrors(mapZodErrors(e));
+                setErrors(mapEditorZodErrors(e));
             }
             return false;
         }
         return true;
     };
 
-    const removeModule = (moduleIndex: number) => {
-        setModules((prevModules) => prevModules.filter((_, idx) => idx !== moduleIndex));
-    };
+    const removeModule = (moduleIndex: number) => dispatch({ type: 'removeModule', moduleIndex });
 
-    const addClassToModule = (moduleIndex: number) => {
-        setModules(prevModules => {
-            const newModules = _.cloneDeep(prevModules);
-            const mod = newModules[moduleIndex];
+    const addClassToModule = (moduleIndex: number) => dispatch({ type: 'addClass', moduleIndex });
 
-            if (!mod.classes) {
-                mod.classes = [];
-            }
+    const removeClassFromModule = (moduleIndex: number, classIndex: number) => dispatch({ type: 'removeClass', moduleIndex, classIndex });
 
-            mod.classes.push({
-                title: "",
-                description: "",
-                video: null,
-            });
-
-            return newModules;
-        });
-    };
-
-    const removeClassFromModule = (moduleIndex: number, classIndex: number) => {
-        setModules((prevModules) => {
-            const newModules = _.cloneDeep(prevModules);
-            newModules[moduleIndex].classes = newModules[moduleIndex].classes!.filter((_, idx) => idx !== classIndex);
-            return newModules;
-        });
-    };
-
-    const handleClassChange = <K extends keyof ModuleClass>(
+    const handleClassChange = <K extends keyof CourseEditorClass>(
         moduleIndex: number,
         classIndex: number,
         field: K,
-        value: ModuleClass[K],
+        value: CourseEditorClass[K],
     ) => {
         if (field === "video" && value instanceof File) {
-            const fileURL = URL.createObjectURL(value as File);
+            const fileURL = URL.createObjectURL(value);
 
             const video = document.createElement("video");
             video.src = fileURL;
             video.addEventListener("loadedmetadata", () => {
                 const vidDuration = video.duration;
-                setModules((prevModules) => {
-                    const newModules = _.cloneDeep(prevModules);
-                    newModules[moduleIndex].classes![classIndex]['videoDuration'] = vidDuration;
-                    return newModules;
-                });
+                dispatch({ type: 'updateClass', moduleIndex, classIndex, patch: { videoDuration: vidDuration } });
 
                 URL.revokeObjectURL(fileURL);
             });
 
-            video.addEventListener("error", (err) => {
-                console.error("Error al cargar video:", err);
+            video.addEventListener("error", () => {
+                setErrors((currentErrors) => ({
+                    ...currentErrors,
+                    [`${moduleIndex}-classes-${classIndex}-video`]: {
+                        type: 'custom',
+                        message: 'No fue posible leer los metadatos del video.',
+                    },
+                }));
+                URL.revokeObjectURL(fileURL);
             });
         }
 
-        setModules((prevModules) => {
-            const newModules = _.cloneDeep(prevModules);
-            newModules[moduleIndex].classes![classIndex][field] = value;
-            return newModules;
-        });
+        dispatch({ type: 'updateClass', moduleIndex, classIndex, patch: { [field]: value } });
     };
 
     const handleModuleTitleChange = (moduleIndex: number, value: string) => {
-        setModules((prevModules) => {
-            const newModules = _.cloneDeep(prevModules);
-            newModules[moduleIndex].title = value;
-            return newModules;
-        });
+        dispatch({ type: 'updateModule', moduleIndex, patch: { title: value } });
     };
 
     const handleModuleMinRequiredPointsChange = (moduleIndex: number, value: string) => {
-        setModules((prevModules) => {
-            const newModules = _.cloneDeep(prevModules);
-            newModules[moduleIndex].minRequiredPoints = Number(value);
-            return newModules;
-        });
+        dispatch({ type: 'updateModule', moduleIndex, patch: { minRequiredPoints: Number(value) } });
     };
 
-    const handleQuizChange = <K extends keyof QuizModule>(
+    const handleQuizChange = <K extends keyof Pick<CourseEditorQuiz, 'title' | 'description'>>(
         moduleIndex: number,
         field: K,
-        value: QuizModule[K],
+        value: CourseEditorQuiz[K],
     ) => {
-        setModules((prevModules) => {
-            const newModules = _.cloneDeep(prevModules);
-            newModules[moduleIndex].quiz![field] = value;
-            return newModules;
-        });
+        dispatch({ type: 'updateQuiz', moduleIndex, patch: { [field]: value } });
     };
 
-    const addQuestionToQuiz = (moduleIndex: number) => {
-        setModules((prevModules) => {
-            const newModules = _.cloneDeep(prevModules);
-            newModules[moduleIndex].quiz!.questions!.push({ type: 'multiple', title: '', points: 0, options: [{ value: '', isCorrect: false }] });
-            return newModules;
-        });
-    };
+    const addQuestionToQuiz = (moduleIndex: number) => dispatch({ type: 'addQuestion', moduleIndex });
 
-    const handleQuestionChange = <K extends keyof QuizQuestions>(
+    const handleQuestionChange = <K extends keyof Pick<CourseEditorQuestion, 'title' | 'points'>>(
         moduleIndex: number,
         questionIndex: number,
-        field: K,                     // ahora TS sabe que es clave de ModuleClass
-        value: QuizQuestions[K],       // y el valor tiene el tipo correcto
+        field: K,
+        value: CourseEditorQuestion[K],
     ) => {
-        const newModules = [...modules];
-        newModules[moduleIndex].quiz!.questions![questionIndex][field] = value;
-        setModules(newModules);
+        dispatch({ type: 'updateQuestion', moduleIndex, questionIndex, patch: { [field]: value } });
     };
 
     const addOptionToQuestion = (moduleIndex: number, questionIndex: number) => {
-        const newModules = [...modules];
-        newModules[moduleIndex].quiz!.questions![questionIndex].options!.push({ value: '', isCorrect: false });
-        setModules(newModules);
+        dispatch({ type: 'addOption', moduleIndex, questionIndex });
     };
 
     /**
@@ -179,52 +160,30 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
    * @param value 
    */
 
-    const handleOptionChange = <K extends keyof QuestionOption>(
+    const handleOptionChange = <K extends keyof CourseEditorOption>(
         moduleIndex: number,
         questionIndex: number,
         optionIndex: number,
         field: K,
-        value: QuestionOption[K],
+        value: CourseEditorOption[K],
     ) => {
-        const newModules = [...modules];
-        if (field === 'isCorrect' && value) {
-            newModules[moduleIndex].quiz?.questions?.[questionIndex].options?.forEach((option, idx) => {
-                option.isCorrect = idx === optionIndex;
-            });
-        } else {
-            newModules[moduleIndex].quiz!.questions![questionIndex].options![optionIndex][field] = value;
-        }
-        setModules(newModules);
+        dispatch({ type: 'updateOption', moduleIndex, questionIndex, optionIndex, patch: { [field]: value } });
     };
 
     const removeQuestionFromQuiz = (moduleIndex: number, questionIndex: number) => {
-        const newModules = [...modules];
-        newModules[moduleIndex].quiz?.questions?.splice(questionIndex, 1);
-        setModules(newModules);
+        dispatch({ type: 'removeQuestion', moduleIndex, questionIndex });
     };
 
-    const onNextStep = () => {
+    const onNextStep = async () => {
         if (validateModules()) {
-            setData((prevDatos) => {
-                return {
-                    ...prevDatos,
-                    modules: _.cloneDeep(modules),
-                }
-            });
-            nextStep();
+            setData((prevDatos) => ({ ...prevDatos, modules }));
+            await nextStep(modules);
         }
     };
 
     const onPreviousStep = () => {
-        if (validateModules()) {
-            setData((prevDatos) => {
-                return {
-                    ...prevDatos,
-                    modules: _.cloneDeep(modules),
-                }
-            });
-            previousStep();
-        }
+        setData((prevDatos) => ({ ...prevDatos, modules }));
+        previousStep();
     };
 
     const moduleHasErrors = (moduleIndex: number): number => {
@@ -261,6 +220,39 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
 
     return (
         <div className={cn('w-full lg:w-3/4')}>
+            {(videoUploads.length > 0 || contentPhase === 'uploading' || contentPhase === 'saving') && (
+                <section ref={uploadProgressRef} aria-label="Progreso de videos" className="mb-6 scroll-mt-4 rounded-md border border-sky-200 bg-sky-50 p-4">
+                    <h2 className="font-semibold">Estado de los videos</h2>
+                    <p role="status" aria-live="polite" className="mt-1 text-sm">
+                        {contentPhase === 'saving' ? 'Videos subidos. Guardando el contenido del curso...'
+                            : contentPhase === 'uploading' ? 'Subiendo videos al almacenamiento...'
+                                : contentPhase === 'error' ? 'El intento falló. Se reutilizarán los videos ya subidos; sólo se subirán los faltantes.'
+                                    : 'Videos pendientes de subir.'}
+                    </p>
+                    <ul className="mt-3 space-y-3">
+                        {videoUploads.map((video) => (
+                            <li key={video.key} className="text-sm">
+                                <div className="flex flex-wrap justify-between gap-2">
+                                    <span>Módulo {video.moduleIndex + 1}, clase {video.classIndex + 1}: {video.fileName}</span>
+                                    <span>{video.status === 'uploaded' ? 'Subido, pendiente de guardar'
+                                        : video.status === 'reused' ? (contentPhase === 'error'
+                                            ? 'Subido, listo para reintentar' : 'URL reutilizada, pendiente de guardar')
+                                        : video.status === 'retry' ? 'Se subirá de nuevo'
+                                            : video.status === 'uploading' ? `${video.percentage}%`
+                                                : 'En espera'}</span>
+                                </div>
+                                <progress
+                                    aria-label={`Carga del video del módulo ${video.moduleIndex + 1}, clase ${video.classIndex + 1}`}
+                                    value={video.percentage}
+                                    max={100}
+                                    className="mt-1 h-2 w-full"
+                                />
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
+            <fieldset disabled={isSaving} className="min-w-0 w-full border-0 p-0">
             <div>
                 <button
                     type="button"
@@ -274,7 +266,7 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                     <TabList className={cn('flex space-x-1 rounded-md p-4 mb-6  border border-gray-300')}>
                         {modules.map((module, index) => (
                             <Tab
-                                key={index}
+                                key={module.clientKey}
                                 className={({ selected }) =>
                                     `w-full py-2.5 text-sm leading-5 font-medium text-[#0BBBE7] rounded-lg focus:outline-none ${selected ? 'bg-[#E8EFF5] shadow' : 'text-[#0BBBE7] hover:bg-white/[0.12]'
                                     }`
@@ -286,7 +278,7 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                     </TabList>
                     <TabPanels>
                         {modules.map((module, moduleIndex) => (
-                            <TabPanel key={moduleIndex} className={cn('bg-white p-4 rounded-md border border-gray-300')}>
+                            <TabPanel key={module.clientKey} className={cn('bg-white p-4 rounded-md border border-gray-300')}>
                                 <div className={cn('mb-4')}>
                                     <label className={cn('block text-sm font-medium text-gray-700 mb-2')} htmlFor={`${moduleIndex}-title`}>
                                         Nombre del módulo
@@ -342,7 +334,7 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                                     Eliminar módulo<DeleteForever />
                                 </button>
                                 {module.classes?.map((cls, classIndex) => (
-                                    <div key={classIndex} className={cn('border border-gray-300 p-4 rounded-md mb-4')}>
+                                    <div key={cls.clientKey} className={cn('border border-gray-300 p-4 rounded-md mb-4')}>
                                         <h3 className={cn('text-lg font-semibold mb-4')}>Clase {classIndex + 1}</h3>
                                         <div className={cn('mb-4')}>
                                             <label className={cn('block text-sm font-medium text-gray-700 mb-2')} htmlFor={`${moduleIndex}-classes-${classIndex}-title`}>
@@ -391,7 +383,7 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                                                 )}
                                             />
                                         </div>
-                                        {cls.video !== "" && (
+                                        {typeof cls.video === 'string' && cls.video !== '' && (
                                             <div className={cn('mb-4')}>
                                                 <p className={cn('text-sm text-gray-700')}>
                                                     Video cargado:{" "}
@@ -492,9 +484,8 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                                         <div className={cn('flex space-x-4')}>
                                             <TabList className={cn('w-1/3 flex flex-col space-y-2 bg-gray-50 rounded-md p-2')}>
                                                 {module.quiz?.questions?.map((question, questionIndex) => (
-                                                    <div key={questionIndex} className={cn('flex items-center justify-between')}>
+                                                    <div key={question.clientKey} className={cn('flex items-center justify-between')}>
                                                         <Tab
-                                                            key={questionIndex}
                                                             className={({ selected }) =>
                                                                 `w-full max-w-lg py-2 text-sm font-medium rounded-md focus:outline-none ${selected ? 'bg-gray-300 text-black' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                                                 }`
@@ -521,7 +512,7 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                                             </TabList>
                                             <TabPanels className={cn('w-2/3')}>
                                                 {module.quiz?.questions?.map((question, questionIndex) => (
-                                                    <TabPanel key={`question-${questionIndex}`} className={cn('border border-gray-300 p-4 rounded-md mb-4')}>
+                                                    <TabPanel key={question.clientKey} className={cn('border border-gray-300 p-4 rounded-md mb-4')}>
                                                         <h4 className={cn('text-md font-semibold mb-4')}>Pregunta {questionIndex + 1}</h4>
                                                         <div className={cn('mb-4')}>
                                                             <label className={cn('block text-sm font-medium text-gray-700 mb-2')} htmlFor={`question-type-${moduleIndex}-${questionIndex}`}>
@@ -531,7 +522,12 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                                                                 id={`question-type-${moduleIndex}-${questionIndex}`}
                                                                 name={`question-type-${moduleIndex}-${questionIndex}`}
                                                                 value={question.type}
-                                                                onChange={(e) => handleQuestionChange(moduleIndex, questionIndex, 'type', e.target.value)}
+                                                                onChange={(e) => {
+                                                                    const type = e.target.value;
+                                                                    if (type === 'multiple' || type === 'text') {
+                                                                        dispatch({ type: 'changeQuestionType', moduleIndex, questionIndex, questionType: type });
+                                                                    }
+                                                                }}
                                                                 className={cn('w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#0BBBE7]')}
                                                             >
                                                                 <option value="multiple">Selección múltiple</option>
@@ -596,22 +592,22 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                                                             />
                                                         </div>
                                                         {question.type === 'text' && (
-                                                            <div key={0} className={cn('items-center gap-2 mb-2')}>
-                                                                <label className={cn('block text-sm font-medium text-gray-700 mb-2')} htmlFor={`${moduleIndex}-quiz-questions-${questionIndex}-options-0-value`}>
+                                                            <div className={cn('items-center gap-2 mb-2')}>
+                                                                <label className={cn('block text-sm font-medium text-gray-700 mb-2')} htmlFor={`${moduleIndex}-quiz-questions-${questionIndex}-expectedAnswer-value`}>
                                                                     Respuesta de la pregunta
                                                                 </label>
                                                                 <input
                                                                     type="text"
-                                                                    id={`${moduleIndex}-quiz-questions-${questionIndex}-options-0-value`}
-                                                                    name={`${moduleIndex}-quiz-questions-${questionIndex}-options-0-value`}
-                                                                    value={question.options?.[0].value}
-                                                                    onChange={(e) => handleOptionChange(moduleIndex, questionIndex, 0, 'value', e.target.value)}
+                                                                    id={`${moduleIndex}-quiz-questions-${questionIndex}-expectedAnswer-value`}
+                                                                    name={`${moduleIndex}-quiz-questions-${questionIndex}-expectedAnswer-value`}
+                                                                    value={question.expectedAnswer.value}
+                                                                    onChange={(e) => dispatch({ type: 'updateExpectedAnswer', moduleIndex, questionIndex, value: e.target.value })}
                                                                     className={cn('w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#0BBBE7]')}
                                                                     placeholder="[Respuesta de la pregunta]"
                                                                 />
                                                                 <ErrorMessage
                                                                     errors={errors}
-                                                                    name={`${moduleIndex}-quiz-questions-${questionIndex}-options-0-value`}
+                                                                    name={`${moduleIndex}-quiz-questions-${questionIndex}-expectedAnswer-value`}
                                                                     render={({ message }) => (
                                                                         <p className={cn('text-red-500 text-sm text-left w-full')}>
                                                                             {message}
@@ -621,9 +617,9 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                                                             </div>
                                                         )}
                                                         {question.type === 'multiple' && (
-                                                            <div key={`${moduleIndex}`}>
+                                                            <div>
                                                                 {question.options?.map((option, optionIndex) => (
-                                                                    <div key={`options-${optionIndex}`}>
+                                                                    <div key={option.clientKey}>
                                                                         <div className={cn('flex items-center gap-2 mb-2')}>
                                                                             <input
                                                                                 type="text"
@@ -647,11 +643,7 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                                                                             <button
                                                                                 type="button"
                                                                                 className={cn('text-red-500 hover:underline')}
-                                                                                onClick={() => {
-                                                                                    const newModules = [...modules];
-                                                                                    newModules[moduleIndex].quiz!.questions![questionIndex].options!.splice(optionIndex, 1);
-                                                                                    setModules(newModules);
-                                                                                }}
+                                                                                onClick={() => dispatch({ type: 'removeOption', moduleIndex, questionIndex, optionIndex })}
                                                                             >
                                                                                 <DeleteForever />
                                                                             </button>
@@ -723,10 +715,13 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                     </TabPanels>
                 </TabGroup>
             </div>
+            </fieldset>
+            {saveError && <p role="alert" className={cn('mt-4 text-sm text-red-600')}>{saveError}</p>}
             <div className={cn('flex justify-end mt-8')}>
                 <div className={cn('flex mx-3')}>
                     <Button
                         type="button"
+                        disabled={isSaving}
                         className={cn('border border-[#0BBBE7] text-[#0BBBE7] px-6 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-1')}
                         onClick={onPreviousStep}
                     >
@@ -735,11 +730,12 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                 </div>
                 <div className={cn('flex mx-3')}>
                     <Button
-                        type="submit"
+                        type="button"
+                        disabled={isSaving}
                         className={cn('bg-[#0BBBE7] text-white px-6 py-2 rounded-md hover:bg-[#009fdf] transition-colors')}
                         onClick={onNextStep}
                     >
-                        Siguiente
+                        {isSaving ? 'Guardando...' : 'Guardar y continuar'}
                     </Button>
                 </div>
             </div>

@@ -1,46 +1,64 @@
 "use client";
 
-import { CoursePublicData } from "@/utils/types";
+import type { StudentCourseDto } from "@/application/courses/student-course.dto";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import { Check, LockKeyhole } from "lucide-react";
 import { ClientQuizView } from "./quiz-view";
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import Image from 'next/image';
+import { saveClassProgress, saveModuleCompletion } from '@/features/courses/learning/progress-http.client';
+import { resolveLearningPosition } from '@/features/courses/learning/resume-position';
 
 type CourseViewProps = {
-    data: CoursePublicData;
+    data: StudentCourseDto;
 };
 
 export const ClientCourseView = ({ data }: CourseViewProps) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const intervalRef = useRef<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null)
-    const [selectedClass, setSelectedClass] = useState<{ moduleIndex: number; classIndex: number; classId: number | undefined } | null>(() => {
-        if (data.classCompleted.length === 0) return null
-
-        const lastId = data.classCompleted[data.classCompleted.length - 1].classId
-
-        for (let m = 0; m < data.modules!.length; m++) {
-            const mod = data.modules![m]
-            const idx = mod.classes?.findIndex((cls) => cls.id === lastId)
-            if (idx != null && idx >= 0) {
-                return { moduleIndex: m, classIndex: idx, classId: lastId }
-            }
-        }
-        return null
+    const [selectedClass, setSelectedClass] = useState<{ moduleIndex: number; classIndex: number; classId: number } | null>(() => {
+        const position = resolveLearningPosition(data);
+        return position?.kind === 'class' ? position : null;
     });
-    const [selectedQuiz, setSelectedQuiz] = useState<{ moduleIndex: number; moduleId: number; quizId: number } | null>(null);
+    const [selectedQuiz, setSelectedQuiz] = useState<{ moduleIndex: number; moduleId: number; quizId: number } | null>(() => {
+        const position = resolveLearningPosition(data);
+        return position?.kind === 'quiz' ? position : null;
+    });
     const [videoEnded, setVideoEnded] = useState(false);
+    const [progressError, setProgressError] = useState<string | null>(null);
+    const [failedModuleId, setFailedModuleId] = useState<number | null>(null);
+    const [pendingNextModuleId, setPendingNextModuleId] = useState<number | null>(null);
 
     const router = useRouter();
 
-    const selectedClassData = selectedClass
-        ? data.modules?.[selectedClass.moduleIndex]?.classes?.[selectedClass.classIndex]
+    const selectedClassModule = selectedClass ? data.modules[selectedClass.moduleIndex] : null;
+    const selectedClassData = selectedClassModule && !selectedClassModule.locked
+        ? selectedClassModule.classes.find((lesson) => lesson.id === selectedClass?.classId)
         : null;
-    const selectedQuizData = selectedQuiz ? data.modules?.[selectedQuiz.moduleIndex!].quiz : null;
+    const selectedQuizModule = selectedQuiz ? data.modules[selectedQuiz.moduleIndex] : null;
+    const selectedQuizData = selectedQuizModule && !selectedQuizModule.locked && selectedQuizModule.quiz?.id === selectedQuiz?.quizId
+        ? selectedQuizModule.quiz
+        : null;
+
+    useEffect(() => {
+        if (pendingNextModuleId === null) return;
+        const moduleIndex = data.modules.findIndex((module) => module.id === pendingNextModuleId);
+        const nextModule = data.modules[moduleIndex];
+        if (!nextModule || nextModule.locked) return;
+        const firstClass = nextModule.classes[0];
+        if (firstClass) {
+            setSelectedClass({ moduleIndex, classIndex: 0, classId: firstClass.id });
+            setSelectedQuiz(null);
+        } else if (nextModule.quiz) {
+            setSelectedQuiz({ moduleIndex, moduleId: nextModule.id, quizId: nextModule.quiz.id });
+            setSelectedClass(null);
+        }
+        setPendingNextModuleId(null);
+    }, [data.modules, pendingNextModuleId]);
 
     useEffect(() => {
         if (selectedClass) {
@@ -54,23 +72,25 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
     }, [selectedClass]);
 
     // Función para enviar el estado de reproducción
-    const storeClassState = (currentTime: number, isCompleted = false) => {
-        fetch(`/api/courses/class-state`, {
-            method: "POST",
-            body: JSON.stringify({
+    const persistClassState = async (classId: number, currentTime: number, isCompleted = false): Promise<boolean> => {
+        setProgressError(null);
+        try {
+            await saveClassProgress({
                 canonicalId: data.canonicalId,
-                classId: selectedClass?.classId,
+                classId,
                 isCompleted,
                 currentTime,
-            }),
-        }).then(async (response) => {
-            const result = await response.json();
-            if (!result.success) {
-                return;
-            }
+            });
             router.refresh();
-        });
+            return true;
+        } catch {
+            setProgressError('No se pudo guardar el progreso de la clase. Inténtalo nuevamente.');
+            return false;
+        }
     };
+
+    const storeClassState = (currentTime: number, isCompleted = false): Promise<boolean> =>
+        selectedClass ? persistClassState(selectedClass.classId, currentTime, isCompleted) : Promise.resolve(false);
 
     // Inicia un intervalo que cada 3 segundos envía el estado del video
     const handleVideoPlay = () => {
@@ -79,7 +99,7 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
         if (!intervalRef.current && videoRef.current) {
             intervalRef.current = window.setInterval(() => {
                 if (videoRef.current && !videoRef.current.paused) {
-                    storeClassState(videoRef.current.currentTime, false);
+                    void storeClassState(videoRef.current.currentTime, false);
                 }
             }, 2300);
         }
@@ -96,20 +116,23 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
     // Cuando finaliza el video, limpia el intervalo, envía el estado completado y muestra el overlay
     const handleVideoEnd = (e: React.SyntheticEvent<HTMLVideoElement>) => {
         clearVideoInterval();
-        storeClassState(e.currentTarget.currentTime, true);
-        setVideoEnded(true);
+        void storeClassState(e.currentTarget.currentTime, true).then((saved) => {
+            if (saved) setVideoEnded(true);
+        });
     };
 
     const handleVideoPause = () => {
         clearVideoInterval();
     };
 
-    // Al cargar el video, establece el currentTime según el estado previo
-    const handleLoadStart = () => {
-        if (videoRef.current) {
-            const clsCurrentTime = data.classCompleted.find((clsCompleted) => clsCompleted.classId === selectedClassData?.id);
-            videoRef.current.currentTime = clsCurrentTime?.currentVideoTime ?? 0;
-        }
+    // Seek only after metadata is available; loadstart may be too early for the browser.
+    const handleLoadedMetadata = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+        const saved = data.classCompleted.find((state) => state.classId === selectedClassData?.id)?.currentVideoTime;
+        if (saved === undefined) return;
+        const duration = event.currentTarget.duration;
+        event.currentTarget.currentTime = Number.isFinite(duration) && duration > 0
+            ? Math.min(Math.max(0, saved), duration)
+            : Math.max(0, saved);
     };
 
     // Función para que el usuario pueda "reproducir de nuevo" el video (resetear)
@@ -128,13 +151,15 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
         const currentClassIndex = selectedClass.classIndex;
         const currentModule = data.modules?.[moduleIndex];
         if (!currentModule) return;
-        const totalClasses = currentModule.classes?.length || 0;
+        const totalClasses = currentModule.classes.length;
         if (currentClassIndex < totalClasses - 1) {
             // Existe siguiente clase en el módulo
+            const nextClass = currentModule.classes[currentClassIndex + 1];
+            if (!nextClass) return;
             setSelectedClass({
                 moduleIndex,
                 classIndex: currentClassIndex + 1,
-                classId: currentModule.classes?.[currentClassIndex + 1].id,
+                classId: nextClass.id,
             });
             setSelectedQuiz(null);
         } else {
@@ -142,8 +167,8 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
             if (currentModule.quiz) {
                 setSelectedQuiz({
                     moduleIndex,
-                    moduleId: currentModule.id ?? 0,
-                    quizId: currentModule.quiz.id ?? 0,
+                    moduleId: currentModule.id,
+                    quizId: currentModule.quiz.id,
                 });
                 setSelectedClass(null);
             }
@@ -151,23 +176,21 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
         setVideoEnded(false);
     };
 
-    const storeModuleComplete = () => {
-        const currentModuleId = selectedQuiz?.moduleId;
-        fetch(`/api/courses/module-state`, {
-            method: 'POST', body: JSON.stringify({
-                canonicalId: data.canonicalId, moduleId: currentModuleId
-            })
-        }).then(async (response) => {
-            const result = await response.json();
-            if (!result.success) {
-                return;
-            }
-            const moduleIndex = data.modules!.findIndex((module) => module.id === currentModuleId)
-            if (data.modules!.length - 1 > moduleIndex!) {
-                setSelectedClass({ moduleIndex: moduleIndex! + 1, classIndex: 0, classId: data.modules![moduleIndex].classes![0].id });
-                setSelectedQuiz(null);
-            }
-        });
+    const storeModuleComplete = async (): Promise<void> => {
+        if (!selectedQuiz) return;
+        const currentModuleId = selectedQuiz.moduleId;
+        setProgressError(null);
+        setFailedModuleId(null);
+        try {
+            await saveModuleCompletion({ canonicalId: data.canonicalId, moduleId: currentModuleId });
+            router.refresh();
+            const moduleIndex = data.modules.findIndex((module) => module.id === currentModuleId);
+            const nextModule = moduleIndex >= 0 ? data.modules[moduleIndex + 1] : undefined;
+            if (nextModule) setPendingNextModuleId(nextModule.id);
+        } catch {
+            setFailedModuleId(currentModuleId);
+            setProgressError('No se pudo guardar la finalización del módulo. Inténtalo nuevamente.');
+        }
     }
 
 
@@ -182,17 +205,20 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                     </p>
                     <div className={cn("space-y-4")} id="course-items-container">
                         {data.modules?.map((module, moduleIndex) => {
-                            const isModuleCompleted = data.moduleCompleted.find(
-                                (moduleCompleted) => moduleCompleted.moduleId === module.id && moduleCompleted.isCompleted
-                            );
                             const isQuizCompleted = data.quizCompleted.find(
-                                (quizCompleted) => quizCompleted.quizId === module.quiz?.id
+                                (quizCompleted) => quizCompleted.quizId === module.quiz?.id && quizCompleted.passed
                             );
                             return (
-                                <div key={moduleIndex}>
+                                <div key={module.id}>
                                     <h3 className={cn("font-semibold text-gray-700 mb-2")}>
                                         Módulo #{moduleIndex + 1} {module.title}
                                     </h3>
+                                    {module.locked && (
+                                        <p className="flex items-center gap-2 text-sm text-gray-500 mb-3" aria-label={`Módulo ${moduleIndex + 1} bloqueado`}>
+                                            <LockKeyhole className="w-4 h-4" aria-hidden="true" />
+                                            Aprueba el quiz del módulo anterior para continuar.
+                                        </p>
+                                    )}
                                     {module.classes?.map((cls, classIndex) => {
                                         const isSelected =
                                             selectedClass &&
@@ -202,10 +228,14 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                                             (clsCompleted) => clsCompleted.classId === cls.id && clsCompleted.isCompleted
                                         );
                                         return (
-                                            <div key={classIndex} className={cn("mb-4")}>
+                                            <div key={cls.id} className={cn("mb-4")}>
                                                 <button
                                                     id={`class-${moduleIndex}-${classIndex}`}
                                                     onClick={() => {
+                                                        if (selectedClass?.classId !== cls.id) {
+                                                            const savedTime = data.classCompleted.find((state) => state.classId === cls.id)?.currentVideoTime ?? 0;
+                                                            void persistClassState(cls.id, savedTime);
+                                                        }
                                                         setSelectedClass({ moduleIndex, classIndex, classId: cls.id });
                                                         setVideoEnded(false);
                                                         setSelectedQuiz(null);
@@ -243,7 +273,8 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                                         <button
                                             key={module.quiz.id}
                                             onClick={() => {
-                                                setSelectedQuiz({ moduleIndex, moduleId: module.id ?? 0, quizId: module.quiz?.id ?? 0 });
+                                                if (!module.quiz) return;
+                                                setSelectedQuiz({ moduleIndex, moduleId: module.id, quizId: module.quiz.id });
                                                 setSelectedClass(null);
                                                 setVideoEnded(false);
                                             }}
@@ -256,7 +287,7 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                                                     : "bg-white border border-gray-300"
                                             )}
                                         >
-                                            {isModuleCompleted || isQuizCompleted ? (
+                                            {isQuizCompleted ? (
                                                 <div className={cn("w-5 h-5 rounded-full flex items-center justify-center bg-[#0BBBE7]")}>
                                                     <Check className={cn("text-white w-4 h-4")} />
                                                 </div>
@@ -284,6 +315,12 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
 
                 {/* Panel central: reproductor de video o quiz */}
                 <div className={cn("lg:w-2/4 w-full xl:px-6")}>
+                    {progressError && <p role="alert" className="mb-3 text-sm text-red-600">{progressError}</p>}
+                    {selectedQuiz && failedModuleId === selectedQuiz.moduleId && (
+                        <button type="button" onClick={() => void storeModuleComplete()} className="mb-3 text-sm text-blue-700 underline">
+                            Reintentar guardar módulo
+                        </button>
+                    )}
                     <div className={cn("relative bg-white")}>
                         {selectedClassData && selectedClassData.video ? (
                             <div className="relative">
@@ -295,7 +332,7 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                                     onPlay={handleVideoPlay}
                                     onPause={handleVideoPause}
                                     onEnded={handleVideoEnd}
-                                    onLoadStart={handleLoadStart}
+                                    onLoadedMetadata={handleLoadedMetadata}
                                     className={cn("w-full rounded-xl mb-4")}
                                 />
                                 {/* Overlay que cubre sólo el reproductor */}
@@ -325,11 +362,11 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                                 quizIndex={selectedQuiz?.moduleIndex ?? 0}
                                 // lastResult={data.quizCompleted.find((quizCompleted) => quizCompleted.quizId === selectedQuizData.id)}
                                 courseCanonicalId={data.canonicalId}
-                                minRequiredPoints={data.modules?.[selectedQuiz?.moduleIndex ?? 0].minRequiredPoints ?? 0}
+                                minRequiredPoints={selectedQuiz ? data.modules[selectedQuiz.moduleIndex]?.minRequiredPoints ?? 0 : 0}
                                 onQuizFinish={(moduleIndex: number, passed: boolean) => {
                                     if (passed) {
                                         // Lógica para almacenar el estado del módulo
-                                        storeModuleComplete();
+                                        void storeModuleComplete();
                                     }
                                 }}
                             />

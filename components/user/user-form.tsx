@@ -8,10 +8,10 @@ import { CheckIcon, XIcon } from "../svg/certifit-icons";
 import { Controller, useForm } from "react-hook-form";
 import PhoneInput from "react-phone-input-2";
 import { useEffect, useState } from "react";
-import { CreateUserSchema, EditUserSchema } from "@/utils/schemas";
+import { CreateUserSchema, EditUserSchema } from '@/features/users/user-form.schema';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { UserCreateData } from "@/utils/types";
+import type { AdminUserFormValues } from '@/features/users/admin-user-form.types';
 import { register as createUser, edit as editUser } from "@/actions/user/register"
 import SubmitButton from "../submitButton";
 import Modal from "../modal";
@@ -22,7 +22,7 @@ interface UserFormProps<T> {
     data: T;
 }
 
-export const UserCreateEditForm = ({ data }: UserFormProps<UserCreateData>) => {
+export const UserCreateEditForm = ({ data }: UserFormProps<AdminUserFormValues>) => {
     const [error, setError] = useState<string | undefined>();
     const [success, setSuccess] = useState<string | undefined>();
     const [isOpen, setIsOpen] = useState(false);
@@ -31,7 +31,6 @@ export const UserCreateEditForm = ({ data }: UserFormProps<UserCreateData>) => {
 
     const schemaRequired = data.id ? EditUserSchema : CreateUserSchema;
 
-    console.log(data);
     const {
         register,
         handleSubmit,
@@ -52,24 +51,15 @@ export const UserCreateEditForm = ({ data }: UserFormProps<UserCreateData>) => {
     });
 
     useEffect(() => {
-        const initializeForm = async () => {
-            try {
-                reset({
-                    name: data.name,
-                    lastName: data.lastName,
-                    email: data.email,
-                    phoneNumber: data.phoneNumber,
-                    identification: data.identification || '',
-                    identificationType: (data.identificationType as 'CC' | 'TI' | 'CE' | 'NIT' | 'PAS') || 'CC', // Ensure type compatibility
-                });
-
-            } catch (error) {
-                console.error("Error al inicializar el formulario:", error);
-            }
-        };
-
-        initializeForm();
-    }, [data, reset]);
+        reset({
+            name: data.name,
+            lastName: data.lastName,
+            email: data.email,
+            phoneNumber: data.phoneNumber,
+            identification: data.identification || '',
+            identificationType: (data.identificationType as 'CC' | 'TI' | 'CE' | 'NIT' | 'PAS') || 'CC', // Ensure type compatibility
+        });
+    }, [data.name, data.lastName, data.email, data.phoneNumber, data.identification, data.identificationType, reset]);
 
     const password = watch('password', '') ?? "";
 
@@ -77,50 +67,35 @@ export const UserCreateEditForm = ({ data }: UserFormProps<UserCreateData>) => {
     const hasNumber = /\d/.test(password ?? '');
     const hasMinLength = password.length >= 8;
 
-    const onSubmit = (formData: z.infer<typeof schemaRequired>) => {
+    const onSubmit = async (formData: z.infer<typeof schemaRequired>) => {
         setIsLoading(true);
         setError('');
         setSuccess('');
 
         try {
-            if (!data.id) {
-                const userDataForApi: UserCreateData = {
-                    name: formData.name as string,
-                    lastName: formData.lastName as string,
-                    email: formData.email as string,
-                    phoneNumber: formData.phoneNumber as string,
-                    password: formData.password as string,
-                    confirmPassword: formData.confirmPassword as string,
-                    identification: formData.identification || '',
-                    identificationType: (formData.identificationType as 'CC' | 'TI' | 'CE' | 'NIT' | 'PAS') || 'CC', // Ensure type compatibility
-                };
+            const input = {
+                name: formData.name ?? data.name,
+                lastName: formData.lastName ?? data.lastName,
+                email: formData.email ?? data.email,
+                phoneNumber: formData.phoneNumber ?? data.phoneNumber,
+                identification: formData.identification || null,
+                identificationType: formData.identificationType ?? null,
+                ...(formData.password ? { password: formData.password, confirmPassword: formData.confirmPassword } : {}),
+            };
+            const result = data.id
+                ? await editUser({ ...input, id: data.id })
+                : await createUser(input);
 
-                createUser({data:{ ...userDataForApi }}).then((data) => {
-                    setIsLoading(false);
-                    if (data?.success) {
-                        setSuccess(data.message);
-                        setIsOpen(true);
-                    } else {
-                        setError(data.message);
-                    }
-                }).catch(() => setError('Algo ha pasado, intenta mas tarde!'));
+            if (result.ok) {
+                setSuccess(result.message);
+                setIsOpen(true);
             } else {
-                editUser({data:{id:data.id, userData:{ ...formData }}}).then((data) => {
-                    setIsLoading(false);
-                    if (data?.success) {
-                        setSuccess(data.message);
-                        setIsOpen(true);
-                    } else {
-                        setError(data.message);
-                    }
-                }).catch(() => {
-                    setIsLoading(false);
-                    setError('Algo ha pasado, intenta mas tarde!')
-                });
+                setError(result.error.message);
             }
-        } catch (error) {
-            console.error("Error:", error);
+        } catch {
             setError('Algo ha pasado, intenta mas tarde!');
+        } finally {
+            setIsLoading(false);
         }
     };
 

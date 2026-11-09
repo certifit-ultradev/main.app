@@ -1,4 +1,5 @@
 import Loader from './components/Loader'
+import type { JSX } from 'react'
 
 import { LoaderProps } from './types'
 

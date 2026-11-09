@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils";
-import { NewPasswordSchema } from "@/utils/schemas";
+import { NewPasswordSchema } from '@/features/auth/auth-form.schema';
 import { ErrorMessage } from "@hookform/error-message";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -45,11 +45,12 @@ export const NewPasswordForLoggedForm = () => {
         startTransition(() => {
             newPasswordForLoggedUser(formData).then((result) => {
                 setIsLoading(false);
-                if (result.success) {
+                if (result.ok) {
                     setSuccess(result.message);
                     router.push("/login");
+                } else {
+                    setError(result.error.message);
                 }
-                setError(result.error);
             });
         });
     }

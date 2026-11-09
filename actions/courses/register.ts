@@ -1,120 +1,137 @@
-"use server";
+'use server';
 
-import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
-import { editCourse, registerCourse, updateClassVideoPath } from "@/services/courses";
-import { CourseData, CourseModule, EditClassVideo, EditCourseData, QuestionOption, QuizQuestions, ServerActionRequest, ServerActionResponse } from "@/utils/types";
-import { Middlewares } from "../server-action-middleware";
-import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
+import { createCourseDraft, editCourse, queueUnusedCourseAssets, registerCourse, saveCourseContent, updateClassVideoPath, updateCourseBasics } from '@/services/courses';
+import type { CourseEditorDto } from '@/application/courses/course.dto';
+import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/actions/action-result';
+import { withAdminAction } from '@/interfaces/actions/action-context';
+import {
+    AdminCourseInputSchema,
+    AdminCourseBasicsInputSchema,
+    SaveAdminCourseContentInputSchema,
+    QueueUnusedCourseAssetsInputSchema,
+    UpdateAdminCourseBasicsInputSchema,
+    UpdateAdminCourseInputSchema,
+    UpdateClassVideoInputSchema,
+} from '@/interfaces/actions/admin.contract';
+import { validateActionInput } from '@/interfaces/actions/validation';
+import { toCourseBasicsCommand, toCourseBasicsPatchCommand, toCourseContentCommand, toCourseEditorPatch, toCreateCourseCommand } from '@/interfaces/actions/course-editor.mapper';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
-/**
- * 
- * @param request 
- * @returns 
- */
-export const register = async (request: ServerActionRequest<CourseData>): Promise<ServerActionResponse<CourseData | null>> => {
-    return await Middlewares<CourseData | null, CourseData>(
-        request,
-        [isAdmin, isEmailVerified],
-        async (courseData: CourseData) => {
-            try {
-                const course = await registerCourse(courseData);
-                if (!course) {
-                    return { success: false, error: "No se pudo crear el curso." }
-                }
+const logCourseActionError = (event: string, error: unknown, courseId?: number) => {
+    // Do not log input, Blob URLs or exception messages: they may contain user data.
+    safeLogger.error(event, { courseId, name: error instanceof Error ? error.name : 'unknown' });
+};
 
-                const modules = course.courseModules?.map((courseModule): CourseModule => ({
-                    id: courseModule.id,
-                    courseId: courseModule.courseId,
-                    title: courseModule.title,
-                    minRequiredPoints: courseModule.minRequiredPoints,
-                    classes: courseModule.moduleClass?.map((cls) => ({
-                        id: cls.id,
-                        courseModuleId: cls.courseModuleId,
-                        title: cls.title,
-                        description: cls.description,
-                        video: cls.videoPath,
-                    })),
-                    quiz: {
-                        id: courseModule.moduleQuiz?.[0].id,
-                        courseModuleId: courseModule.moduleQuiz?.[0].courseModuleId,
-                        title: courseModule.moduleQuiz?.[0].title ?? '',
-                        description: courseModule.moduleQuiz?.[0].description ?? '',
-                        questions: courseModule.moduleQuiz?.[0].quizQuestion?.map((question): QuizQuestions => ({
-                            id: question.id,
-                            quizModuleId: question.quizId,
-                            type: question.type,
-                            title: question.title,
-                            points: question.points,
-                            options: question.possibleAnswerQuestion?.map((option): QuestionOption => ({
-                                id: option.id,
-                                quizQuestionId: option.questionId,
-                                value: option.value,
-                                isCorrect: option.isCorrect
-                            }))
-                        })),
-                    }
-                }));
-
-                return {
-                    success: true, payload: {
-                        id: course.id,
-                        title: course.title,
-                        description: course.description,
-                        courseImage: course.courseImage,
-                        instructorName: course.instructorName,
-                        instructorPhoto: course.instructorPhoto,
-                        expiresAt: new Date(course.expiresAt).toISOString().split('T')[0],
-                        category: course.category,
-                        price: course.price,
-                        modules: modules
-                    }, message: "Curso creado correctamente."
-                }
-            } catch (error) {
-                return mapErrorToServerActionResponse(error, true);
-            }
-        });
+export async function createDraft(input: unknown): Promise<ActionResult<CourseEditorDto>> {
+    const parsed = validateActionInput(AdminCourseBasicsInputSchema, input);
+    if (!parsed.ok) return parsed;
+    return withAdminAction(async () => {
+        try {
+            return actionSuccess(await createCourseDraft(toCourseBasicsCommand(parsed.data)), 'Borrador creado.');
+        } catch (error) {
+            logCourseActionError('course.draft.create.failed', error);
+            return actionFailure('UNEXPECTED', 'No fue posible crear el borrador.');
+        }
+    });
 }
 
-/**
- * 
- * @param request 
- * @returns 
- */
-export const edit = async (request: ServerActionRequest<EditCourseData>): Promise<ServerActionResponse<null>> => {
-    return await Middlewares<null, EditCourseData>(
-        request,
-        [isAdmin, isEmailVerified],
-        async (courseData: EditCourseData) => {
-            try {
-                await editCourse(courseData.originalCourseData, courseData.newCourseData);
-
-                return { success: true, message: "Curso editado correctamente." }
-            } catch (error) {
-                return mapErrorToServerActionResponse(error, true);
-            }
-        });
+export async function updateBasics(input: unknown): Promise<ActionResult<null>> {
+    const parsed = validateActionInput(UpdateAdminCourseBasicsInputSchema, input);
+    if (!parsed.ok) return parsed;
+    return withAdminAction(async () => {
+        try {
+            await updateCourseBasics(parsed.data.courseId, toCourseBasicsPatchCommand(parsed.data.basics));
+            return actionSuccess(null, 'Información básica guardada.');
+        } catch (error) {
+            logCourseActionError('course.basics.update.failed', error, parsed.data.courseId);
+            return actionFailure('UNEXPECTED', 'No fue posible guardar la información básica.');
+        }
+    });
 }
 
-/**
- * 
- * @param request 
- * @returns 
- */
-export const editClassVideoPath = async (request: ServerActionRequest<EditClassVideo>): Promise<ServerActionResponse<null>> => {
-    return await Middlewares<null, EditClassVideo>(
-        request,
-        [isAdmin, isEmailVerified],
-        async (classVideoData: EditClassVideo) => {
-            try {
-                const resultEditedClass = await updateClassVideoPath(classVideoData.clsId, classVideoData.videoPath, classVideoData.videoSize);
-                if (!resultEditedClass) {
-                    return { success: false, error: "No se pudo modificar la clase." }
-                }
+export async function saveContent(input: unknown): Promise<ActionResult<CourseEditorDto>> {
+    const parsed = validateActionInput(SaveAdminCourseContentInputSchema, input);
+    if (!parsed.ok) return parsed;
+    return withAdminAction(async () => {
+        try {
+            const course = await saveCourseContent(parsed.data.courseId, toCourseContentCommand(parsed.data.content));
+            return actionSuccess(course, 'Contenido del curso guardado.');
+        } catch (error) {
+            logCourseActionError('course.content.save.failed', error, parsed.data.courseId);
+            return actionFailure('UNEXPECTED', 'No fue posible guardar el contenido del curso.');
+        }
+    });
+}
 
-                return { success: true, message: "Información del video de la clase modificada correctamente." }
-            } catch (error) {
-                return mapErrorToServerActionResponse(error, true);
+export async function queueUnusedAssets(input: unknown): Promise<ActionResult<null>> {
+    const parsed = validateActionInput(QueueUnusedCourseAssetsInputSchema, input);
+    if (!parsed.ok) return parsed;
+    return withAdminAction(async () => {
+        try {
+            await queueUnusedCourseAssets(parsed.data.courseId, parsed.data.urls);
+            return actionSuccess(null);
+        } catch (error) {
+            logCourseActionError('course.assets.cleanup_queue.failed', error, parsed.data.courseId);
+            return actionFailure('UNEXPECTED', 'No fue posible programar la limpieza de archivos.');
+        }
+    });
+}
+
+export async function register(input: unknown): Promise<ActionResult<CourseEditorDto>> {
+    const parsedInput = validateActionInput(AdminCourseInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
+
+    return withAdminAction(async () => {
+        try {
+            const course = await registerCourse(toCreateCourseCommand(parsedInput.data));
+            if (!course) {
+                safeLogger.error('course.legacy_create.empty_result');
+                return actionFailure('UNEXPECTED', 'No se pudo crear el curso.');
             }
-        });
 
+            return actionSuccess(course, 'Curso creado correctamente.');
+        } catch (error) {
+            logCourseActionError('course.legacy_create.failed', error);
+            return actionFailure('UNEXPECTED', 'No fue posible crear el curso.');
+        }
+    });
+}
+
+export async function edit(input: unknown): Promise<ActionResult<null>> {
+    const parsedInput = validateActionInput(UpdateAdminCourseInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
+
+    return withAdminAction(async () => {
+        try {
+            await editCourse(parsedInput.data.courseId, toCourseEditorPatch(parsedInput.data.patch));
+            return actionSuccess(null, 'Curso editado correctamente.');
+        } catch (error) {
+            logCourseActionError('course.legacy_edit.failed', error, parsedInput.data.courseId);
+            return actionFailure('UNEXPECTED', 'No fue posible editar el curso.');
+        }
+    });
+}
+
+export async function editClassVideoPath(input: unknown): Promise<ActionResult<null>> {
+    const parsedInput = validateActionInput(UpdateClassVideoInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
+
+    return withAdminAction(async () => {
+        try {
+            const updated = await updateClassVideoPath(
+                parsedInput.data.clsId,
+                parsedInput.data.videoPath,
+                parsedInput.data.videoSize,
+            );
+            return updated
+                ? actionSuccess(null, 'Información del video de la clase modificada correctamente.')
+                : actionFailure('NOT_FOUND', 'No se pudo modificar la clase.');
+        } catch (error) {
+            safeLogger.error('course.class_video.update.failed', {
+                classId: parsedInput.data.clsId,
+                name: error instanceof Error ? error.name : 'unknown',
+            });
+            return actionFailure('UNEXPECTED', 'No fue posible modificar la clase.');
+        }
+    });
 }

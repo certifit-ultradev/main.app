@@ -1,5 +1,6 @@
-import { mapErrorToAPIResponse } from '@/exceptions/error-encoder';
-import { calculateTotalSalesPerCourse} from '@/services/courses';
+import { toCourseSalesReport } from '@/interfaces/http/courses/reports.contract';
+import { calculateTotalSalesPerCourse } from '@/services/courses';
+import { reportFailureResponse, reportSuccessResponse } from '../report-api-response';
 
 /**
  * 
@@ -8,11 +9,8 @@ import { calculateTotalSalesPerCourse} from '@/services/courses';
 export async function GET() {
     try {
         const result = await calculateTotalSalesPerCourse();
-        return Response.json({
-            success: true,
-            data: result
-        });
+        return reportSuccessResponse(toCourseSalesReport(result));
     } catch (error) {
-        return mapErrorToAPIResponse(error);
+        return reportFailureResponse(error);
     }
 }

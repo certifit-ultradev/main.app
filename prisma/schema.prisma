@@ -71,6 +71,7 @@ model PasswordResetToken {
 
 model Course {
   id              Int            @id @default(autoincrement())
+  draftKey        String?        @unique @map("draft_key")
   canonicalId     String         @default("") @db.VarChar(255)
   title           String
   description     String         @db.Text
@@ -95,6 +96,7 @@ model Course {
 model CourseModules {
   id                Int     @id @default(autoincrement())
   courseId          Int     @map("course_id")
+  position          Int     @map("position")
   title             String
   minRequiredPoints Int     @map("min_require_points")
   deleted           Boolean @default(false)
@@ -108,6 +110,8 @@ model CourseModules {
   moduleQuiz      ModuleQuiz[]
   userModuleState UserModuleState[]
   UserQuizState   UserQuizState[]
+
+  @@index([courseId, position])
 }
 
 model ModuleClass {
@@ -115,6 +119,7 @@ model ModuleClass {
   title          String
   description    String    @db.Text
   courseModuleId Int       @map("course_module_id")
+  position       Int       @map("position")
   videoPath      String    @map("video_path")
   videoSize      Int       @default(0) @map("video_size")
   videoDuration  Int       @default(0) @map("video_duration")
@@ -125,6 +130,20 @@ model ModuleClass {
 
   courseModule     CourseModules      @relation(fields: [courseModuleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   UserClassesState UserClassesState[]
+
+  @@index([courseModuleId, position])
+}
+
+model CourseAssetCleanup {
+  id            Int       @id @default(autoincrement())
+  url           String    @unique
+  courseId      Int       @map("course_id")
+  attempts      Int       @default(0)
+  availableAt   DateTime  @default(now()) @map("available_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  lastAttemptAt DateTime? @map("last_attempt_at")
+
+  @@index([courseId])
 }
 
 model ModuleQuiz {
@@ -141,18 +160,21 @@ model ModuleQuiz {
   quizQuestion   QuizQuestion[]
   userQuizAnswer UserQuizAnswer[]
   userQuizState  UserQuizState[]
+
+  @@unique([courseModuleId])
 }
 
 model QuizQuestion {
-  id        Int       @id @default(autoincrement())
-  quizId    Int       @map("quiz_id")
-  title     String
-  type      String
-  points    Int
-  deleted   Boolean   @default(false)
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime? @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
+  id             Int       @id @default(autoincrement())
+  quizId         Int       @map("quiz_id")
+  title          String
+  type           String
+  points         Int
+  expectedAnswer String?   @map("expected_answer")
+  deleted        Boolean   @default(false)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime? @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
 
   moduleQuiz             ModuleQuiz               @relation(fields: [quizId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   possibleAnswerQuestion PossibleAnswerQuestion[]
@@ -204,6 +226,8 @@ model UserQuizState {
   courseModule CourseModules @relation(fields: [courseModuleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   Course       Course?       @relation(fields: [courseId], references: [id])
   courseId     Int?
+
+  @@unique([userCourseId, quizId])
 }
 
 model Cart {
@@ -245,6 +269,8 @@ model UserModuleState {
 
   userCourse   UserCourse    @relation(fields: [userCourseId], references: [id])
   courseModule CourseModules @relation(fields: [moduleId], references: [id])
+
+  @@unique([userCourseId, moduleId])
 }
 
 model UserClassesState {
@@ -258,6 +284,8 @@ model UserClassesState {
 
   userCourse  UserCourse  @relation(fields: [userCourseId], references: [id])
   moduleClass ModuleClass @relation(fields: [classId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([userCourseId, classId])
 }
 
 model UserQuizAnswer {
@@ -277,6 +305,8 @@ model UserQuizAnswer {
   quizQuestion             QuizQuestion            @relation(fields: [questionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   PossibleAnswerQuestion   PossibleAnswerQuestion? @relation(fields: [possibleAnswerQuestionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   possibleAnswerQuestionId Int?
+
+  @@unique([userCourseId, quizId, questionId])
 }
 
 model CourseCategory {

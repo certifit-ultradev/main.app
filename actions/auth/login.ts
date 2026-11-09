@@ -1,10 +1,13 @@
 "use server";
 
 import { signIn } from "@/auth";
-import { LoginForm, ServerActionResponse } from "@/utils/types";
 import { DEFAULT_LOGIN_REDIRECT } from "@/routes";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
+import { AuthError } from 'next-auth';
+import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/actions/action-result';
+import { LoginInputSchema } from '@/interfaces/actions/auth.contract';
+import { validateActionInput } from '@/interfaces/actions/validation';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 /**
  * 
@@ -12,20 +15,27 @@ import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
  * @param callbackUrl 
  * @returns 
  */
-export const login = async ({ email, password }: LoginForm, callbackUrl?: string | null): Promise<ServerActionResponse<null>> => {
+/** Public action: invalid and unverified credentials receive the same response. */
+export const login = async (input: unknown): Promise<ActionResult<null>> => {
+    const parsedInput = validateActionInput(LoginInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
+
     try {
         await signIn("credentials", {
-            email,
-            password,
+            email: parsedInput.data.email,
+            password: parsedInput.data.password,
             redirect: true,
-            redirectTo: callbackUrl || DEFAULT_LOGIN_REDIRECT,
+            redirectTo: parsedInput.data.callbackUrl || DEFAULT_LOGIN_REDIRECT,
         });
-        return { success: true, message: "Ha iniciado sesión correctamente!" };
+        return actionSuccess(null, 'Ha iniciado sesión correctamente.');
     } catch (error) {
         if (isRedirectError(error)) {
             throw error;
         }
-
-        return mapErrorToServerActionResponse(error);
+        if (error instanceof AuthError && error.type === 'CredentialsSignin') {
+            return actionFailure('UNAUTHENTICATED', 'Credenciales inválidas.');
+        }
+        safeLogger.error('action.auth.login.failed');
+        return actionFailure('UNEXPECTED', 'No fue posible iniciar sesión.');
     }
 }

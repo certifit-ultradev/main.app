@@ -19,14 +19,14 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useEffect, useState } from 'react'
 import { CategoriesDataTableColumns } from './columns';
-import { CourseCategoryData } from '@/utils/types'
+import type { CategoryDto } from '@/interfaces/actions/categories/category.contract'
 import { listAllCourseCategories } from '@/actions/category/list'
 import { deleteCategory } from '@/actions/category/register'
 import Modal from '@/components/modal'
 import { CheckIcon, XIcon } from '@/components/svg/certifit-icons'
 
 export function CategoryListDataTable() {
-    const [data, setData] = useState<CourseCategoryData[]>([]);
+    const [data, setData] = useState<CategoryDto[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [actionResult, setActionnResult] = useState({
@@ -40,11 +40,11 @@ export function CategoryListDataTable() {
             setIsLoading(true);
             try {
                 const response = await listAllCourseCategories();
-                if (response.success) {
-                    setData(response?.payload ?? []);
+                if (response.ok) {
+                    setData(response.data);
+                } else {
                 }
-            } catch (error) {
-                console.error('Error al cargar datos:', error);
+            } catch {
             } finally {
                 setIsLoading(false); // Fin de la carga
             }
@@ -56,10 +56,10 @@ export function CategoryListDataTable() {
 
 
     const handleDeleteCategory = async (id: number) => {
-        const result = await deleteCategory({ data: { id: id } });
+        const result = await deleteCategory({ id });
         setActionnResult({
-            success: result.success ?? false,
-            message: result.message ? result.message : ''
+            success: result.ok,
+            message: result.ok ? result.message ?? '' : result.error.message
         });
         setIsOpen(true);
     };

@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { type PropsWithChildren } from 'react'
+import { type PropsWithChildren, type JSX } from 'react'
 import { cn } from '@/lib/utils'
 import Navbar from '../navbar'
 import { useSession } from 'next-auth/react'
@@ -23,8 +23,9 @@ function Layout(props: LayoutProps): JSX.Element {
         const label = getSegmentName(seg);
         const isLast = index === segments.length - 1;
         const maybeID = isLikelyID(seg);
+        const id = segments.slice(0, index + 1).join('/');
         if (isLast || maybeID) {
-            return { label };
+            return { id, label };
         } else {
             const href =
                 "/" +
@@ -33,7 +34,7 @@ function Layout(props: LayoutProps): JSX.Element {
                     .map((s) => fixRoute(s))
                     .join("/");
 
-            return { label, href };
+            return { id, label, href };
         }
     });
 

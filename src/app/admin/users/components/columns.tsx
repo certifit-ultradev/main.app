@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { UserList } from '@/utils/types';
+import type { AdminUserDto } from '@/application/users/user.dto';
 import { ColumnDef } from '@tanstack/react-table'
 import { MoreVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation'
@@ -13,7 +13,7 @@ interface CreateUserColumnsProps {
     onDeactivate: (id: string) => Promise<void>;
 }
 
-export const UserDataTableColumns = ({ onActivate, onDeactivate }: CreateUserColumnsProps): ColumnDef<UserList>[] => {
+export const UserDataTableColumns = ({ onActivate, onDeactivate }: CreateUserColumnsProps): ColumnDef<AdminUserDto>[] => {
     const router = useRouter();
     return [
         {
@@ -81,9 +81,9 @@ export const UserDataTableColumns = ({ onActivate, onDeactivate }: CreateUserCol
                                 className='hover:bg-gray-100'
                                 onClick={async () => {
                                     if (!user.emailVerified) {
-                                        await onActivate(user.id as string);
+                                        await onActivate(user.id);
                                     } else {
-                                        await onDeactivate(user.id as string);
+                                        await onDeactivate(user.id);
                                     }
                                 }}
                             >

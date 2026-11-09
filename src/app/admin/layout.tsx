@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { SessionProvider } from 'next-auth/react'
 import '../globals.css';
 import { auth } from "@/auth";
+import { AppHeroUIProvider } from '@/components/heroui-provider';
 
 export const metadata: Metadata = {
     title: 'Certifit',
@@ -20,9 +21,11 @@ export default async function RootLayout({
         <html lang="en">
             <body>
                 <SessionProvider session={session}>
-                    <Layout>
-                        {children}
-                    </Layout>
+                    <AppHeroUIProvider>
+                        <Layout>
+                            {children}
+                        </Layout>
+                    </AppHeroUIProvider>
                 </SessionProvider>
             </body>
         </html>

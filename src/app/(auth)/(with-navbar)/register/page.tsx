@@ -5,13 +5,13 @@ import { RegistrationForm } from '@/components/auth/register-form';
 import { useState } from 'react';
 import { StepProgress } from '@/components/progress/step-progress';
 import { PasswordConfirmationForm } from '@/components/auth/password-confirmation-form';
-import { RegisterPageData } from '@/utils/types';
+import type { RegistrationFormValues } from '@/features/auth/registration/registration-form.types';
 import { cn } from '@/lib/utils';
 import { VerificationOtpEmailForm } from '@/components/auth/verification/verification-otp-email-form';
 
 const RegisterPage: NextPage = () => {
     const [step, setStep] = useState<number>(1);
-    const [data, setData] = useState<RegisterPageData>({
+    const [data, setData] = useState<RegistrationFormValues>({
         name: '',
         lastName: '',
         email: '',
