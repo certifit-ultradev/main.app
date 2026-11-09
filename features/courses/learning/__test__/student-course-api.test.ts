@@ -43,7 +43,7 @@ describe('student course HTTP parser', () => {
         const withLeakedAnswer = {
             ...course,
             modules: [{
-                id: 1, courseId: 1, title: 'Módulo', minRequiredPoints: 1, classes: [],
+                id: 1, courseId: 1, title: 'Módulo', minRequiredPoints: 1, locked: false, classes: [],
                 quiz: { id: 2, courseModuleId: 1, title: 'Quiz', description: '', questions: [
                     { id: 3, type: 'text', title: 'Pregunta', options: [{ id: 4, value: 'Secreto' }] },
                 ] },

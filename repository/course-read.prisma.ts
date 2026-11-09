@@ -7,13 +7,16 @@ import type {
 } from '@/application/courses/course-read.ports';
 import type { CatalogCourseCardDto, CourseEditorDto } from '@/application/courses/course.dto';
 import type { StudentCourseDto, StudentCourseListItemDto } from '@/application/courses/student-course.dto';
+import { unlockedModuleIds } from '@/application/courses/module-access';
 import { prisma } from '@/lib/prisma';
 import { toAuthorQuestionDto, toStudentQuestionDto } from '@/mappers/course-question-mapper';
 import type { Prisma } from '@/prisma/app/generated/prisma/client';
 
+const presentationOrder = [{ position: 'asc' as const }, { id: 'asc' as const }];
+
 const catalogInclude = {
     category: true,
-    courseModules: { include: { moduleClass: true } },
+    courseModules: { include: { moduleClass: { orderBy: presentationOrder } }, orderBy: presentationOrder },
     userCourse: { select: { id: true } },
 } as const;
 
@@ -21,7 +24,7 @@ const editorInclude = {
     category: true,
     courseModules: {
         include: {
-            moduleClass: { orderBy: { id: 'asc' } },
+            moduleClass: { orderBy: presentationOrder },
             moduleQuiz: {
                 include: {
                     quizQuestion: {
@@ -32,7 +35,7 @@ const editorInclude = {
                 orderBy: { id: 'asc' },
             },
         },
-        orderBy: { id: 'asc' },
+        orderBy: presentationOrder,
     },
 } as const;
 
@@ -45,6 +48,7 @@ const studentCourseInclude = {
             title: true,
             minRequiredPoints: true,
             moduleClass: {
+                where: { deleted: false },
                 select: {
                     id: true,
                     courseModuleId: true,
@@ -54,15 +58,17 @@ const studentCourseInclude = {
                     videoSize: true,
                     videoDuration: true,
                 },
-                orderBy: { id: 'asc' },
+                orderBy: presentationOrder,
             },
             moduleQuiz: {
+                where: { deleted: false },
                 select: {
                     id: true,
                     courseModuleId: true,
                     title: true,
                     description: true,
                     quizQuestion: {
+                        where: { deleted: false },
                         select: {
                             id: true,
                             type: true,
@@ -79,14 +85,15 @@ const studentCourseInclude = {
                 orderBy: { id: 'asc' },
             },
         },
-        orderBy: { id: 'asc' },
+        where: { deleted: false },
+        orderBy: presentationOrder,
     },
 } as const;
 
 const studentEnrollmentInclude = {
     course: { include: studentCourseInclude },
     userClassesState: {
-        select: { classId: true, currentVideoTime: true, completed: true, createdAt: true },
+        select: { classId: true, currentVideoTime: true, completed: true, createdAt: true, updatedAt: true },
         orderBy: { id: 'desc' },
     },
     userModuleState: {
@@ -94,7 +101,7 @@ const studentEnrollmentInclude = {
         orderBy: { id: 'desc' },
     },
     userQuizState: {
-        select: { quizId: true, courseModuleId: true, result: true, retries: true, passed: true, createdAt: true },
+        select: { quizId: true, courseModuleId: true, result: true, retries: true, passed: true, createdAt: true, updatedAt: true },
         orderBy: { id: 'desc' },
     },
 } as const;
@@ -113,9 +120,9 @@ const studentCourseListInclude = {
             category: { select: { id: true, name: true } },
             courseModules: {
                 select: {
-                    moduleClass: { select: { id: true, title: true, videoDuration: true }, orderBy: { id: 'asc' } },
+                    moduleClass: { select: { id: true, title: true, videoDuration: true }, orderBy: presentationOrder },
                 },
-                orderBy: { id: 'asc' },
+                orderBy: presentationOrder,
             },
         },
     },
@@ -138,6 +145,9 @@ function toCategory(category: { id: number; name: string } | null): { id: number
     return category ? { id: category.id, name: category.name } : null;
 }
 
+const courseImageOrDefault = (value: string) => value || '/logo.png';
+const instructorPhotoOrDefault = (value: string) => value || '/trainer_1.png';
+
 function duration(seconds: number): string {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -156,10 +166,10 @@ function toCatalogCourse(row: CatalogCourseRow): CatalogCourseCardDto {
         title: row.title,
         description: row.description,
         price: row.price,
-        courseImage: row.courseImage,
+        courseImage: courseImageOrDefault(row.courseImage),
         courseDuration: duration(totalDuration),
         instructorName: row.instructorName,
-        instructorPhoto: row.instructorPhoto,
+        instructorPhoto: instructorPhotoOrDefault(row.instructorPhoto),
         category: toCategory(row.category),
         expiresAt: row.expiresAt.toISOString(),
         alreadyPurchased: row.userCourse.length > 0,
@@ -169,6 +179,7 @@ function toCatalogCourse(row: CatalogCourseRow): CatalogCourseCardDto {
 function toEditorCourse(row: EditorCourseRow): CourseEditorDto {
     return {
         id: row.id,
+        isActive: row.isActive,
         canonicalId: row.canonicalId,
         title: row.title,
         description: row.description,
@@ -205,25 +216,31 @@ function toEditorCourse(row: EditorCourseRow): CourseEditorDto {
 
 function toStudentCourse(enrollment: StudentEnrollmentRow): StudentCourseDto {
     const course = enrollment.course;
+    const unlocked = unlockedModuleIds(
+        course.courseModules.map((module) => ({ id: module.id, quizId: module.moduleQuiz[0]?.id ?? null })),
+        new Set(enrollment.userQuizState.filter((state) => state.passed).map((state) => state.quizId)),
+    );
 
     return {
         canonicalId: course.canonicalId,
         title: course.title,
         description: course.description,
-        courseImage: course.courseImage,
+        courseImage: courseImageOrDefault(course.courseImage),
         instructorName: course.instructorName,
-        instructorPhoto: course.instructorPhoto,
+        instructorPhoto: instructorPhotoOrDefault(course.instructorPhoto),
         expiresAt: course.expiresAt.toISOString(),
         category: toCategory(course.category),
         price: course.price,
         modules: course.courseModules.map((module) => {
             const quiz = module.moduleQuiz[0];
+            const locked = !unlocked.has(module.id);
             return {
                 id: module.id,
                 courseId: course.id,
                 title: module.title,
                 minRequiredPoints: module.minRequiredPoints,
-                classes: module.moduleClass.map((courseClass) => ({
+                locked,
+                classes: locked ? [] : module.moduleClass.map((courseClass) => ({
                     id: courseClass.id,
                     courseModuleId: courseClass.courseModuleId,
                     title: courseClass.title,
@@ -232,7 +249,7 @@ function toStudentCourse(enrollment: StudentEnrollmentRow): StudentCourseDto {
                     videoSize: courseClass.videoSize ?? null,
                     videoDuration: courseClass.videoDuration ?? null,
                 })),
-                quiz: quiz ? {
+                quiz: !locked && quiz ? {
                     id: quiz.id,
                     courseModuleId: quiz.courseModuleId,
                     title: quiz.title,
@@ -251,6 +268,7 @@ function toStudentCourse(enrollment: StudentEnrollmentRow): StudentCourseDto {
             currentVideoTime: state.currentVideoTime,
             isCompleted: state.completed,
             createdAt: state.createdAt.toISOString(),
+            lastViewedAt: (state.updatedAt ?? state.createdAt).toISOString(),
         })),
         quizCompleted: enrollment.userQuizState.map((state) => ({
             quizId: state.quizId,
@@ -259,6 +277,7 @@ function toStudentCourse(enrollment: StudentEnrollmentRow): StudentCourseDto {
             retries: state.retries,
             passed: state.passed,
             createdAt: state.createdAt.toISOString(),
+            lastAttemptAt: (state.updatedAt ?? state.createdAt).toISOString(),
         })),
     };
 }
@@ -293,9 +312,9 @@ function toStudentCourseListItem(enrollment: StudentCourseListRow): StudentCours
         canonicalId: course.canonicalId,
         title: course.title,
         price: course.price,
-        courseImage: course.courseImage,
+        courseImage: courseImageOrDefault(course.courseImage),
         instructorName: course.instructorName,
-        instructorPhoto: course.instructorPhoto,
+        instructorPhoto: instructorPhotoOrDefault(course.instructorPhoto),
         courseDuration: duration(totalDuration),
         category: toCategory(course.category),
         description: course.description,

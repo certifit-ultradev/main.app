@@ -6,6 +6,7 @@ import { withAdminAction } from '@/interfaces/actions/action-context';
 import type { CategoryDto } from '@/interfaces/actions/categories/category.contract';
 import { DeleteCategoryInputSchema } from '@/interfaces/actions/categories/category.contract';
 import { validateActionInput } from '@/interfaces/actions/validation';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 function unexpectedCategoryError(): ActionResult<never> {
     return actionFailure('UNEXPECTED', 'No fue posible completar la operación de categorías.');
@@ -17,6 +18,7 @@ export async function listAllCourseCategories(): Promise<ActionResult<CategoryDt
             const categories = await getAllCourseCategories();
             return actionSuccess(categories);
         } catch {
+            safeLogger.error('action.category.list.failed');
             return unexpectedCategoryError();
         }
     });
@@ -36,6 +38,7 @@ export async function fetchCategoryById(
             }
             return actionSuccess(category);
         } catch {
+            safeLogger.error('action.category.get_by_id.failed');
             return unexpectedCategoryError();
         }
     });

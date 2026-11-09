@@ -5,6 +5,7 @@ import { getVerificationTokenByToken, removeVerificationToken, requestEmailVerif
 import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/actions/action-result';
 import { VerificationEmailInputSchema, VerificationTokenInputSchema } from '@/interfaces/actions/auth.contract';
 import { validateActionInput } from '@/interfaces/actions/validation';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 /**
  * 
@@ -20,6 +21,7 @@ export const sendVerificationToken = async (input: unknown): Promise<ActionResul
         await requestEmailVerification(parsedInput.data.email);
     } catch {
         // Public response remains identical for delivery failures and unknown accounts.
+        safeLogger.error('action.auth.verification.request.failed');
     }
     return actionSuccess(null, 'Si existe una cuenta pendiente de verificación, recibirás un correo de activación.');
 }
@@ -62,6 +64,7 @@ export const verifyEmail = async (input: unknown): Promise<ActionResult<null>> =
 
         return actionSuccess(null, 'Email verificado.');
     } catch {
+        safeLogger.error('action.auth.verification.confirm.failed');
         return actionFailure('UNEXPECTED', 'No fue posible verificar el correo.');
     }
 }

@@ -17,6 +17,7 @@ const StudentCourseSchema: z.ZodType<StudentCourseDto> = z.object({
         courseId: z.number().int().positive(),
         title: z.string(),
         minRequiredPoints: z.number().finite(),
+        locked: z.boolean(),
         classes: z.array(z.object({
             id: z.number().int().positive(),
             courseModuleId: z.number().int().positive(),
@@ -56,6 +57,7 @@ const StudentCourseSchema: z.ZodType<StudentCourseDto> = z.object({
         currentVideoTime: z.number().finite(),
         isCompleted: z.boolean(),
         createdAt: z.string().datetime(),
+        lastViewedAt: z.string().datetime(),
     })),
     quizCompleted: z.array(z.object({
         quizId: z.number().int().positive(),
@@ -64,6 +66,7 @@ const StudentCourseSchema: z.ZodType<StudentCourseDto> = z.object({
         retries: z.number().int().nonnegative(),
         passed: z.boolean(),
         createdAt: z.string().datetime(),
+        lastAttemptAt: z.string().datetime(),
     })),
 });
 

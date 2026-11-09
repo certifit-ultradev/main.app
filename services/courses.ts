@@ -16,12 +16,23 @@ import {
 import { prismaCourseProgressWritePort } from '@/repository/course-progress.prisma';
 import { prismaCourseEditorWritePort } from '@/repository/course-editor.prisma';
 import type { QuizAnswerScope, QuizAttemptContext, QuizAttemptResult, QuizQuestionForScoring, StoredQuizAnswer } from '@/application/courses/progress.commands';
-import type { CourseEditorPatch, CreateCourseCommand } from '@/application/courses/course-editor.commands';
+import type { CourseBasicsCommand, CourseBasicsPatchCommand, CourseContentCommand, CourseEditorPatch, CreateCourseCommand } from '@/application/courses/course-editor.commands';
+import { processCourseAssetCleanup } from '@/infrastructure/blob/course-asset-cleanup';
+import { safeLogger } from '@/shared/observability/safe-logger';
 import { assertValidCourseQuestion } from '@/application/courses/course-question.validation';
 import type { CourseSalesDto, MonthlyCountDto } from '@/application/courses/course-analytics.ports';
 import { prismaCourseAnalyticsReadPort } from '@/repository/course-analytics.prisma';
 
 export const COURSES_PAGE_SIZE = 10;
+
+const cleanupCourseAssets = async (courseId?: number) => {
+    try {
+        await processCourseAssetCleanup(courseId);
+    } catch {
+        // A committed course write must not become a false failure when cleanup is unavailable.
+        safeLogger.error('course.asset_cleanup.unavailable', { courseId });
+    }
+};
 
 /** Catalog projection for the optional current viewer. */
 export const getCatalogCourses = async (): Promise<CatalogCourseCardDto[]> => {
@@ -58,6 +69,7 @@ export const getUserCourses = withAuth(async (user): Promise<StudentCourseListIt
     try {
         return await prismaStudentCourseReadPort.findEnrolledCourses(user.id);
     } catch (error) {
+        safeLogger.error('service.course.user_courses.failed');
         logPrismaError(error);
         return [];
     }
@@ -79,10 +91,56 @@ export const registerCourse = async (command: CreateCourseCommand): Promise<Cour
         if (!course) throw new Error('No fue posible leer el curso creado');
         return course;
     } catch (error) {
+        safeLogger.error('service.course.register.failed');
         logPrismaError(error);
         throw error;
     }
 }
+
+export const createCourseDraft = async (command: CourseBasicsCommand): Promise<CourseEditorDto> => {
+    try {
+        const courseId = await prismaCourseEditorWritePort.createDraft(command);
+        const course = await prismaCourseEditorReadPort.findEditorCourseById(courseId);
+        if (!course) throw new Error('No fue posible leer el borrador creado');
+        return course;
+    } catch (error) {
+        safeLogger.error('service.course.create_draft.failed');
+        logPrismaError(error);
+        throw error;
+    }
+};
+
+export const updateCourseBasics = async (courseId: number, command: CourseBasicsPatchCommand): Promise<void> => {
+    try {
+        await prismaCourseEditorWritePort.updateBasics(courseId, command);
+        await cleanupCourseAssets(courseId);
+    } catch (error) {
+        safeLogger.error('service.course.update_basics.failed', { courseId });
+        logPrismaError(error);
+        throw error;
+    }
+};
+
+export const saveCourseContent = async (courseId: number, command: CourseContentCommand): Promise<CourseEditorDto> => {
+    try {
+        for (const module of command.modules) {
+            for (const question of module.quiz.questions) assertValidCourseQuestion(question);
+        }
+        await prismaCourseEditorWritePort.saveContent(courseId, command);
+        await cleanupCourseAssets(courseId);
+        const course = await prismaCourseEditorReadPort.findEditorCourseById(courseId);
+        if (!course) throw new Error('No fue posible leer el curso actualizado');
+        return course;
+    } catch (error) {
+        safeLogger.error('service.course.save_content.failed', { courseId });
+        logPrismaError(error);
+        throw error;
+    }
+};
+
+export const queueUnusedCourseAssets = async (courseId: number, urls: string[]): Promise<void> => {
+    await prismaCourseEditorWritePort.queueUnusedAssets(courseId, urls);
+};
 
 /**
  * 
@@ -96,7 +154,9 @@ export const editCourse = async (courseId: number, patch: CourseEditorPatch) => 
             for (const question of module.quiz.questions) assertValidCourseQuestion(question);
         }
         await prismaCourseEditorWritePort.updateCourse(courseId, patch);
+        await cleanupCourseAssets(courseId);
     } catch (error) {
+        safeLogger.error('service.course.edit.failed', { courseId });
         logPrismaError(error);
         throw error;
     }
@@ -111,8 +171,11 @@ export const editCourse = async (courseId: number, patch: CourseEditorPatch) => 
  */
 export const updateClassVideoPath = async (clsId: number, videoPath: string, videoSize: number) => {
     try {
-        return await prismaCourseEditorWritePort.setClassVideo(clsId, videoPath, videoSize);
+        const updated = await prismaCourseEditorWritePort.setClassVideo(clsId, videoPath, videoSize);
+        await cleanupCourseAssets();
+        return updated;
     } catch (error) {
+        safeLogger.error('service.course.class_video.update.failed', { classId: clsId });
         logPrismaError(error);
         throw error;
     }
@@ -125,18 +188,14 @@ export const updateClassVideoPath = async (clsId: number, videoPath: string, vid
  */
 export const activateCourse = async (id: number) => {
     try {
-        const countActiveCourses = await prismaCourseEditorReadPort.countActiveCourses();
-        if (countActiveCourses === 3) {
-            return { success: false, message: "Solo se pueden tener 3 cursos activos" };
-        }
-
         const updateResult = await prismaCourseEditorWritePort.setCourseActive(id, true);
         if (!updateResult) {
-            return { success: false, message: "No se pudo activar el curso" };
+            return { success: false, message: 'El curso está incompleto o se alcanzó el límite de cursos activos.' };
         }
 
         return { success: true, message: "Curso activado correctamente" };
     } catch (error) {
+        safeLogger.error('service.course.activate.failed', { courseId: id });
         logPrismaError(error);
         throw error;
     }
@@ -156,6 +215,7 @@ export const deactivateCourse = async (id: number) => {
 
         return { success: true, message: "Curso desactivado" };
     } catch (error) {
+        safeLogger.error('service.course.deactivate.failed', { courseId: id });
         logPrismaError(error);
         throw error;
     }
@@ -230,6 +290,7 @@ export const registerClassCurrentState = withAuth(async (user, courseId: string,
 
         return { success: true };
     } catch (error) {
+        safeLogger.error('service.course.class_progress.failed', { classId });
         logPrismaError(error);
         throw error;
     }
@@ -251,6 +312,7 @@ export const registerModuleFinishtState = withAuth(async (user, courseId: string
 
         return { success: true };
     } catch (error) {
+        safeLogger.error('service.course.module_progress.failed', { moduleId });
         logPrismaError(error);
         throw error;
     }
@@ -279,6 +341,7 @@ export const registerQuestionAnswer = withAuth(async (user, data: SubmitQuizAnsw
 
         return { success: true };
     } catch (error) {
+        safeLogger.error('service.course.quiz_answer.failed', { quizId: data.quizId, questionId: data.questionId });
         logPrismaError(error);
         throw error;
     }
@@ -298,6 +361,7 @@ export const calculateQuizScore = withAuth(async (user, data: CalculateQuizScore
             quizId: data.quizId,
         }, calculateQuizAttemptResult);
     } catch (error) {
+        safeLogger.error('service.course.quiz_score.failed', { quizId: data.quizId });
         logPrismaError(error);
         throw error;
     }
@@ -322,6 +386,7 @@ export const calculateTotalSalesPerCourse = withAuth(async (): Promise<CourseSal
     try {
         return await prismaCourseAnalyticsReadPort.findSalesByCourse();
     } catch (error) {
+        safeLogger.error('service.course.sales_by_course.failed');
         logPrismaError(error);
         throw error;
     }
@@ -335,6 +400,7 @@ export const calculateTotalSalesByMonth = withAuth(async (): Promise<MonthlyCoun
     try {
         return await prismaCourseAnalyticsReadPort.findApprovedSalesByMonth();
     } catch (error) {
+        safeLogger.error('service.course.sales_by_month.failed');
         logPrismaError(error);
         throw error;
     }
@@ -348,6 +414,7 @@ export const calculateUsersRegisteredByMonth = withAuth(async (): Promise<Monthl
     try {
         return await prismaCourseAnalyticsReadPort.findRegisteredUsersByMonth();
     } catch (error) {
+        safeLogger.error('service.course.users_by_month.failed');
         logPrismaError(error);
         throw error;
     }

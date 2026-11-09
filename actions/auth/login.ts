@@ -7,6 +7,7 @@ import { AuthError } from 'next-auth';
 import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/actions/action-result';
 import { LoginInputSchema } from '@/interfaces/actions/auth.contract';
 import { validateActionInput } from '@/interfaces/actions/validation';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 /**
  * 
@@ -34,6 +35,7 @@ export const login = async (input: unknown): Promise<ActionResult<null>> => {
         if (error instanceof AuthError && error.type === 'CredentialsSignin') {
             return actionFailure('UNAUTHENTICATED', 'Credenciales inválidas.');
         }
+        safeLogger.error('action.auth.login.failed');
         return actionFailure('UNEXPECTED', 'No fue posible iniciar sesión.');
     }
 }

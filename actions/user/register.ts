@@ -9,6 +9,7 @@ import {
     UserIdInputSchema,
 } from '@/interfaces/actions/admin.contract';
 import { validateActionInput } from '@/interfaces/actions/validation';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 function unexpectedUserError(): ActionResult<never> {
     return actionFailure('UNEXPECTED', 'No fue posible completar la operación de usuarios.');
@@ -34,6 +35,7 @@ export async function register(input: unknown): Promise<ActionResult<null>> {
                 ? actionSuccess(null, 'Usuario creado correctamente.')
                 : actionFailure('UNEXPECTED', 'No se pudo crear el usuario.');
         } catch {
+            safeLogger.error('action.user.register.failed');
             return unexpectedUserError();
         }
     });
@@ -59,6 +61,7 @@ export async function edit(input: unknown): Promise<ActionResult<null>> {
                 ? actionSuccess(null, 'Usuario editado correctamente.')
                 : actionFailure('NOT_FOUND', 'El usuario no existe.');
         } catch {
+            safeLogger.error('action.user.edit.failed');
             return unexpectedUserError();
         }
     });
@@ -75,6 +78,7 @@ export async function activate(input: unknown): Promise<ActionResult<null>> {
                 ? actionSuccess(null, 'Usuario activado correctamente.')
                 : actionFailure('NOT_FOUND', 'El usuario no existe.');
         } catch {
+            safeLogger.error('action.user.activate.failed');
             return unexpectedUserError();
         }
     });
@@ -91,6 +95,7 @@ export async function deactivate(input: unknown): Promise<ActionResult<null>> {
                 ? actionSuccess(null, 'Usuario desactivado correctamente.')
                 : actionFailure('NOT_FOUND', 'El usuario no existe.');
         } catch {
+            safeLogger.error('action.user.deactivate.failed');
             return unexpectedUserError();
         }
     });

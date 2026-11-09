@@ -14,9 +14,14 @@ export const generateEditorAssetName = (mimeType: string): string => {
     return `${uuidv4()}.${extension}`;
 };
 
-export const uploadEditorAsset = async (path: string, file: File): Promise<UploadedAsset> => {
+export const uploadEditorAsset = async (
+    path: string,
+    file: File,
+    onProgress?: (percentage: number) => void,
+): Promise<UploadedAsset> => {
     const result = await upload(`${path}${generateEditorAssetName(file.type)}`, file, {
         access: 'public', handleUploadUrl: '/api/blob-upload', multipart: true,
+        onUploadProgress: onProgress ? ({ percentage }) => onProgress(percentage) : undefined,
     });
     return { url: result.url, pathname: result.pathname };
 };

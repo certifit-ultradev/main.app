@@ -18,7 +18,7 @@ const LearnPage = async ({ params }: LearnPageProps) => {
     const rqHeaders = await headers();
     const response = await fetch(
         `${getPublicAppUrl()}/api/courses/${encodeURIComponent(canonicalId)}`,
-        { method: 'GET', headers: new Headers(rqHeaders) }
+        { method: 'GET', headers: new Headers(rqHeaders), cache: 'no-store' }
     );
 
     let courseData;
@@ -39,7 +39,7 @@ const LearnPage = async ({ params }: LearnPageProps) => {
         throw error;
     }
 
-    return <ClientCourseView data={courseData} />;
+    return <ClientCourseView key={courseData.canonicalId} data={courseData} />;
 }
 
 export default LearnPage;

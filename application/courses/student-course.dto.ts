@@ -36,6 +36,8 @@ export type StudentModuleDto = {
     courseId: number;
     title: string;
     minRequiredPoints: number;
+    /** Locked modules expose only their identity; lessons and quiz remain private. */
+    locked: boolean;
     classes: StudentClassDto[];
     quiz: StudentQuizDto | null;
 };
@@ -47,6 +49,7 @@ export type StudentCourseProgressDto = {
         currentVideoTime: number;
         isCompleted: boolean;
         createdAt: string;
+        lastViewedAt: string;
     }>;
     quizCompleted: Array<{
         quizId: number;
@@ -55,6 +58,7 @@ export type StudentCourseProgressDto = {
         retries: number;
         passed: boolean;
         createdAt: string;
+        lastAttemptAt: string;
     }>;
 };
 

@@ -5,6 +5,7 @@ import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/ac
 import { withAdminAction } from '@/interfaces/actions/action-context';
 import { CourseIdInputSchema } from '@/interfaces/actions/admin.contract';
 import { validateActionInput } from '@/interfaces/actions/validation';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 export async function deactivate(input: unknown): Promise<ActionResult<null>> {
     const parsedInput = validateActionInput(CourseIdInputSchema, input);
@@ -17,6 +18,7 @@ export async function deactivate(input: unknown): Promise<ActionResult<null>> {
                 ? actionSuccess(null, 'Curso desactivado correctamente.')
                 : actionFailure('NOT_FOUND', 'No se pudo desactivar el curso.');
         } catch {
+            safeLogger.error('action.course.deactivate.failed', { courseId: parsedInput.data.id });
             return actionFailure('UNEXPECTED', 'No fue posible desactivar el curso.');
         }
     });

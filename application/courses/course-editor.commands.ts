@@ -14,16 +14,20 @@ export type CourseEditorModulePatch = Readonly<{
     id?: number; title: string; minRequiredPoints: number;
     classes: readonly CourseEditorClassPatch[]; quiz: CourseEditorQuizPatch;
 }>;
+export type CourseBasicsCommand = Readonly<{
+    draftKey?: string;
+    title: string; description: string; price: number; categoryId: number;
+    instructorName: string; courseImage: string; instructorPhoto: string; expiresAt: Date;
+}>;
+/** Only fields explicitly changed in the first editor step may be persisted. */
+export type CourseBasicsPatchCommand = Readonly<Partial<Omit<CourseBasicsCommand, 'draftKey'>>>;
+export type CourseContentCommand = Readonly<{ modules: readonly CourseEditorModulePatch[] }>;
 /**
  * Full editor replacement, not a sparse object patch: required text fields
  * reject empty input at the action boundary. Nested omitted IDs create new
  * records; nullable class video input becomes the editor's empty path value.
  */
-export type CourseEditorPatch = Readonly<{
-    title: string; description: string; price: number; categoryId: number;
-    instructorName: string; courseImage: string; instructorPhoto: string; expiresAt: Date;
-    modules: readonly CourseEditorModulePatch[];
-}>;
+export type CourseEditorPatch = CourseBasicsCommand & CourseContentCommand;
 
 /** Serializable aggregate creation command. Assets must already be durable URLs. */
 export type CreateCourseCommand = Readonly<{

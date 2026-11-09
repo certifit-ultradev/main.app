@@ -25,6 +25,7 @@ export type { CourseEditorListItemDto, CourseEditorPageDto } from './course-read
 
 export type CourseEditorDto = {
     id: number;
+    isActive?: boolean;
     canonicalId: string;
     title: string;
     description: string;

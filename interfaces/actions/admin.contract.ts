@@ -111,18 +111,49 @@ const moduleSchema = z.object({
     quiz: quizSchema,
 }).strict();
 
-/** Persistable course payload: files must already have been uploaded by the browser. */
-export const AdminCourseInputSchema = z.object({
-    id: optionalEntityId,
+const storedOrEmptyAssetSchema = z.union([z.string().url(), z.literal('')]);
+
+/** Draft basics have no modules and may have no images yet. */
+export const AdminCourseBasicsInputSchema = z.object({
+    draftKey: z.string().uuid().optional(),
     title: z.string().trim().min(1),
     price: z.number().finite().positive(),
-    courseImage: z.string().url(),
+    courseImage: storedOrEmptyAssetSchema,
     instructorName: z.string().trim().min(1),
-    instructorPhoto: z.string().url(),
+    instructorPhoto: storedOrEmptyAssetSchema,
     category: categorySchema,
     description: z.string().trim().min(1),
     expiresAt: z.string().refine((value) => !Number.isNaN(Date.parse(value)), 'La fecha de vencimiento no es válida.'),
+}).strict();
+
+const AdminCourseBasicsPatchInputSchema = AdminCourseBasicsInputSchema.omit({ draftKey: true }).partial()
+    .refine((basics) => Object.keys(basics).length > 0, 'Debe modificar al menos un campo.');
+
+export const AdminCourseContentInputSchema = z.object({
     modules: z.array(moduleSchema).min(1),
+}).strict();
+
+/** Complete legacy payload remains strict at the action boundary. */
+export const AdminCourseInputSchema = AdminCourseBasicsInputSchema.extend({
+    id: optionalEntityId,
+    courseImage: z.string().url(),
+    instructorPhoto: z.string().url(),
+    modules: z.array(moduleSchema).min(1),
+}).strict();
+
+export const UpdateAdminCourseBasicsInputSchema = z.object({
+    courseId: courseIdSchema,
+    basics: AdminCourseBasicsPatchInputSchema,
+}).strict();
+
+export const SaveAdminCourseContentInputSchema = z.object({
+    courseId: courseIdSchema,
+    content: AdminCourseContentInputSchema,
+}).strict();
+
+export const QueueUnusedCourseAssetsInputSchema = z.object({
+    courseId: courseIdSchema,
+    urls: z.array(z.string().url()).min(1),
 }).strict();
 
 export const UpdateAdminCourseInputSchema = z.object({
@@ -140,3 +171,6 @@ export const UpdateClassVideoInputSchema = z.object({
 export type CreateAdminUserInput = z.infer<typeof CreateAdminUserInputSchema>;
 export type UpdateAdminUserInput = z.infer<typeof UpdateAdminUserInputSchema>;
 export type AdminCourseInput = z.infer<typeof AdminCourseInputSchema>;
+export type AdminCourseBasicsInput = z.infer<typeof AdminCourseBasicsInputSchema>;
+export type AdminCourseBasicsPatchInput = z.infer<typeof AdminCourseBasicsPatchInputSchema>;
+export type AdminCourseContentInput = z.infer<typeof AdminCourseContentInputSchema>;

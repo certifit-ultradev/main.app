@@ -9,6 +9,7 @@ import {
     UpdateCategoryInputSchema,
 } from '@/interfaces/actions/categories/category.contract';
 import { validateActionInput } from '@/interfaces/actions/validation';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 function unexpectedCategoryError(): ActionResult<never> {
     return actionFailure('UNEXPECTED', 'No fue posible completar la operación de categorías.');
@@ -26,6 +27,7 @@ export async function register(input: unknown): Promise<ActionResult<null>> {
             }
             return actionSuccess(null, 'Categoría creada correctamente.');
         } catch {
+            safeLogger.error('action.category.register.failed');
             return unexpectedCategoryError();
         }
     });
@@ -43,6 +45,7 @@ export async function edit(input: unknown): Promise<ActionResult<null>> {
             }
             return actionSuccess(null, 'Categoría editada correctamente.');
         } catch {
+            safeLogger.error('action.category.edit.failed');
             return unexpectedCategoryError();
         }
     });
@@ -57,6 +60,7 @@ export async function deleteCategory(input: unknown): Promise<ActionResult<null>
             await removeCourseCategory(parsedInput.data.id);
             return actionSuccess(null, 'Categoría eliminada correctamente.');
         } catch {
+            safeLogger.error('action.category.delete.failed');
             return unexpectedCategoryError();
         }
     });

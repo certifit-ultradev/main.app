@@ -21,10 +21,12 @@ const nextConfig = {
         },
     },
     experimental: {
+        agentUpgrade: 'security',
         serverActions: {
             bodySizeLimit: '1000mb',
         }
-    }
+    },
+    allowedDevOrigins: ['192.168.253.242']
 }
 
 module.exports = nextConfig

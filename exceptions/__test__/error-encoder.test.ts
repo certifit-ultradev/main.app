@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { mapErrorToAPIResponse } from '@/exceptions/error-encoder';
+import { logPrismaError, mapErrorToAPIResponse } from '@/exceptions/error-encoder';
+import { Prisma } from '@/prisma/app/generated/prisma/client';
 import { MalformedJsonError } from '@/exceptions/malformed-json';
 import { CourseAlreadyPurchasedError } from '@/exceptions/course-already-purchased';
 import { CourseInvalidStateError } from '@/exceptions/course-invalid-state';
@@ -57,5 +58,32 @@ describe('HTTP error encoder', () => {
         expect(body).toEqual({ error: { code: 'UNEXPECTED', message: 'Ocurrió un error. Inténtalo más tarde.' } });
         expect(JSON.stringify(body)).not.toContain(privateDetail);
         expect(safeLogger.error).toHaveBeenCalledWith('http.error.unexpected', { name: 'Error' });
+    });
+
+    it('classifies an expired Prisma transaction without logging its raw metadata', () => {
+        const error = new Prisma.PrismaClientKnownRequestError(privateDetail, {
+            code: 'P2028', clientVersion: '6.7.0',
+            meta: { error: `Transaction already closed: expired transaction for ${privateDetail}` },
+        });
+
+        logPrismaError(error);
+
+        expect(safeLogger.error).toHaveBeenCalledWith('persistence.known', { code: 'P2028', reason: 'expired' });
+        expect(JSON.stringify((safeLogger.error as jest.Mock).mock.calls)).not.toContain(privateDetail);
+    });
+
+    it('includes only the Prisma code in unexpected HTTP logs', async () => {
+        const error = new Prisma.PrismaClientKnownRequestError(privateDetail, {
+            code: 'P6001', clientVersion: '6.7.0',
+            meta: { url: privateDetail },
+        });
+
+        const response = mapErrorToAPIResponse(error);
+
+        expect(response.status).toBe(500);
+        expect(safeLogger.error).toHaveBeenCalledWith('http.error.unexpected', {
+            name: 'PrismaClientKnownRequestError', code: 'P6001',
+        });
+        expect(JSON.stringify((safeLogger.error as jest.Mock).mock.calls)).not.toContain(privateDetail);
     });
 });

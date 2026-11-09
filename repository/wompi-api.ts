@@ -2,6 +2,7 @@ import { PaymentProviderError } from '@/exceptions/payment-provider-error';
 import { TransactionWompiResponseSchema } from '@/infrastructure/payments/wompi.types';
 import { getWompiBaseUrl } from "@/config/env";
 import type { PaymentTransactionRecord } from '@/application/payments/payment.records';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 /**
  * Obtains the information of a Wompi transaction
@@ -18,6 +19,7 @@ export const getTransaction = async (trxId: string): Promise<PaymentTransactionR
             headers: { 'Content-Type': 'application/json' },
         });
     } catch {
+        safeLogger.error('repository.payment_provider.transaction.request.failed');
         throw new PaymentProviderError('unavailable');
     }
 
@@ -29,6 +31,7 @@ export const getTransaction = async (trxId: string): Promise<PaymentTransactionR
     try {
         originalData = await response.json();
     } catch {
+        safeLogger.error('repository.payment_provider.transaction.response_invalid');
         throw new PaymentProviderError('invalid_response');
     }
     const parsed = TransactionWompiResponseSchema.safeParse(originalData);

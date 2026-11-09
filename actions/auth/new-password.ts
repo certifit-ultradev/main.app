@@ -6,6 +6,7 @@ import { withAuthenticatedAction } from '@/interfaces/actions/action-context';
 import { NewPasswordInputSchema, ResetPasswordWithTokenInputSchema } from '@/interfaces/actions/auth.contract';
 import { validateActionInput } from '@/interfaces/actions/validation';
 import { resetPasswordWithToken } from '@/services/password-reset';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 /** Public reset action authorized by a one-time token. */
 export async function newPassword(values: unknown, token?: unknown): Promise<ActionResult<null>> {
@@ -31,6 +32,7 @@ export async function newPassword(values: unknown, token?: unknown): Promise<Act
                 return actionFailure('NOT_FOUND', 'El enlace de restablecimiento no es válido.');
         }
     } catch {
+        safeLogger.error('action.auth.password_reset.consume.failed');
         return actionFailure('UNEXPECTED', 'No fue posible actualizar la contraseña.');
     }
 }
@@ -45,6 +47,7 @@ export async function newPasswordForLoggedUser(input: unknown): Promise<ActionRe
             await editUserById(actor.userId, { password: parsedInput.data.password });
             return actionSuccess(null, 'Contraseña actualizada correctamente.');
         } catch {
+            safeLogger.error('action.auth.password_change.failed');
             return actionFailure('UNEXPECTED', 'No fue posible actualizar la contraseña.');
         }
     });

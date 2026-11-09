@@ -29,7 +29,7 @@ export function toCourseEditorFormValues(course: CourseEditorDto): CourseEditorF
         instructorPhoto: course.instructorPhoto,
         category: course.category ? { ...course.category } : null,
         description: course.description,
-        expiresAt: course.expiresAt,
+        expiresAt: course.expiresAt.slice(0, 10),
         modules: hydrateEditorModules(course.modules.map((module) => ({
             id: module.id,
             title: module.title,

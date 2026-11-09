@@ -11,6 +11,8 @@ import type {
 } from '@/application/courses/progress.commands';
 import { prisma } from '@/lib/prisma';
 import { resolveTextAnswer } from '@/mappers/course-text-answer';
+import { unlockedModuleIds } from '@/application/courses/module-access';
+import { CourseInvalidStateError } from '@/exceptions/course-invalid-state';
 
 type CourseProgressQueryClient = Pick<
     typeof prisma,
@@ -43,14 +45,54 @@ const scopedQuiz = (courseId: number, moduleId: number, quizId: number) => ({
 const findEnrollment = (client: CourseProgressQueryClient, userId: string, canonicalId: string) =>
     client.userCourse.findFirst({
         where: scopedEnrollment(userId, canonicalId),
-        select: { id: true, courseId: true },
+        select: {
+            id: true,
+            courseId: true,
+            course: {
+                select: {
+                    courseModules: {
+                        where: { deleted: false },
+                        orderBy: [{ position: 'asc' as const }, { id: 'asc' as const }],
+                        select: {
+                            id: true,
+                            moduleQuiz: {
+                                where: { deleted: false },
+                                select: { id: true },
+                                take: 1,
+                            },
+                        },
+                    },
+                },
+            },
+            userQuizState: { where: { passed: true }, select: { quizId: true } },
+        },
     });
+
+type Enrollment = NonNullable<Awaited<ReturnType<typeof findEnrollment>>>;
+
+const assertModuleUnlocked = (enrollment: Enrollment, moduleId: number): void => {
+    const unlocked = unlockedModuleIds(
+        enrollment.course.courseModules.map((module) => ({ id: module.id, quizId: module.moduleQuiz[0]?.id ?? null })),
+        new Set(enrollment.userQuizState.map((state) => state.quizId)),
+    );
+    if (!unlocked.has(moduleId)) {
+        throw new CourseInvalidStateError('Debes aprobar el quiz del módulo anterior para continuar');
+    }
+};
+
+const assertQuizPassed = (enrollment: Enrollment, moduleId: number): void => {
+    const quizId = enrollment.course.courseModules.find((module) => module.id === moduleId)?.moduleQuiz[0]?.id;
+    if (!quizId || !enrollment.userQuizState.some((state) => state.quizId === quizId)) {
+        throw new CourseInvalidStateError('Debes aprobar el quiz para completar el módulo');
+    }
+};
 
 const getQuizQuestion = async (client: CourseProgressQueryClient, scope: QuizAnswerScope): Promise<QuizQuestionForScoring | null> => {
     const enrollment = await findEnrollment(client, scope.userId, scope.canonicalId);
     if (!enrollment) {
         return null;
     }
+    assertModuleUnlocked(enrollment, scope.moduleId);
 
     const question = await client.quizQuestion.findFirst({
         where: {
@@ -113,8 +155,9 @@ const upsertClassProgress = async (command: ClassProgressUpsert): Promise<void> 
                 deleted: false,
                 courseModule: { is: { courseId: enrollment.courseId, deleted: false } },
             },
-            select: { id: true },
+            select: { id: true, courseModuleId: true },
         }), 'Clase inválida para el curso');
+        assertModuleUnlocked(enrollment, lesson.courseModuleId);
 
         await tx.userClassesState.upsert({
             where: {
@@ -144,6 +187,8 @@ const completeModule = async (command: ModuleCompletion): Promise<void> => {
             where: scopedModule(enrollment.courseId, command.moduleId),
             select: { id: true },
         }), 'Módulo inválido para el curso');
+        assertModuleUnlocked(enrollment, courseModule.id);
+        assertQuizPassed(enrollment, courseModule.id);
 
         await tx.userModuleState.upsert({
             where: {
@@ -201,6 +246,7 @@ const recordQuizAttempt = async (
             },
         },
     }), 'Quiz inválido para el módulo');
+    assertModuleUnlocked(enrollment, scope.moduleId);
 
     const answers = await tx.userQuizAnswer.findMany({
         where: { userCourseId: enrollment.id, quizId: quiz.id },
@@ -214,6 +260,11 @@ const recordQuizAttempt = async (
         questionCount: quiz.quizQuestion.length,
         minRequiredPoints: quiz.courseModule.minRequiredPoints,
         answers,
+    });
+
+    const previousState = await tx.userQuizState.findUnique({
+        where: { userCourseId_quizId: { userCourseId: enrollment.id, quizId: quiz.id } },
+        select: { passed: true, result: true },
     });
 
     await tx.userQuizState.upsert({
@@ -233,8 +284,8 @@ const recordQuizAttempt = async (
         },
         update: {
             retries: { increment: 1 },
-            result: result.totalScore,
-            passed: result.pass,
+            result: previousState?.passed && !result.pass ? previousState.result : result.totalScore,
+            passed: result.pass || previousState?.passed === true,
             courseModuleId: quiz.courseModuleId,
         },
     });

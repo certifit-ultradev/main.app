@@ -15,10 +15,12 @@ import { mapEditorZodErrors } from '@/features/courses/editor/editor-form-errors
 interface CourseBasicFormProps {
     data: CourseEditorFormValues;
     setData: Dispatch<SetStateAction<CourseEditorFormValues>>;
-    nextStep: () => void;
+    nextStep: () => Promise<void> | void;
+    isSaving?: boolean;
+    saveError?: string;
 };
 
-export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProps) => {
+export const CourseBasicForm = ({ data, setData, nextStep, isSaving = false, saveError }: CourseBasicFormProps) => {
     const [errors, setErrors] = useState<EditorErrorMap>({});
     const [categories, setCategories] = useState<CategoryDto[]>([]);// Estado para categorías
     const [categoryLoadError, setCategoryLoadError] = useState('');
@@ -40,9 +42,9 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
         initializeForm();
     }, []);
 
-    const onSubmit = () => {
+    const onSubmit = async () => {
         if (validateBasicData()) {
-            nextStep();
+            await nextStep();
         }
     }
 
@@ -86,6 +88,7 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
 
     return (
         <div className={cn('w-full lg:w-3/4')}>
+            {saveError && <p role="alert" className={cn('mb-4 text-sm text-red-600')}>{saveError}</p>}
             <div className={cn('mb-6')}>
                 <h2 className={cn('text-2xl font-semibold')}>Información Básica</h2>
                 <p className={cn('text-gray-600')}>Ingresa la información general del curso</p>
@@ -111,7 +114,7 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
                     />
                 </div>
                 <div className={cn('border-dashed border-2 border-gray-300 rounded-md p-4')}>
-                    {(data.id != 0 && data.courseImage) && (
+                    {(data.id != 0 && typeof data.courseImage === 'string' && data.courseImage) && (
                         <div className={cn('mb-4')}>
                             <p className={cn('text-sm text-gray-700')}>
                                 Imagen cargada:{" "}
@@ -173,7 +176,7 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
                 </div>
 
                 <div className={cn('border-dashed border-2 border-gray-300 rounded-md p-4')}>
-                    {(data.id != 0 && data.instructorPhoto) && (
+                    {(data.id != 0 && typeof data.instructorPhoto === 'string' && data.instructorPhoto) && (
                         <div className={cn('mb-4')}>
                             <p className={cn('text-sm text-gray-700')}>
                                 Imagen cargada:{" "}
@@ -268,9 +271,9 @@ export const CourseBasicForm = ({ data, setData, nextStep }: CourseBasicFormProp
                 </div>
 
                 <div className={cn('flex justify-end')}>
-                    <Button type="submit" onClick={onSubmit}
+                    <Button type="button" disabled={isSaving} onClick={onSubmit}
                         className={cn('bg-[#0BBBE7] text-white px-6 py-2 rounded-md hover:bg-[#009fdf] transition-colors')}>
-                        Continuar
+                        {isSaving ? 'Guardando...' : 'Guardar y continuar'}
                     </Button>
                 </div>
             </div>

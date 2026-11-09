@@ -4,6 +4,10 @@
 
 ### Added
 
+- Added server-side quiz prerequisites that unlock modules in presentation order only after the previous quiz is passed.
+- Added saved learning-position recovery so returning students resume their last viewed class or quiz.
+- Added per-class video upload percentages and safe, stage-specific course editor error events.
+- Added resumable, idempotent course drafts, explicit module/class display positions, and durable cleanup jobs for replaced course assets.
 - Added separate course catalog, student-learning, and editor DTOs, with distinct text and multiple-choice quiz contracts.
 - Added migrations for atomic course-progress constraints and a dedicated expected-answer column for text questions; the text-answer migration still requires deployment and data verification.
 - Added typed action and HTTP response contracts, request validation, and explicit mappings for authentication, authorization, payment-provider, and validation errors.
@@ -11,6 +15,8 @@
 
 ### Changed
 
+- Updated Next.js and its ESLint configuration to 16.4.5, and generated the standard Prisma Client during installation.
+- Persisted the course editor after the basic-information and content steps, with course-scoped uploads and a review step backed by saved data.
 - Upgraded to Next.js 16 and React 19, replaced deprecated NextUI packages with HeroUI v2, and migrated linting and request interception to the supported Next.js 16 conventions.
 - Split the monolithic course repository into focused catalog, editor, progress, and analytics adapters, with business rules and DTO mapping at explicit layer boundaries.
 - Reworked the course editor around immutable module updates, serializable drafts, browser-only file handling, and a scoped Blob upload adapter.
@@ -19,6 +25,11 @@
 
 ### Fixed
 
+- Preserved unchanged course basics during edits and restored saved video playback time after metadata loads.
+- Hid locked module content and rejected progress writes to modules whose prerequisite quiz is not passed.
+- Reused already-uploaded class videos when retrying a failed course-content save and removed their cleanup jobs after a successful retry.
+- Reduced Prisma round trips when saving new course modules and set an explicit transaction timeout for course content writes.
+- Removed the shared pending upload path, prevented incomplete drafts from being activated, and retired the unused monolithic course repository.
 - Prevented student course and quiz responses from exposing correct answers, grading fields, or text solutions; quiz scoring and enrollment checks remain server-side.
 - Made course progress and quiz-answer persistence idempotent and handled courses without classes without invalid progress values.
 - Distinguished malformed JSON from invalid input, missing sessions from insufficient permissions, and payment-provider failures from purchase conflicts without leaking internal details.

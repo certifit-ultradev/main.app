@@ -5,7 +5,7 @@ import type {
     CourseEditorQuestion,
     CourseEditorQuiz,
 } from '@/features/courses/editor/course-editor-form.types';
-import { Dispatch, SetStateAction, useEffect, useReducer, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useReducer, useRef, useState } from "react";
 import { Tab, TabGroup, TabList, TabPanels, TabPanel } from '@headlessui/react';
 import { AddCircleOutline, DeleteForever } from "@mui/icons-material";
 import { Button } from '@/components/ui/button';
@@ -23,17 +23,40 @@ import {
 interface CourseBasicFormProps {
     data: CourseEditorFormValues;
     setData: Dispatch<SetStateAction<CourseEditorFormValues>>;
-    nextStep: () => void;
+    nextStep: (modules: CourseEditorFormValues['modules']) => Promise<void> | void;
     previousStep: () => void;
+    isSaving?: boolean;
+    saveError?: string;
+    videoUploads?: VideoUploadStatus[];
+    contentPhase?: 'idle' | 'uploading' | 'saving' | 'error';
 };
 
-export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: CourseBasicFormProps) => {
+export type VideoUploadStatus = {
+    key: string;
+    moduleIndex: number;
+    classIndex: number;
+    fileName: string;
+    percentage: number;
+    status: 'pending' | 'uploading' | 'uploaded' | 'reused' | 'retry';
+};
+
+export const CourseClassesForm = ({
+    data, setData, nextStep, previousStep, isSaving = false, saveError,
+    videoUploads = [], contentPhase = 'idle',
+}: CourseBasicFormProps) => {
     const [errors, setErrors] = useState<EditorErrorMap>({});
     const [modules, dispatchModules] = useReducer(courseEditorModulesReducer, data.modules, hydrateEditorModules);
+    const uploadProgressRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
         dispatchModules({ type: 'hydrate', modules: data.modules });
     }, [data.modules]);
+
+    useEffect(() => {
+        if (contentPhase === 'uploading') {
+            uploadProgressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [contentPhase]);
 
     const dispatch = (action: CourseEditorModulesAction) => dispatchModules(action);
     const addModule = () => dispatch({ type: 'addModule' });
@@ -151,18 +174,16 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
         dispatch({ type: 'removeQuestion', moduleIndex, questionIndex });
     };
 
-    const onNextStep = () => {
+    const onNextStep = async () => {
         if (validateModules()) {
             setData((prevDatos) => ({ ...prevDatos, modules }));
-            nextStep();
+            await nextStep(modules);
         }
     };
 
     const onPreviousStep = () => {
-        if (validateModules()) {
-            setData((prevDatos) => ({ ...prevDatos, modules }));
-            previousStep();
-        }
+        setData((prevDatos) => ({ ...prevDatos, modules }));
+        previousStep();
     };
 
     const moduleHasErrors = (moduleIndex: number): number => {
@@ -199,6 +220,39 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
 
     return (
         <div className={cn('w-full lg:w-3/4')}>
+            {(videoUploads.length > 0 || contentPhase === 'uploading' || contentPhase === 'saving') && (
+                <section ref={uploadProgressRef} aria-label="Progreso de videos" className="mb-6 scroll-mt-4 rounded-md border border-sky-200 bg-sky-50 p-4">
+                    <h2 className="font-semibold">Estado de los videos</h2>
+                    <p role="status" aria-live="polite" className="mt-1 text-sm">
+                        {contentPhase === 'saving' ? 'Videos subidos. Guardando el contenido del curso...'
+                            : contentPhase === 'uploading' ? 'Subiendo videos al almacenamiento...'
+                                : contentPhase === 'error' ? 'El intento falló. Se reutilizarán los videos ya subidos; sólo se subirán los faltantes.'
+                                    : 'Videos pendientes de subir.'}
+                    </p>
+                    <ul className="mt-3 space-y-3">
+                        {videoUploads.map((video) => (
+                            <li key={video.key} className="text-sm">
+                                <div className="flex flex-wrap justify-between gap-2">
+                                    <span>Módulo {video.moduleIndex + 1}, clase {video.classIndex + 1}: {video.fileName}</span>
+                                    <span>{video.status === 'uploaded' ? 'Subido, pendiente de guardar'
+                                        : video.status === 'reused' ? (contentPhase === 'error'
+                                            ? 'Subido, listo para reintentar' : 'URL reutilizada, pendiente de guardar')
+                                        : video.status === 'retry' ? 'Se subirá de nuevo'
+                                            : video.status === 'uploading' ? `${video.percentage}%`
+                                                : 'En espera'}</span>
+                                </div>
+                                <progress
+                                    aria-label={`Carga del video del módulo ${video.moduleIndex + 1}, clase ${video.classIndex + 1}`}
+                                    value={video.percentage}
+                                    max={100}
+                                    className="mt-1 h-2 w-full"
+                                />
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
+            <fieldset disabled={isSaving} className="min-w-0 w-full border-0 p-0">
             <div>
                 <button
                     type="button"
@@ -329,7 +383,7 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                                                 )}
                                             />
                                         </div>
-                                        {cls.video !== "" && (
+                                        {typeof cls.video === 'string' && cls.video !== '' && (
                                             <div className={cn('mb-4')}>
                                                 <p className={cn('text-sm text-gray-700')}>
                                                     Video cargado:{" "}
@@ -661,10 +715,13 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                     </TabPanels>
                 </TabGroup>
             </div>
+            </fieldset>
+            {saveError && <p role="alert" className={cn('mt-4 text-sm text-red-600')}>{saveError}</p>}
             <div className={cn('flex justify-end mt-8')}>
                 <div className={cn('flex mx-3')}>
                     <Button
                         type="button"
+                        disabled={isSaving}
                         className={cn('border border-[#0BBBE7] text-[#0BBBE7] px-6 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-1')}
                         onClick={onPreviousStep}
                     >
@@ -673,11 +730,12 @@ export const CourseClassesForm = ({ data, setData, nextStep, previousStep }: Cou
                 </div>
                 <div className={cn('flex mx-3')}>
                     <Button
-                        type="submit"
+                        type="button"
+                        disabled={isSaving}
                         className={cn('bg-[#0BBBE7] text-white px-6 py-2 rounded-md hover:bg-[#009fdf] transition-colors')}
                         onClick={onNextStep}
                     >
-                        Siguiente
+                        {isSaving ? 'Guardando...' : 'Guardar y continuar'}
                     </Button>
                 </div>
             </div>

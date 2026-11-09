@@ -42,7 +42,7 @@ describe('LearnPage', () => {
 
         expect(global.fetch).toHaveBeenCalledWith(
             'https://app.example.com/api/courses/course-1',
-            expect.objectContaining({ method: 'GET' }),
+            expect.objectContaining({ method: 'GET', cache: 'no-store' }),
         );
         expect(page.props.data).toEqual(course);
     });

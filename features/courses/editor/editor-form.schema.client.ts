@@ -11,15 +11,16 @@ const editorAssetSchema = z.union([
     z.instanceof(File, { message: 'Debes subir un archivo' }),
     z.string().url('La URL del archivo no es válida'),
 ]);
+const optionalEditorImageSchema = z.union([editorAssetSchema, z.literal(''), z.null()]);
 
 export const CourseBasicInfoSchema = z.object({
     title: z.string().min(1, 'El título es obligatorio'),
-    courseImage: editorAssetSchema,
+    courseImage: optionalEditorImageSchema,
     description: z.string().min(1, 'La descripción es obligatoria'),
     price: z.preprocess((value) => typeof value === 'string' && value.trim() !== '' ? Number(value) : value,
         z.number().positive('El precio debe ser un número positivo')),
     instructorName: z.string().min(1, 'El nombre del instructor es obligatorio'),
-    instructorPhoto: editorAssetSchema,
+    instructorPhoto: optionalEditorImageSchema,
     category: editorCategorySchema,
     expiresAt: z.preprocess(
         (value) => typeof value === 'string' ? new Date(value) : value,
@@ -73,4 +74,4 @@ export const CourseModulesSchema = z.array(z.object({
         questions: z.array(z.discriminatedUnion('type', [multipleChoiceQuestionSchema, textQuestionSchema]))
             .min(1, 'El quiz debe tener al menos una pregunta'),
     }),
-}));
+})).min(1, 'Agrega al menos un módulo');

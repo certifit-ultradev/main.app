@@ -1,5 +1,5 @@
-import type { CourseEditorPatch, CourseEditorQuestionPatch, CreateCourseCommand } from '@/application/courses/course-editor.commands';
-import type { AdminCourseInput } from './admin.contract';
+import type { CourseBasicsCommand, CourseBasicsPatchCommand, CourseContentCommand, CourseEditorPatch, CourseEditorQuestionPatch, CreateCourseCommand } from '@/application/courses/course-editor.commands';
+import type { AdminCourseBasicsInput, AdminCourseBasicsPatchInput, AdminCourseContentInput, AdminCourseInput } from './admin.contract';
 
 function atLeastTwo<T>(items: T[]): [T, T, ...T[]] {
     if (items.length < 2) throw new Error('La pregunta de selección requiere al menos dos opciones');
@@ -21,6 +21,14 @@ function toQuestionPatch(question: AdminCourseInput['modules'][number]['quiz']['
 /** Translates the validated action contract into the application write command. */
 export function toCourseEditorPatch(course: AdminCourseInput): CourseEditorPatch {
     return {
+        ...toCourseBasicsCommand(course),
+        ...toCourseContentCommand(course),
+    };
+}
+
+export function toCourseBasicsCommand(course: AdminCourseBasicsInput): CourseBasicsCommand {
+    return {
+        draftKey: course.draftKey,
         title: course.title,
         description: course.description,
         price: course.price,
@@ -29,6 +37,24 @@ export function toCourseEditorPatch(course: AdminCourseInput): CourseEditorPatch
         courseImage: course.courseImage,
         instructorPhoto: course.instructorPhoto,
         expiresAt: new Date(course.expiresAt),
+    };
+}
+
+export function toCourseBasicsPatchCommand(course: AdminCourseBasicsPatchInput): CourseBasicsPatchCommand {
+    return {
+        ...(course.title !== undefined ? { title: course.title } : {}),
+        ...(course.description !== undefined ? { description: course.description } : {}),
+        ...(course.price !== undefined ? { price: course.price } : {}),
+        ...(course.category !== undefined ? { categoryId: course.category.id } : {}),
+        ...(course.instructorName !== undefined ? { instructorName: course.instructorName } : {}),
+        ...(course.courseImage !== undefined ? { courseImage: course.courseImage } : {}),
+        ...(course.instructorPhoto !== undefined ? { instructorPhoto: course.instructorPhoto } : {}),
+        ...(course.expiresAt !== undefined ? { expiresAt: new Date(course.expiresAt) } : {}),
+    };
+}
+
+export function toCourseContentCommand(course: AdminCourseContentInput): CourseContentCommand {
+    return {
         modules: course.modules.map((module) => ({
             id: module.id,
             title: module.title,

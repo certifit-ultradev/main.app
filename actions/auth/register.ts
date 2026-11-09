@@ -5,6 +5,7 @@ import { UserExistError } from '@/exceptions/user-exist';
 import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/actions/action-result';
 import { RegisterAccountInputSchema } from '@/interfaces/actions/auth.contract';
 import { validateActionInput } from '@/interfaces/actions/validation';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 /**
  * 
@@ -27,6 +28,7 @@ export const register = async (input: unknown): Promise<ActionResult<null>> => {
         if (error instanceof UserExistError) {
             return actionFailure('CONFLICT', 'No fue posible crear el usuario.');
         }
+        safeLogger.error('action.auth.register.failed');
         return actionFailure('UNEXPECTED', 'No fue posible crear el usuario.');
     }
 }

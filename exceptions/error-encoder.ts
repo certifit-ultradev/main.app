@@ -52,7 +52,10 @@ export function mapErrorToAPIResponse(error: unknown): Response {
         case error instanceof z.ZodError:
             return httpFailure(422, 'VALIDATION', 'Datos inválidos.');
         default:
-            safeLogger.error('http.error.unexpected', { name: error instanceof Error ? error.name : 'unknown' });
+            safeLogger.error('http.error.unexpected', {
+                name: error instanceof Error ? error.name : 'unknown',
+                ...(error instanceof Prisma.PrismaClientKnownRequestError ? { code: error.code } : {}),
+            });
             return httpFailure(500, 'UNEXPECTED', 'Ocurrió un error. Inténtalo más tarde.');
     }
 }
@@ -63,7 +66,18 @@ export function mapErrorToAPIResponse(error: unknown): Response {
  * @param error - The error to log.
  */
 export function logPrismaError(error: unknown) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) safeLogger.error('persistence.known', { code: error.code });
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2028') {
+            // Classify transaction failures without printing Prisma's raw metadata,
+            // which may contain SQL or user-supplied values.
+            const detail = error.meta?.error;
+            const reason = typeof detail !== 'string' ? 'unknown'
+                : /expired|timeout|timed out/i.test(detail) ? 'expired'
+                    : /start/i.test(detail) ? 'start_failed'
+                        : /closed/i.test(detail) ? 'closed' : 'other';
+            safeLogger.error('persistence.known', { code: error.code, reason });
+        } else safeLogger.error('persistence.known', { code: error.code });
+    }
     else if (error instanceof Prisma.PrismaClientValidationError) safeLogger.error('persistence.validation');
     else if (error instanceof Prisma.PrismaClientInitializationError) safeLogger.error('persistence.initialization');
     else if (error instanceof Prisma.PrismaClientRustPanicError) safeLogger.error('persistence.panic');

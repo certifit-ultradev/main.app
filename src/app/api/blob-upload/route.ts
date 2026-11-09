@@ -71,7 +71,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             body: parsed.data,
             authorizeAdmin: async () => {
                 try {
-                    // Blob permits pending uploads before email verification, but still requires an admin session.
+                    // Course drafts exist before assets are uploaded; an admin session is still required.
                     return await getAuthenticatedActor({ requireAdmin: true, requireEmailVerified: false });
                 } catch (error) {
                     if (error instanceof UserNotLoggedError) {

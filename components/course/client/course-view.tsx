@@ -3,13 +3,14 @@
 import type { StudentCourseDto } from "@/application/courses/student-course.dto";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import { Check, LockKeyhole } from "lucide-react";
 import { ClientQuizView } from "./quiz-view";
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import Image from 'next/image';
 import { saveClassProgress, saveModuleCompletion } from '@/features/courses/learning/progress-http.client';
+import { resolveLearningPosition } from '@/features/courses/learning/resume-position';
 
 type CourseViewProps = {
     data: StudentCourseDto;
@@ -20,32 +21,44 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
     const intervalRef = useRef<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null)
     const [selectedClass, setSelectedClass] = useState<{ moduleIndex: number; classIndex: number; classId: number } | null>(() => {
-        if (data.classCompleted.length === 0) return null
-
-        const lastCompleted = data.classCompleted.at(-1);
-        if (!lastCompleted) return null;
-        const lastId = lastCompleted.classId;
-
-        for (let m = 0; m < data.modules.length; m++) {
-            const mod = data.modules[m];
-            const idx = mod.classes.findIndex((cls) => cls.id === lastId);
-            if (idx >= 0) {
-                return { moduleIndex: m, classIndex: idx, classId: lastId }
-            }
-        }
-        return null
+        const position = resolveLearningPosition(data);
+        return position?.kind === 'class' ? position : null;
     });
-    const [selectedQuiz, setSelectedQuiz] = useState<{ moduleIndex: number; moduleId: number; quizId: number } | null>(null);
+    const [selectedQuiz, setSelectedQuiz] = useState<{ moduleIndex: number; moduleId: number; quizId: number } | null>(() => {
+        const position = resolveLearningPosition(data);
+        return position?.kind === 'quiz' ? position : null;
+    });
     const [videoEnded, setVideoEnded] = useState(false);
     const [progressError, setProgressError] = useState<string | null>(null);
     const [failedModuleId, setFailedModuleId] = useState<number | null>(null);
+    const [pendingNextModuleId, setPendingNextModuleId] = useState<number | null>(null);
 
     const router = useRouter();
 
-    const selectedClassData = selectedClass
-        ? data.modules?.[selectedClass.moduleIndex]?.classes?.[selectedClass.classIndex]
+    const selectedClassModule = selectedClass ? data.modules[selectedClass.moduleIndex] : null;
+    const selectedClassData = selectedClassModule && !selectedClassModule.locked
+        ? selectedClassModule.classes.find((lesson) => lesson.id === selectedClass?.classId)
         : null;
-    const selectedQuizData = selectedQuiz ? data.modules[selectedQuiz.moduleIndex]?.quiz : null;
+    const selectedQuizModule = selectedQuiz ? data.modules[selectedQuiz.moduleIndex] : null;
+    const selectedQuizData = selectedQuizModule && !selectedQuizModule.locked && selectedQuizModule.quiz?.id === selectedQuiz?.quizId
+        ? selectedQuizModule.quiz
+        : null;
+
+    useEffect(() => {
+        if (pendingNextModuleId === null) return;
+        const moduleIndex = data.modules.findIndex((module) => module.id === pendingNextModuleId);
+        const nextModule = data.modules[moduleIndex];
+        if (!nextModule || nextModule.locked) return;
+        const firstClass = nextModule.classes[0];
+        if (firstClass) {
+            setSelectedClass({ moduleIndex, classIndex: 0, classId: firstClass.id });
+            setSelectedQuiz(null);
+        } else if (nextModule.quiz) {
+            setSelectedQuiz({ moduleIndex, moduleId: nextModule.id, quizId: nextModule.quiz.id });
+            setSelectedClass(null);
+        }
+        setPendingNextModuleId(null);
+    }, [data.modules, pendingNextModuleId]);
 
     useEffect(() => {
         if (selectedClass) {
@@ -59,13 +72,12 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
     }, [selectedClass]);
 
     // Función para enviar el estado de reproducción
-    const storeClassState = async (currentTime: number, isCompleted = false): Promise<boolean> => {
-        if (!selectedClass) return false;
+    const persistClassState = async (classId: number, currentTime: number, isCompleted = false): Promise<boolean> => {
         setProgressError(null);
         try {
             await saveClassProgress({
                 canonicalId: data.canonicalId,
-                classId: selectedClass.classId,
+                classId,
                 isCompleted,
                 currentTime,
             });
@@ -76,6 +88,9 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
             return false;
         }
     };
+
+    const storeClassState = (currentTime: number, isCompleted = false): Promise<boolean> =>
+        selectedClass ? persistClassState(selectedClass.classId, currentTime, isCompleted) : Promise.resolve(false);
 
     // Inicia un intervalo que cada 3 segundos envía el estado del video
     const handleVideoPlay = () => {
@@ -110,12 +125,14 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
         clearVideoInterval();
     };
 
-    // Al cargar el video, establece el currentTime según el estado previo
-    const handleLoadStart = () => {
-        if (videoRef.current) {
-            const clsCurrentTime = data.classCompleted.find((clsCompleted) => clsCompleted.classId === selectedClassData?.id);
-            videoRef.current.currentTime = clsCurrentTime?.currentVideoTime ?? 0;
-        }
+    // Seek only after metadata is available; loadstart may be too early for the browser.
+    const handleLoadedMetadata = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+        const saved = data.classCompleted.find((state) => state.classId === selectedClassData?.id)?.currentVideoTime;
+        if (saved === undefined) return;
+        const duration = event.currentTarget.duration;
+        event.currentTarget.currentTime = Number.isFinite(duration) && duration > 0
+            ? Math.min(Math.max(0, saved), duration)
+            : Math.max(0, saved);
     };
 
     // Función para que el usuario pueda "reproducir de nuevo" el video (resetear)
@@ -169,11 +186,7 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
             router.refresh();
             const moduleIndex = data.modules.findIndex((module) => module.id === currentModuleId);
             const nextModule = moduleIndex >= 0 ? data.modules[moduleIndex + 1] : undefined;
-            const firstClass = nextModule?.classes[0];
-            if (firstClass) {
-                setSelectedClass({ moduleIndex: moduleIndex + 1, classIndex: 0, classId: firstClass.id });
-                setSelectedQuiz(null);
-            }
+            if (nextModule) setPendingNextModuleId(nextModule.id);
         } catch {
             setFailedModuleId(currentModuleId);
             setProgressError('No se pudo guardar la finalización del módulo. Inténtalo nuevamente.');
@@ -192,17 +205,20 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                     </p>
                     <div className={cn("space-y-4")} id="course-items-container">
                         {data.modules?.map((module, moduleIndex) => {
-                            const isModuleCompleted = data.moduleCompleted.find(
-                                (moduleCompleted) => moduleCompleted.moduleId === module.id && moduleCompleted.isCompleted
-                            );
                             const isQuizCompleted = data.quizCompleted.find(
-                                (quizCompleted) => quizCompleted.quizId === module.quiz?.id
+                                (quizCompleted) => quizCompleted.quizId === module.quiz?.id && quizCompleted.passed
                             );
                             return (
                                 <div key={module.id}>
                                     <h3 className={cn("font-semibold text-gray-700 mb-2")}>
                                         Módulo #{moduleIndex + 1} {module.title}
                                     </h3>
+                                    {module.locked && (
+                                        <p className="flex items-center gap-2 text-sm text-gray-500 mb-3" aria-label={`Módulo ${moduleIndex + 1} bloqueado`}>
+                                            <LockKeyhole className="w-4 h-4" aria-hidden="true" />
+                                            Aprueba el quiz del módulo anterior para continuar.
+                                        </p>
+                                    )}
                                     {module.classes?.map((cls, classIndex) => {
                                         const isSelected =
                                             selectedClass &&
@@ -216,6 +232,10 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                                                 <button
                                                     id={`class-${moduleIndex}-${classIndex}`}
                                                     onClick={() => {
+                                                        if (selectedClass?.classId !== cls.id) {
+                                                            const savedTime = data.classCompleted.find((state) => state.classId === cls.id)?.currentVideoTime ?? 0;
+                                                            void persistClassState(cls.id, savedTime);
+                                                        }
                                                         setSelectedClass({ moduleIndex, classIndex, classId: cls.id });
                                                         setVideoEnded(false);
                                                         setSelectedQuiz(null);
@@ -267,7 +287,7 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                                                     : "bg-white border border-gray-300"
                                             )}
                                         >
-                                            {isModuleCompleted || isQuizCompleted ? (
+                                            {isQuizCompleted ? (
                                                 <div className={cn("w-5 h-5 rounded-full flex items-center justify-center bg-[#0BBBE7]")}>
                                                     <Check className={cn("text-white w-4 h-4")} />
                                                 </div>
@@ -312,7 +332,7 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                                     onPlay={handleVideoPlay}
                                     onPause={handleVideoPause}
                                     onEnded={handleVideoEnd}
-                                    onLoadStart={handleLoadStart}
+                                    onLoadedMetadata={handleLoadedMetadata}
                                     className={cn("w-full rounded-xl mb-4")}
                                 />
                                 {/* Overlay que cubre sólo el reproductor */}

@@ -9,6 +9,7 @@ import { getUserByEmail } from '@/services/user';
 import { ONE_HOUR_IDENTITY_TOKEN_TTL } from '@/application/identity/identity-token.ports';
 import { uuidIdentityTokenGenerator } from '@/infrastructure/identity/uuid-identity-token-generator';
 import { bcryptPasswordHasher } from '@/infrastructure/identity/bcrypt-password-hasher';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 export async function requestPasswordReset(email: string): Promise<void> {
     await requestPasswordResetUseCase({ email }, {
@@ -18,6 +19,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
                     const user = await getUserByEmail(candidateEmail);
                     return user ? { email: user.email } : null;
                 } catch {
+                    safeLogger.error('service.password_reset.account_lookup.failed');
                     return null;
                 }
             },

@@ -7,6 +7,7 @@ import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/ac
 import { withAdminAction } from '@/interfaces/actions/action-context';
 import { AdminPageInputSchema, CourseIdInputSchema } from '@/interfaces/actions/admin.contract';
 import { validateActionInput } from '@/interfaces/actions/validation';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 export async function listAll(input: unknown): Promise<ActionResult<CourseEditorPageDto>> {
     const parsedInput = validateActionInput(AdminPageInputSchema, input);
@@ -17,6 +18,7 @@ export async function listAll(input: unknown): Promise<ActionResult<CourseEditor
             const coursesPaged = await getEditorCoursePage({ page: parsedInput.data.page });
             return actionSuccess<CourseEditorPageDto>(coursesPaged);
         } catch {
+            safeLogger.error('action.course.list.failed');
             return actionFailure('UNEXPECTED', 'No fue posible consultar los cursos.');
         }
     });
@@ -32,6 +34,7 @@ export async function getCourseDataById(input: unknown): Promise<ActionResult<Co
             if (!course) return actionFailure('NOT_FOUND', 'El curso no existe.');
             return actionSuccess(course);
         } catch {
+            safeLogger.error('action.course.get_by_id.failed', { courseId: parsedInput.data.id });
             return actionFailure('UNEXPECTED', 'No fue posible consultar el curso.');
         }
     });

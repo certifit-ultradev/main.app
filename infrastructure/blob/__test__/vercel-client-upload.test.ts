@@ -2,6 +2,7 @@ import { BlobUploadPolicyError, handleCourseBlobUpload, isAllowedCourseAssetPath
 import { handleUpload } from '@vercel/blob/client';
 
 jest.mock('@vercel/blob/client', () => ({ handleUpload: jest.fn() }));
+jest.mock('@/lib/prisma', () => ({ prisma: { course: { findFirst: jest.fn().mockResolvedValue({ id: 1 }) } } }));
 
 const body = {
     type: 'blob.generate-client-token' as const,
@@ -89,7 +90,7 @@ describe('Vercel course-asset upload adapter', () => {
     });
 
     it('acepta exclusivamente el prefijo y extensiones permitidos', () => {
-        expect(isAllowedCourseAssetPath('/courses/pending/asset.jpg')).toBe(true);
+        expect(isAllowedCourseAssetPath('/courses/pending/asset.jpg')).toBe(false);
         expect(isAllowedCourseAssetPath('/courses/12/video.mp4')).toBe(true);
         expect(isAllowedCourseAssetPath('/courses/0/video.mp4')).toBe(false);
         expect(isAllowedCourseAssetPath('/courses/12/video.pdf')).toBe(false);

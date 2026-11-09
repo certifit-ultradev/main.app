@@ -225,7 +225,7 @@ export default function Home() {
                     {/* Imagen de la izquierda (visible en pantallas md y superiores) */}
                     <div className={cn("w-full md:w-1/2 hidden md:flex")}>
                         <div className={cn("bg-black rounded-xl overflow-hidden shadow-xl relative")}>
-                            <Image src="https://vnruzfzvnvdhb848.public.blob.vercel-storage.com/public/contacto-oJMlgDHcAo1MLaPAMXHcRSXrvm3iSN.png" alt="Imagen Contacto" className={cn("w-full h-auto object-cover rounded-xl")} width={458} height={586} />
+                            <Image src="https://vnruzfzvnvdhb848.public.blob.vercel-storage.com/public/contacto-oJMlgDHcAo1MLaPAMXHcRSXrvm3iSN.png" alt="Imagen Contacto" className={cn("w-full h-auto object-cover rounded-xl")} width={458} height={586} loading="eager" />
                         </div>
                     </div>
                     {/* Formulario a la derecha */}

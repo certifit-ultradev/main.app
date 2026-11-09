@@ -111,6 +111,64 @@ describe('Prisma course-read ports', () => {
         expect(questionSelect.possibleAnswerQuestion.select).not.toHaveProperty('isCorrect');
     });
 
+    it('returns the saved class time and latest activity for course resumption', async () => {
+        const createdAt = new Date('2026-01-01T00:00:00.000Z');
+        const updatedAt = new Date('2026-01-02T00:00:00.000Z');
+        (prisma.userCourse.findFirst as jest.Mock).mockResolvedValue({
+            course,
+            userModuleState: [], userQuizState: [],
+            userClassesState: [
+                { classId: 12, currentVideoTime: 42, completed: false, createdAt, updatedAt },
+            ],
+        });
+
+        const result = await prismaStudentCourseReadPort.findEnrolledCourse('typescript', 'student-1');
+        expect(result?.classCompleted).toEqual([{
+            classId: 12, currentVideoTime: 42, isCompleted: false,
+            createdAt: createdAt.toISOString(), lastViewedAt: updatedAt.toISOString(),
+        }]);
+        expect((prisma.userCourse.findFirst as jest.Mock).mock.calls[0][0].include.userClassesState.select.updatedAt).toBe(true);
+    });
+
+    it('returns the quiz attempt time used to distinguish revisits from older progress', async () => {
+        const createdAt = new Date('2026-01-01T00:00:00.000Z');
+        const updatedAt = new Date('2026-01-03T00:00:00.000Z');
+        (prisma.userCourse.findFirst as jest.Mock).mockResolvedValue({
+            course, userModuleState: [], userClassesState: [],
+            userQuizState: [{ quizId: 13, courseModuleId: 11, result: 10, retries: 2,
+                passed: true, createdAt, updatedAt }],
+        });
+
+        const result = await prismaStudentCourseReadPort.findEnrolledCourse('typescript', 'student-1');
+        expect(result?.quizCompleted[0]).toMatchObject({
+            quizId: 13, createdAt: createdAt.toISOString(), lastAttemptAt: updatedAt.toISOString(),
+        });
+        expect((prisma.userCourse.findFirst as jest.Mock).mock.calls[0][0].include.userQuizState.select.updatedAt).toBe(true);
+    });
+
+    it('hides future lessons, video URLs and quiz questions until the preceding quiz is passed', async () => {
+        const futureModule = {
+            ...course.courseModules[0], id: 21, title: 'Avanzado',
+            moduleClass: [{ ...course.courseModules[0].moduleClass[0], id: 22, courseModuleId: 21, videoPath: 'https://example.com/private-video.mp4' }],
+            moduleQuiz: [{ ...course.courseModules[0].moduleQuiz[0], id: 23, courseModuleId: 21 }],
+        };
+        const enrollment = {
+            course: { ...course, courseModules: [course.courseModules[0], futureModule] },
+            userModuleState: [], userClassesState: [], userQuizState: [],
+        };
+        (prisma.userCourse.findFirst as jest.Mock).mockResolvedValueOnce(enrollment)
+            .mockResolvedValueOnce({ ...enrollment, userQuizState: [{ quizId: 13, courseModuleId: 11, result: 10, retries: 1, passed: true, createdAt: new Date() }] });
+
+        const locked = await prismaStudentCourseReadPort.findEnrolledCourse('typescript', 'student-1');
+        expect(locked?.modules[0].locked).toBe(false);
+        expect(locked?.modules[1]).toMatchObject({ id: 21, locked: true, classes: [], quiz: null });
+        expect(JSON.stringify(locked)).not.toContain('private-video.mp4');
+
+        const unlocked = await prismaStudentCourseReadPort.findEnrolledCourse('typescript', 'student-1');
+        expect(unlocked?.modules[1].locked).toBe(false);
+        expect(unlocked?.modules[1].classes[0].video).toBe('https://example.com/private-video.mp4');
+    });
+
     it('exposes a single expected answer to the author without fake text options', async () => {
         (prisma.course.findFirst as jest.Mock).mockResolvedValue(course);
 
@@ -122,6 +180,9 @@ describe('Prisma course-read ports', () => {
             ] },
             { id: 16, type: 'text', title: 'Pregunta abierta', points: 10, expectedAnswer: { value: 'Respuesta secreta' } },
         ]);
+        const query = (prisma.course.findFirst as jest.Mock).mock.calls[0][0];
+        expect(query.include.courseModules.orderBy).toEqual([{ position: 'asc' }, { id: 'asc' }]);
+        expect(query.include.courseModules.include.moduleClass.orderBy).toEqual([{ position: 'asc' }, { id: 'asc' }]);
     });
 
     it('reads a new text question without options and an unmigrated historical question', async () => {

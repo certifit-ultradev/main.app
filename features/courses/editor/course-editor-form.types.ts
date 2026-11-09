@@ -59,51 +59,43 @@ export type PersistableCourseEditorDraft = Omit<CourseEditorFormValues, 'courseI
     }>;
 };
 
-export function toPersistableCourseEditorDraft(data: CourseEditorFormValues): PersistableCourseEditorDraft {
-    const requireStoredAsset = (asset: CourseEditorAsset, field: string): string => {
-        if (typeof asset !== 'string' || asset.length === 0) {
-            throw new Error(`${field} debe estar cargado antes de guardar el curso`);
-        }
-        return asset;
-    };
+const requireStoredAsset = (asset: CourseEditorAsset, field: string): string => {
+    if (typeof asset !== 'string' || asset.length === 0) {
+        throw new Error(`${field} debe estar cargado antes de guardar el curso`);
+    }
+    return asset;
+};
 
+export function toPersistableCourseEditorModules(modules: CourseEditorModule[]): PersistableCourseEditorDraft['modules'] {
+    return modules.map(({ clientKey: _moduleKey, classes, quiz, ...module }) => {
+        const { clientKey: _quizKey, questions, ...persistableQuiz } = quiz;
+        return {
+            ...module,
+            classes: classes.map(({ clientKey: _classKey, video, ...courseClass }) => ({
+                ...courseClass,
+                video: video === null ? null : requireStoredAsset(video, 'El video de la clase'),
+            })),
+            quiz: {
+                ...persistableQuiz,
+                questions: questions.map((question): PersistableCourseEditorQuestion => question.type === 'text'
+                    ? {
+                        id: question.id, title: question.title, points: question.points,
+                        type: 'text', expectedAnswer: { value: question.expectedAnswer.value },
+                    }
+                    : {
+                        id: question.id, title: question.title, points: question.points,
+                        type: 'multiple', options: question.options.map(({ clientKey: _optionKey, ...option }) => option),
+                    }),
+            },
+        };
+    });
+}
+
+export function toPersistableCourseEditorDraft(data: CourseEditorFormValues): PersistableCourseEditorDraft {
     return {
         ...data,
         courseImage: requireStoredAsset(data.courseImage, 'La imagen del curso'),
         instructorPhoto: requireStoredAsset(data.instructorPhoto, 'La foto del instructor'),
-        modules: data.modules.map(({ clientKey: _moduleKey, classes, quiz, ...module }) => {
-            const { clientKey: _quizKey, questions, ...persistableQuiz } = quiz;
-
-            return {
-                ...module,
-                classes: classes.map(({ clientKey: _classKey, video, ...courseClass }) => ({
-                    ...courseClass,
-                    video: video === null
-                        ? null
-                        : requireStoredAsset(video, 'El video de la clase'),
-                })),
-                quiz: {
-                    ...persistableQuiz,
-                    questions: questions.map((question): PersistableCourseEditorQuestion => {
-                        if (question.type === 'text') {
-                            return {
-                                id: question.id,
-                                title: question.title,
-                                points: question.points,
-                                type: 'text',
-                                expectedAnswer: { value: question.expectedAnswer.value },
-                            };
-                        }
-                        return {
-                            id: question.id,
-                            title: question.title,
-                            points: question.points,
-                            type: 'multiple',
-                            options: question.options.map(({ clientKey: _optionKey, ...option }) => option),
-                        };
-                    }),
-                },
-            };
-        }),
+        modules: toPersistableCourseEditorModules(data.modules),
     };
 }
