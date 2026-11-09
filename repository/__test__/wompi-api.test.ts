@@ -31,9 +31,18 @@ const mockResponse = (payload: unknown): void => {
 
 describe('Wompi API repository', () => {
     const originalEnv = process.env;
+    const testEnv = {
+        WOMPI_PUB_KEY: 'test-public-key',
+        WOMPI_SIG_DATA: 'test-signature-key',
+        DATABASE_URL: 'postgresql://user:password@localhost:5432/test',
+        AUTH_SECRET: 'test-auth-secret',
+        FROM_EMAIL: 'noreply@example.com',
+        MAILERSEND_SMTP_USER: 'test-smtp-user',
+        MAILERSEND_SMTP_PASSWORD: 'test-smtp-password',
+    };
 
     beforeEach(() => {
-        process.env = { ...originalEnv, APP_ENV: 'DEV' };
+        process.env = { ...originalEnv, ...testEnv, APP_ENV: 'DEV' };
         resetEnvCache();
         jest.clearAllMocks();
     });
