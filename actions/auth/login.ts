@@ -24,6 +24,7 @@ export const login = async (input: unknown): Promise<ActionResult<null>> => {
         await signIn("credentials", {
             email: parsedInput.data.email,
             password: parsedInput.data.password,
+            rememberMe: parsedInput.data.rememberMe ? 'true' : 'false',
             redirect: true,
             redirectTo: parsedInput.data.callbackUrl || DEFAULT_LOGIN_REDIRECT,
         });

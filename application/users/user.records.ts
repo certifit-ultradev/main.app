@@ -10,8 +10,23 @@ export type PersistedUserRecord = {
     identification: string | null;
     identificationType: string | null;
     phoneNumber: string;
+    profileImage: string | null;
     createdAt: Date;
     updatedAt: Date | null;
+};
+
+/** Narrow record used for a student's own profile. Credentials never leave persistence. */
+export type ClientProfileRecord = {
+    id: string;
+    name: string;
+    lastName: string;
+    email: string;
+    phoneNumber: string;
+    profileImage: string | null;
+    identification: string | null;
+    identificationType: string | null;
+    createdAt: Date;
+    isAdmin: boolean;
 };
 
 export type UserCourseEnrollmentRecord = {

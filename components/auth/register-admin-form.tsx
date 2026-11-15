@@ -65,7 +65,7 @@ export const RegistrationAdminForm = ({ data, setData, nextStep }: RegisterFormP
                     <FormError error={error} />
                     <FormSuccess message={success} />
                 </div>
-                <Button color='primary' type='submit' className={cn('w-full bg-[#0BBBE7] text-white rounded-full hover:bg-[#009fdf] transition-colors')} > Continuar</Button>
+                <Button type='submit' className={cn('w-full bg-[#0BBBE7] text-white rounded-full hover:bg-[#009fdf] transition-colors')} > Continuar</Button>
             </form>
         </div>
     )

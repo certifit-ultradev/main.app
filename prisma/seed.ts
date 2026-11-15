@@ -20,7 +20,7 @@ async function user() {
                 lastName: 'Admin',
                 password: hashedPassword,
                 isAdmin: true,
-                email: 'certifit.ultra@gmail.com',
+                email: 'pedro.reyes63@yahoo.es',
                 emailVerified: new Date,
                 phoneNumber: "123456789",
                 createdAt: new Date(),

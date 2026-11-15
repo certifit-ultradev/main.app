@@ -14,7 +14,10 @@ export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
         Credentials({
             async authorize(credentials) {
                 const parsedCredentials = z
-                    .object({ email: z.string().email(), password: z.string().min(6) })
+                    .object({
+                        email: z.string().email(), password: z.string().min(6),
+                        rememberMe: z.enum(['true', 'false']).optional(),
+                    })
                     .safeParse(credentials);
 
                 if (parsedCredentials.success) {
@@ -29,7 +32,7 @@ export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
 
                         const passwordsMatch = await bcrypt.compare(password, user.passwordHash);
 
-                        if (passwordsMatch) return user;
+                        if (passwordsMatch) return { ...user, rememberMe: parsedCredentials.data.rememberMe === 'true' };
                     } catch (error) {
                         return null;
                     }
@@ -39,5 +42,4 @@ export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
         }),
     ],
     adapter: PrismaAdapter(extendedPrisma),
-    session: { strategy: "jwt" }
 });

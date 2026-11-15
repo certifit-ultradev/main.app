@@ -4,6 +4,8 @@
 
 ### Added
 
+- Added client self-service profiles with authenticated own-account APIs, optional profile photos, initials fallback, and a nullable profile-image migration.
+- Added server-enforced 24-hour and 30-day session lifetimes controlled by the Remember me option at sign-in.
 - Added server-side quiz prerequisites that unlock modules in presentation order only after the previous quiz is passed.
 - Added saved learning-position recovery so returning students resume their last viewed class or quiz.
 - Added per-class video upload percentages and safe, stage-specific course editor error events.
@@ -15,6 +17,8 @@
 
 ### Changed
 
+- Replaced masked phone inputs with a separate calling-code selector in registration, admin user forms, the landing page, and client profile editing while retaining the combined stored value.
+- Removed the unused phone-input dependency and validated supported calling codes before saving user phone numbers.
 - Updated Next.js and its ESLint configuration to 16.4.5, and generated the standard Prisma Client during installation.
 - Persisted the course editor after the basic-information and content steps, with course-scoped uploads and a review step backed by saved data.
 - Upgraded to Next.js 16 and React 19, replaced deprecated NextUI packages with HeroUI v2, and migrated linting and request interception to the supported Next.js 16 conventions.
@@ -25,6 +29,8 @@
 
 ### Fixed
 
+- Added client profile and admin dashboard links to the appropriate desktop and mobile menus, including the landing page.
+- Deleted replaced client profile photos only after the new profile image was saved successfully.
 - Preserved unchanged course basics during edits and restored saved video playback time after metadata loads.
 - Hid locked module content and rejected progress writes to modules whose prerequisite quiz is not passed.
 - Reused already-uploaded class videos when retrying a failed course-content save and removed their cleanup jobs after a successful retry.

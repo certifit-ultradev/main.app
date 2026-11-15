@@ -13,6 +13,12 @@ const nextConfig = {
                 hostname: 'vnruzfzvnvdhb848.public.blob.vercel-storage.com',
                 port: '',
             },
+            {
+                protocol: 'https',
+                hostname: '*.public.blob.vercel-storage.com',
+                port: '',
+                pathname: '/users/**',
+            },
         ],
     },
     logging: {

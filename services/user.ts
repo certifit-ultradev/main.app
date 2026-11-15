@@ -26,6 +26,7 @@ const toAdminUserDto = (user: PersistedUserRecord): AdminUserDto => {
         lastName: user.lastName,
         email: user.email,
         phoneNumber: user.phoneNumber,
+        profileImage: user.profileImage ?? null,
         isAdmin: user.isAdmin,
         emailVerified: user.emailVerified?.toISOString() ?? null,
         identification: user.identification ?? null,

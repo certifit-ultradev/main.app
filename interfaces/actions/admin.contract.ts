@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidCombinedPhoneNumber } from '@/shared/phone-number';
 
 const userIdSchema = z.string().trim().min(1, 'El identificador de usuario es obligatorio.');
 const courseIdSchema = z.number().int().positive('El identificador de curso no es válido.');
@@ -18,7 +19,7 @@ const userFieldsSchema = z.object({
     name: z.string().trim().min(3, 'Los nombres son requeridos.'),
     lastName: z.string().trim().min(3, 'Los apellidos son requeridos.'),
     email: z.string().trim().email('El correo no es válido.'),
-    phoneNumber: z.string().regex(/^\d{7,15}$/, 'El número de teléfono no es válido.'),
+    phoneNumber: z.string().refine(isValidCombinedPhoneNumber, 'El número de teléfono no es válido.'),
     identification: optionalIdentificationSchema,
     identificationType: identificationTypeSchema.nullable().optional(),
 });

@@ -14,7 +14,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ErrorMessage } from "@hookform/error-message";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import PhoneInput from "react-phone-input-2";
+import { PhoneNumberField } from '@/components/form/phone-number-field';
 import { FormError } from "@/components/form/form-error";
 import { EmailDataSchema, type EmailDataFormValues } from '@/features/contact/contact-form.schema';
 import { sendCourseInformationRequest } from '@/features/contact/course-information-request.client';
@@ -258,19 +258,12 @@ export default function Home() {
                                         control={control}
                                         name='telefono'
                                         render={({ field }) => (
-                                            <PhoneInput
-                                                country={'co'}
+                                            <PhoneNumberField
+                                                id="telefono"
+                                                variant="dark"
+                                                size="compact"
                                                 value={field.value}
-                                                onChange={(value) => field.onChange(value)}
-                                                inputClass={cn(
-                                                    'w-full bg-[#0B0B0B] border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#0BBBE7]'
-                                                )}
-                                                containerClass={cn('w-full')}
-                                                inputProps={{
-                                                    name: 'telefono',
-                                                    required: true,
-                                                }}
-                                                specialLabel=''
+                                                onChange={field.onChange}
                                             />
                                         )}
                                     />

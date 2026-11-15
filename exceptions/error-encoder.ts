@@ -10,6 +10,7 @@ import { UserExistError } from "./user-exist";
 import { Prisma } from "@/prisma/app/generated/prisma/client";
 import { CourseNotPurchasedError } from "./course-not-purchased";
 import { MalformedJsonError } from './malformed-json';
+import { ProfileImageInvalidError } from './profile-image-invalid';
 import { safeLogger } from '@/shared/observability/safe-logger';
 import { apiFailure, type ApiErrorCode } from '@/interfaces/http/api-response';
 
@@ -51,6 +52,8 @@ export function mapErrorToAPIResponse(error: unknown): Response {
             return httpFailure(404, 'NOT_FOUND', 'Recurso no encontrado.');
         case error instanceof z.ZodError:
             return httpFailure(422, 'VALIDATION', 'Datos inválidos.');
+        case error instanceof ProfileImageInvalidError:
+            return httpFailure(422, 'VALIDATION', 'La foto de perfil no es válida.');
         default:
             safeLogger.error('http.error.unexpected', {
                 name: error instanceof Error ? error.name : 'unknown',

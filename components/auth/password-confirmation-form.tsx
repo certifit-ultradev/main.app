@@ -155,9 +155,10 @@ export const PasswordConfirmationForm = ({ data, setData, nextStep, previousStep
                     <div className={cn('grid grid-cols-6 gap-4')}>
                         <div className={cn('col-start-1 col-end-3')}>
                             <Button
-                                color='primary'
+                                type='button'
+                                variant='outline'
                                 onClick={previousStep}
-                                className={cn('w-full border border-[#0BBBE7] text-[#0BBBE7] px-6 py-2 rounded-full hover:bg-blue-50 transition-colors flex items-center gap-1')}
+                                className={cn('w-full border border-[#0BBBE7] text-[#0BBBE7] px-6 py-2 rounded-full hover:bg-[#0BBBE7]/10 transition-colors flex items-center gap-1')}
                             >
                                 Atras
                             </Button>
@@ -165,7 +166,6 @@ export const PasswordConfirmationForm = ({ data, setData, nextStep, previousStep
                         <div className={cn('col-end-7 col-span-2')}>
                             <Button
                                 type='submit'
-                                variant='outline'
                                 className={cn('w-full bg-[#0BBBE7] text-white py-2 rounded-full hover:bg-[#009fdf] transition-colors', {
                                     'opacity-50 cursor-not-allowed': isLoading
                                 })}

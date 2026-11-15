@@ -6,7 +6,7 @@ import { FormSuccess } from "../form/form-success";
 import { cn } from "@/lib/utils";
 import { CheckIcon, XIcon } from "../svg/certifit-icons";
 import { Controller, useForm } from "react-hook-form";
-import PhoneInput from "react-phone-input-2";
+import { PhoneNumberField } from '@/components/form/phone-number-field';
 import { useEffect, useState } from "react";
 import { CreateUserSchema, EditUserSchema } from '@/features/users/user-form.schema';
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -176,19 +176,10 @@ export const UserCreateEditForm = ({ data }: UserFormProps<AdminUserFormValues>)
                             control={control}
                             name='phoneNumber'
                             render={({ field }) => (
-                                <PhoneInput
-                                    country={'co'}
+                                <PhoneNumberField
+                                    id="adminPhoneNumber"
                                     value={field.value}
-                                    onChange={(value) => field.onChange(value)}
-                                    inputClass={cn(
-                                        'w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0BBBE7]'
-                                    )}
-                                    containerClass={cn('w-full')}
-                                    inputProps={{
-                                        name: 'phoneNumber',
-                                        required: true,
-                                    }}
-                                    specialLabel=''
+                                    onChange={field.onChange}
                                 />
                             )}
                         />

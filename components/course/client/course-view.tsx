@@ -317,7 +317,7 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                 <div className={cn("lg:w-2/4 w-full xl:px-6")}>
                     {progressError && <p role="alert" className="mb-3 text-sm text-red-600">{progressError}</p>}
                     {selectedQuiz && failedModuleId === selectedQuiz.moduleId && (
-                        <button type="button" onClick={() => void storeModuleComplete()} className="mb-3 text-sm text-blue-700 underline">
+                        <button type="button" onClick={() => void storeModuleComplete()} className="mb-3 text-sm text-[#0BBBE7] underline hover:text-[#009fdf]">
                             Reintentar guardar módulo
                         </button>
                     )}

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { CreatePersistedUserCommand, UpdatePersistedUserCommand } from '@/application/users/user.commands';
-import type { PersistedUserRecord, UserCourseEnrollmentRecord } from '@/application/users/user.records';
+import type { ClientProfileRecord, PersistedUserRecord, UserCourseEnrollmentRecord } from '@/application/users/user.records';
 import { Prisma } from '@/prisma/app/generated/prisma/client';
 import { UserExistError } from '@/exceptions/user-exist';
 import { safeLogger } from '@/shared/observability/safe-logger';
@@ -8,13 +8,39 @@ import { safeLogger } from '@/shared/observability/safe-logger';
 const toUserRecord = (user: {
     id: string; name: string; lastName: string; email: string; password: string | null; isAdmin: boolean;
     emailVerified: Date | null; identification: string | null; identificationType: string | null;
-    phoneNumber: string; createdAt: Date; updatedAt: Date | null;
+    phoneNumber: string; profileImage: string | null; createdAt: Date; updatedAt: Date | null;
 }): PersistedUserRecord => ({
     id: user.id, name: user.name, lastName: user.lastName, email: user.email, passwordHash: user.password,
     isAdmin: user.isAdmin, emailVerified: user.emailVerified, identification: user.identification,
-    identificationType: user.identificationType, phoneNumber: user.phoneNumber,
+    identificationType: user.identificationType, phoneNumber: user.phoneNumber, profileImage: user.profileImage,
     createdAt: user.createdAt, updatedAt: user.updatedAt,
 });
+
+const clientProfileSelect = {
+    id: true, name: true, lastName: true, email: true, phoneNumber: true,
+    profileImage: true, identification: true, identificationType: true,
+    createdAt: true, isAdmin: true,
+} as const;
+
+export const findClientProfileById = async (id: string): Promise<ClientProfileRecord | null> =>
+    prisma.user.findUnique({ where: { id }, select: clientProfileSelect });
+
+export const updateClientProfileById = async (
+    id: string,
+    patch: { name?: string; lastName?: string; phoneNumber?: string; profileImage?: string | null },
+): Promise<ClientProfileRecord> => prisma.user.update({
+    where: { id },
+    data: {
+        ...(patch.name !== undefined ? { name: patch.name } : {}),
+        ...(patch.lastName !== undefined ? { lastName: patch.lastName } : {}),
+        ...(patch.phoneNumber !== undefined ? { phoneNumber: patch.phoneNumber } : {}),
+        ...(patch.profileImage !== undefined ? { profileImage: patch.profileImage } : {}),
+    },
+    select: clientProfileSelect,
+});
+
+export const isProfileImageReferenced = async (url: string): Promise<boolean> =>
+    (await prisma.user.count({ where: { profileImage: url } })) > 0;
 
 /**
  * This repository is responsible for managing the users in the database.

@@ -256,7 +256,7 @@ export const CourseClassesForm = ({
             <div>
                 <button
                     type="button"
-                    className={cn('border border-[#0BBBE7] text-[#0BBBE7] px-1 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-1 mb-4')}
+                    className={cn('border border-[#0BBBE7] text-[#0BBBE7] px-1 py-2 rounded-md hover:bg-[#0BBBE7]/10 transition-colors flex items-center gap-1 mb-4')}
                     onClick={addModule}
                 >
                     Agregar módulo <AddCircleOutline />
@@ -328,7 +328,7 @@ export const CourseClassesForm = ({
                                 </div>
                                 <button
                                     type="button"
-                                    className={cn('border border-red-500 text-red-500 px-1 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-1 mb-4')}
+                                    className={cn('border border-red-500 text-red-500 px-1 py-2 rounded-md hover:bg-red-50 transition-colors flex items-center gap-1 mb-4')}
                                     onClick={() => removeModule(moduleIndex)}
                                 >
                                     Eliminar módulo<DeleteForever />
@@ -425,7 +425,7 @@ export const CourseClassesForm = ({
 
                                         <button
                                             type="button"
-                                            className={cn('border border-red-500 text-red-500 px-1 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-1 mb-4')}
+                                            className={cn('border border-red-500 text-red-500 px-1 py-2 rounded-md hover:bg-red-50 transition-colors flex items-center gap-1 mb-4')}
                                             onClick={() => removeClassFromModule(moduleIndex, classIndex)}
                                         >
                                             Eliminar clase <DeleteForever />
@@ -495,7 +495,7 @@ export const CourseClassesForm = ({
                                                         </Tab>
                                                         <button
                                                             type="button"
-                                                            className={cn('border-red-500 text-red-500 hover:bg-blue-50 transition-colors flex items-center ')}
+                                                            className={cn('border-red-500 text-red-500 hover:bg-red-50 transition-colors flex items-center ')}
                                                             onClick={() => removeQuestionFromQuiz(moduleIndex, questionIndex)}
                                                         >
                                                             <DeleteForever />
@@ -504,7 +504,7 @@ export const CourseClassesForm = ({
                                                 ))}
                                                 <button
                                                     type="button"
-                                                    className={cn('border border-[#0BBBE7] text-[#0BBBE7] px-1 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-1')}
+                                                    className={cn('border border-[#0BBBE7] text-[#0BBBE7] px-1 py-2 rounded-md hover:bg-[#0BBBE7]/10 transition-colors flex items-center gap-1')}
                                                     onClick={() => addQuestionToQuiz(moduleIndex)}
                                                 >
                                                     Nueva pregunta <AddCircleOutline />
@@ -679,7 +679,7 @@ export const CourseClassesForm = ({
                                                                 />
                                                                 <button
                                                                     type="button"
-                                                                    className={cn('border border-[#0BBBE7] text-[#0BBBE7] px-1 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-1')}
+                                                                    className={cn('border border-[#0BBBE7] text-[#0BBBE7] px-1 py-2 rounded-md hover:bg-[#0BBBE7]/10 transition-colors flex items-center gap-1')}
                                                                     onClick={() => addOptionToQuestion(moduleIndex, questionIndex)}
                                                                 >
                                                                     Agregar otra opción <AddCircleOutline />
@@ -705,7 +705,7 @@ export const CourseClassesForm = ({
 
                                 <button
                                     type="button"
-                                    className={cn('border border-[#0BBBE7] text-[#0BBBE7] px-1 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-1 mb-4')}
+                                    className={cn('border border-[#0BBBE7] text-[#0BBBE7] px-1 py-2 rounded-md hover:bg-[#0BBBE7]/10 transition-colors flex items-center gap-1 mb-4')}
                                     onClick={() => addClassToModule(moduleIndex)}
                                 >
                                     Agregar otra clase <AddCircleOutline />
@@ -721,8 +721,9 @@ export const CourseClassesForm = ({
                 <div className={cn('flex mx-3')}>
                     <Button
                         type="button"
+                        variant="outline"
                         disabled={isSaving}
-                        className={cn('border border-[#0BBBE7] text-[#0BBBE7] px-6 py-2 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-1')}
+                        className={cn('border border-[#0BBBE7] text-[#0BBBE7] px-6 py-2 rounded-md hover:bg-[#0BBBE7]/10 transition-colors flex items-center gap-1')}
                         onClick={onPreviousStep}
                     >
                         Atrás

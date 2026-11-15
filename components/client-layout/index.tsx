@@ -13,6 +13,7 @@ import {
     BreadcrumbPage,
 } from "@/components/ui/breadcrumb"
 import { useSession } from 'next-auth/react'
+import { ClientProfileProvider, useOptionalClientProfile } from '@/features/users/client/client-profile-context'
 
 
 export interface LayoutProps extends PropsWithChildren {
@@ -24,6 +25,11 @@ type ClientBreadcrumb = {
     id: 'home' | 'current-page';
     label: string;
 };
+
+function Greeting({ fallbackName }: { fallbackName?: string | null }) {
+    const profile = useOptionalClientProfile()?.profile;
+    return <p>Hola de nuevo, {profile?.name ?? fallbackName}</p>;
+}
 
 function Layout(props: LayoutProps): JSX.Element {
     const { children, additionalClass = '' } = props
@@ -39,7 +45,7 @@ function Layout(props: LayoutProps): JSX.Element {
     }
 
     return (
-        <main
+        <ClientProfileProvider><main
             className={cn({
                 'min-h-screen items-center max-md:justify-center  max-md:mx-0 max-md:h-auto max-md:w-full':
                     true,
@@ -72,11 +78,11 @@ function Layout(props: LayoutProps): JSX.Element {
                             </BreadcrumbList>
                         </Breadcrumb>
                     </div>
-                    <div className={cn('justify-start')}><p>Hola de nuevo, {data?.user.name}</p></div>
+                    <div className={cn('justify-start')}><Greeting fallbackName={data?.user.name} /></div>
                 </div>
             </div>
             {children}
-        </main>
+        </main></ClientProfileProvider>
     )
 }
 

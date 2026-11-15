@@ -31,6 +31,21 @@ describe('legacy identity action contracts', () => {
         expect(auth).not.toHaveBeenCalled();
     });
 
+    it.each([
+        [undefined, 'false'],
+        [true, 'true'],
+    ])('passes the remember choice to credentials without exposing it elsewhere', async (rememberMe, expected) => {
+        (signIn as jest.Mock).mockResolvedValue(undefined);
+        await login({ email: registration.email, password: registration.password, rememberMe });
+        expect(signIn).toHaveBeenCalledWith('credentials', expect.objectContaining({ rememberMe: expected }));
+    });
+
+    it('rejects a non-boolean remember choice', async () => {
+        await expect(login({ email: registration.email, password: registration.password, rememberMe: 'true' }))
+            .resolves.toMatchObject({ ok: false, error: { code: 'VALIDATION' } });
+        expect(signIn).not.toHaveBeenCalled();
+    });
+
     it('maps invalid credentials without exposing the provider error', async () => {
         const invalidCredentials = new AuthError('private provider detail');
         invalidCredentials.type = 'CredentialsSignin';
