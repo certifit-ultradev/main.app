@@ -6,7 +6,11 @@ type CourseStepProgressProp = {
 };
 
 export const CourseStepProgress = ({ currentStep }: CourseStepProgressProp) => {
-    const steps = ["Información Básica", "Clases", "Resumen"];
+    const steps = [
+        { id: 'basic-information', label: 'Información Básica' },
+        { id: 'classes', label: 'Clases' },
+        { id: 'summary', label: 'Resumen' },
+    ] as const;
 
     return (
         <div className={cn('w-full lg:w-1/4 bg-[#F9FAFC] rounded-lg p-4 h-60')}>
@@ -31,7 +35,7 @@ export const CourseStepProgress = ({ currentStep }: CourseStepProgressProp) => {
 
                     return (
                         <div
-                            key={index}
+                            key={step.id}
                             className={cn(`flex items-center gap-2 text-lg font-medium cursor-pointer ${textColor}`)}
                         >
                             <div
@@ -45,7 +49,7 @@ export const CourseStepProgress = ({ currentStep }: CourseStepProgressProp) => {
                                     <FormatListBulleted className={cn('invert" fontSize="small')} />
                                 )}
                             </div>
-                            <span className={cn('ml-3')}>{step}</span>
+                            <span className={cn('ml-3')}>{step.label}</span>
                         </div>
                     );
                 })}

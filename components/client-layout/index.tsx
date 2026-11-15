@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { type PropsWithChildren } from 'react'
+import { type PropsWithChildren, type JSX } from 'react'
 import { cn } from '@/lib/utils'
 import Navbar from '../navbar'
 import { Slash } from "lucide-react"
@@ -13,6 +13,7 @@ import {
     BreadcrumbPage,
 } from "@/components/ui/breadcrumb"
 import { useSession } from 'next-auth/react'
+import { ClientProfileProvider, useOptionalClientProfile } from '@/features/users/client/client-profile-context'
 
 
 export interface LayoutProps extends PropsWithChildren {
@@ -20,21 +21,31 @@ export interface LayoutProps extends PropsWithChildren {
     additionalClass?: string
 }
 
+type ClientBreadcrumb = {
+    id: 'home' | 'current-page';
+    label: string;
+};
+
+function Greeting({ fallbackName }: { fallbackName?: string | null }) {
+    const profile = useOptionalClientProfile()?.profile;
+    return <p>Hola de nuevo, {profile?.name ?? fallbackName}</p>;
+}
+
 function Layout(props: LayoutProps): JSX.Element {
     const { children, additionalClass = '' } = props
     const { data } = useSession();
-    const [breadcrumbs, setBreadcrumbs] = useState(["Inicio"]);
+    const [breadcrumbs, setBreadcrumbs] = useState<ClientBreadcrumb[]>([{ id: 'home', label: 'Inicio' }]);
 
     const navigate = (page: string) => {
         if (page === "Inicio") {
-            setBreadcrumbs(["Inicio"])
+            setBreadcrumbs([{ id: 'home', label: 'Inicio' }])
         } else {
-            setBreadcrumbs(["Inicio", page])
+            setBreadcrumbs([{ id: 'home', label: 'Inicio' }, { id: 'current-page', label: page }])
         }
     }
 
     return (
-        <main
+        <ClientProfileProvider><main
             className={cn({
                 'min-h-screen items-center max-md:justify-center  max-md:mx-0 max-md:h-auto max-md:w-full':
                     true,
@@ -48,30 +59,30 @@ function Layout(props: LayoutProps): JSX.Element {
                         <Breadcrumb>
                             <BreadcrumbList>
                                 {breadcrumbs.map((crumb, index) => (
-                                    <BreadcrumbItem key={index}>
+                                    <BreadcrumbItem key={crumb.id}>
                                         {index > 0 && (
                                             <Slash className={cn('h-4 w-4 mx-2 text-gray-400')} aria-hidden="true" />
                                         )}
                                         {index < breadcrumbs.length - 1 ? (
                                             <BreadcrumbLink
                                                 href="#"
-                                                onClick={() => navigate(crumb)}
+                                                onClick={() => navigate(crumb.label)}
                                             >
-                                                {crumb}
+                                                {crumb.label}
                                             </BreadcrumbLink>
                                         ) : (
-                                            <BreadcrumbPage>{crumb}</BreadcrumbPage>
+                                            <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
                                         )}
                                     </BreadcrumbItem>
                                 ))}
                             </BreadcrumbList>
                         </Breadcrumb>
                     </div>
-                    <div className={cn('justify-start')}><p>Hola de nuevo, {data?.user.name}</p></div>
+                    <div className={cn('justify-start')}><Greeting fallbackName={data?.user.name} /></div>
                 </div>
             </div>
             {children}
-        </main>
+        </main></ClientProfileProvider>
     )
 }
 

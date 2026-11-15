@@ -40,3 +40,9 @@
         @apply right-5 sm:px-2 px-1.5 py-0.5 
     }
 }
+
+iframe[src*="wompi.co"], /* Selector genérico para el iframe de Wompi */
+.waybox-modal /* Cambia esta clase si Wompi usa otro contenedor padre en el DOM */ {
+    height: 85vh !important;
+    max-height: 100vh !important;
+}

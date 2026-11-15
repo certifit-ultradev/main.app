@@ -1,6 +1,16 @@
-import { Purchase } from "@/models/purchase";
 import { prisma } from "@/lib/prisma";
-import { NotFoundError } from "@/exceptions/not-found";
+import type { CreatePendingCoursePurchaseCommand, PaymentPurchasePatch, PurchaseRecord } from '@/application/payments/payment.records';
+
+const toPurchaseRecord = (purchase: {
+    id: number; cartId: number; trxId: string; reference: string; paymentMethod: string; trxCreationDate: Date;
+    total: number; subtotal: number; status: PurchaseRecord['status']; createdAt: Date; updatedAt: Date | null;
+    cart?: { userId: string; courseId: number } | null;
+}): PurchaseRecord => ({
+    id: purchase.id, cartId: purchase.cartId, trxId: purchase.trxId, reference: purchase.reference,
+    paymentMethod: purchase.paymentMethod, trxCreationDate: purchase.trxCreationDate, total: purchase.total,
+    subtotal: purchase.subtotal, status: purchase.status, createdAt: purchase.createdAt, updatedAt: purchase.updatedAt,
+    ...(purchase.cart ? { cart: { userId: purchase.cart.userId, courseId: purchase.cart.courseId } } : {}),
+});
 
 /**
  * 
@@ -9,43 +19,26 @@ import { NotFoundError } from "@/exceptions/not-found";
  * @param purchase 
  * @returns 
  */
-export const storeCoursePaymentTransaction = async (courseId: number, userId: string, purchase: Purchase): Promise<Purchase | null> => {
+export const storeCoursePaymentTransaction = async (command: CreatePendingCoursePurchaseCommand): Promise<PurchaseRecord> => {
     const txPurchase = await prisma.$transaction(async (tx) => {
         const cartCreated = await tx.cart.create({
             data: {
-                userId,
-                courseId,
+                userId: command.userId,
+                courseId: command.courseId,
             }
         });
-        purchase.cartId = cartCreated.id;
         const purchaseCreated = await tx.purchase.create({
             data: {
                 cartId: cartCreated.id,
-                trxId: purchase.trxId,
-                reference: purchase.reference,
-                paymentMethod: purchase.paymentMethod,
-                trxCreationDate: purchase.trxCreationDate,
-                total: purchase.total,
-                subtotal: purchase.subtotal,
-                status: purchase.status
+                trxId: '', reference: command.reference, paymentMethod: '', trxCreationDate: command.occurredAt,
+                total: 0, subtotal: 0, status: 'PENDING',
             }
         });
 
         return purchaseCreated;
     })
 
-    return new Purchase({
-        cartId: txPurchase.cartId,
-        trxId: txPurchase.trxId,
-        reference: txPurchase.reference,
-        paymentMethod: txPurchase.paymentMethod,
-        trxCreationDate: txPurchase.trxCreationDate,
-        total: txPurchase.total,
-        subtotal: txPurchase.subtotal,
-        status: txPurchase.status,
-        createdAt: txPurchase.createdAt,
-        updatedAt: txPurchase.updatedAt
-    });
+    return toPurchaseRecord(txPurchase);
 }
 
 /**
@@ -54,12 +47,12 @@ export const storeCoursePaymentTransaction = async (courseId: number, userId: st
  * @param data 
  * @returns 
  */
-export const updatePurchaseById = async (id: number, data: Partial<Purchase>) => {
-    const { id: _, cartId: __, cart, ...updateData } = data;
-    return await prisma.purchase.update({
+export const updatePurchaseById = async (id: number, data: PaymentPurchasePatch): Promise<PurchaseRecord> => {
+    const updated = await prisma.purchase.update({
         where: { id },
-        data: updateData
+        data
     });
+    return toPurchaseRecord(updated);
 }
 
 /**
@@ -68,7 +61,7 @@ export const updatePurchaseById = async (id: number, data: Partial<Purchase>) =>
  * @param userId 
  * @returns 
  */
-export const findUserPurchaseById = async (id: number, userId: string): Promise<Purchase> => {
+export const findUserPurchaseById = async (id: number, userId: string): Promise<PurchaseRecord | null> => {
     const purchase = await prisma.purchase.findFirst({
         relationLoadStrategy: 'join',
         include: {
@@ -82,13 +75,7 @@ export const findUserPurchaseById = async (id: number, userId: string): Promise<
         }
     });
 
-    if (!purchase) {
-        throw new NotFoundError('Compra no encontrada');
-    }
-
-    return new Purchase({
-        ...purchase
-    });
+    return purchase ? toPurchaseRecord(purchase) : null;
 }
 
 /**
@@ -96,7 +83,7 @@ export const findUserPurchaseById = async (id: number, userId: string): Promise<
  * @param reference 
  * @returns 
  */
-export const findUserPurchaseByReference = async (reference: string): Promise<Purchase> => {
+export const findUserPurchaseByReference = async (reference: string): Promise<PurchaseRecord | null> => {
     const purchase = await prisma.purchase.findFirst({
         relationLoadStrategy: 'join',
         include: {
@@ -107,13 +94,7 @@ export const findUserPurchaseByReference = async (reference: string): Promise<Pu
         }
     });
 
-    if (!purchase) {
-        throw new NotFoundError('Compra no encontrada');
-    }
-
-    return new Purchase({
-        ...purchase
-    });
+    return purchase ? toPurchaseRecord(purchase) : null;
 }
 
 /**
@@ -122,7 +103,7 @@ export const findUserPurchaseByReference = async (reference: string): Promise<Pu
  * @param userId 
  * @returns 
  */
-export const findLastCoursePendingPurchase = async (courseId: number, userId: string): Promise<Purchase | null> => {
+export const findLastCoursePendingPurchase = async (courseId: number, userId: string): Promise<PurchaseRecord | null> => {
     const lastPurchase = await prisma.purchase.findFirst({
         relationLoadStrategy: 'join',
         where: {
@@ -134,11 +115,5 @@ export const findLastCoursePendingPurchase = async (courseId: number, userId: st
         }
     });
 
-    if (!lastPurchase) {
-        throw new NotFoundError('Compra no encontrada');
-    }
-
-    return new Purchase({
-        ...lastPurchase
-    });
+    return lastPurchase ? toPurchaseRecord(lastPurchase) : null;
 }

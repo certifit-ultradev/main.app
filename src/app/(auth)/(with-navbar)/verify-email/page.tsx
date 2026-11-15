@@ -1,7 +1,7 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { Card, Spinner } from '@nextui-org/react';
+import { Card, Spinner } from '@heroui/react';
 import { FaCircleCheck, FaCircleExclamation } from 'react-icons/fa6';
 import { verifyEmail } from '@/actions/auth/verification-token';
 import { cn } from '@/lib/utils';
@@ -21,12 +21,13 @@ const VerifyEmailPage = () => {
             return;
         }
 
-        verifyEmail(token)
+        verifyEmail({ token })
             .then((data) => {
-                if (data.success) {
+                if (data.ok) {
                     setSuccess(data.message);
+                } else {
+                    setError(data.error.message);
                 }
-                setError(data.error);
             })
             .catch(() => {
                 setError('Ocurrio un error!');

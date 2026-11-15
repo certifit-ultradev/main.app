@@ -1,24 +1,22 @@
 'use client'
 
 import { cn } from '@/lib/utils';
-import { CoursePublicData } from '@/utils/types';
-import { useEffect, useState } from 'react';
+import type { StudentCourseListItemDto } from '@/application/courses/student-course.dto';
+import { useEffect, useState, type JSX } from 'react';
 import { CourseProgressCard, EmptyCourseProgressCard } from './course-progress-card';
 import { Loading } from './loading';
+import { getUserCourseList } from '@/features/courses/learning/course-api.client';
 
 export const UserCourses = () => {
-    const [courses, setCourses] = useState<CoursePublicData[]>([]);
+    const [courses, setCourses] = useState<StudentCourseListItemDto[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchCourses = async () => {
             try {
-                const response = await fetch('/api/courses');
-                const activeCourses = await response.json();
-                // Asigna cursos
-                setCourses(activeCourses);
-            } catch (error) {
-                console.error(error);
+                setCourses(await getUserCourseList());
+            } catch {
+                setCourses([]);
             } finally {
                 // Quita el loading
                 setIsLoading(false);
@@ -29,9 +27,11 @@ export const UserCourses = () => {
     }, []);
 
     const coursesElements = courses.map((course, index) => {
-        const cardComponent: JSX.Element = course.progressPercent === 0 ? <EmptyCourseProgressCard course={course} index={index} /> : <CourseProgressCard course={course} index={index} />;
+        const cardComponent: JSX.Element = course.progressPercent === 0
+            ? <EmptyCourseProgressCard course={course} position={index} />
+            : <CourseProgressCard course={course} />;
         return (
-            <div key={index}>
+            <div key={course.canonicalId}>
                 {cardComponent}
             </div>
         )

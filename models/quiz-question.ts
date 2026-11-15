@@ -4,7 +4,7 @@ export class QuizQuestion {
 	id?: number;
 	quizId: number;
 	title: string;
-	type: string;
+	type: 'text' | 'multiple';
 	points: number;
 	createdAt?: Date;
 	updatedAt?: Date | null;
@@ -15,7 +15,7 @@ export class QuizQuestion {
 			id?: number;
 			quizId: number;
 			title: string;
-			type: string;
+			type: 'text' | 'multiple';
 			points: number;
 			createdAt?: Date;
 			updatedAt?: Date | null;

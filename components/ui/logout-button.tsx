@@ -2,7 +2,7 @@
 
 import { logout } from "@/actions/auth/logout";
 import { cn } from "@/lib/utils";
-import { Button } from "@nextui-org/react";
+import { Button } from "@heroui/react";
 import { HiOutlineLogout } from "react-icons/hi";
 
 export const LogoutButton = () => {

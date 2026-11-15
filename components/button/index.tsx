@@ -17,9 +17,9 @@ function Button(props: ButtonProps) {
       disabled={isDisabled}
       onClick={handleClick}
       className={cn({
-        'text-lg font-medium rounded-xl bg-button-color focus:outline-none focus:z-10 hover:bg-accent':
+        'text-lg font-medium rounded-xl focus:outline-none focus:z-10 transition-colors':
           true,
-        'max-lg:w-full py-2.5 px-10 me-2 mb-2 bg-primary text-white':
+        'max-lg:w-full py-2.5 px-10 me-2 mb-2 bg-[#0BBBE7] text-white hover:bg-[#009fdf]':
           !overrideClass,
         [classes]: !!classes,
       })}

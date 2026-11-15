@@ -3,13 +3,13 @@
 import { ErrorMessage } from '@hookform/error-message';
 import { Control, Controller, FieldErrors, UseFormRegister } from 'react-hook-form';
 import { cn } from '@/lib/utils';
-import { RegisterUserFirstStep } from '@/utils/types';
-import PhoneInput from 'react-phone-input-2';
+import type { RegistrationProfileFormValues } from '@/features/auth/registration/registration-form.types';
+import { PhoneNumberField } from '@/components/form/phone-number-field';
 
 interface RegisterFormProps {
-    errors: FieldErrors<RegisterUserFirstStep>
-    control: Control<RegisterUserFirstStep>
-    register: UseFormRegister<RegisterUserFirstStep>
+    errors: FieldErrors<RegistrationProfileFormValues>
+    control: Control<RegistrationProfileFormValues>
+    register: UseFormRegister<RegistrationProfileFormValues>
 };
 
 export const BasicFieldsForm = ({ register, control, errors }: RegisterFormProps) => {
@@ -69,24 +69,15 @@ export const BasicFieldsForm = ({ register, control, errors }: RegisterFormProps
                 />
             </div>
             <div className={cn('flex flex-wrap mb-4')}>
-                <div className={cn('w-full pr-2')}>
+                <div className={cn('w-full')}>
                     <Controller
                         control={control}
                         name='phoneNumber'
                         render={({ field }) => (
-                            <PhoneInput
-                                country={'co'}
+                            <PhoneNumberField
+                                id="registrationPhoneNumber"
                                 value={field.value}
-                                onChange={(value) => field.onChange(value)}
-                                inputClass={cn(
-                                    'w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0BBBE7]'
-                                )}
-                                containerClass={cn('w-full')}
-                                inputProps={{
-                                    name: 'phoneNumber',
-                                    required: true,
-                                }}
-                                specialLabel=''
+                                onChange={field.onChange}
                             />
                         )}
                     />

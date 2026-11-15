@@ -3,25 +3,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Image from 'next/image'
 import { cn } from '@/lib/utils';
-import { CoursePublicData, RemapedClass } from '@/utils/types';
+import type { StudentCourseListItemDto } from '@/application/courses/student-course.dto';
 import { useRouter } from 'next/navigation';
 
 interface CourseProgressCardProps {
-    course: CoursePublicData;
-    index: number;
+    course: StudentCourseListItemDto;
 }
 
-export function CourseProgressCard({ course, index }: CourseProgressCardProps) {
+export function CourseProgressCard({ course }: CourseProgressCardProps) {
     const router = useRouter();
 
-    const handleStartCourse = (course: CoursePublicData) => {
+    const handleStartCourse = (course: StudentCourseListItemDto) => {
         router.push(`/courses/${course.canonicalId}/learn`);
     }
 
     return (
         <>
             <div
-                key={index}
                 className={cn(
                     "bg-white border border-gray-200 rounded-xl p-4 shadow-sm",
                     "h-full flex flex-col"
@@ -41,7 +39,7 @@ export function CourseProgressCard({ course, index }: CourseProgressCardProps) {
                     <CardContent>
                         <div className={cn('flex items-center space-x-4 mb-4')}>
                             <div className={cn("flex-1 mr-4")}>
-                                {course.visibleClasses.map((cls: RemapedClass) => {
+                                {course.visibleClasses.map((cls) => {
                                     const isCurrentGlobal = course.classesWithCompletion.findIndex((c) => c.id === cls.id) === course.currentIndex;
 
                                     return (
@@ -91,10 +89,10 @@ export function CourseProgressCard({ course, index }: CourseProgressCardProps) {
 }
 
 
-export function EmptyCourseProgressCard({ course, index }: CourseProgressCardProps) {
+export function EmptyCourseProgressCard({ course, position }: CourseProgressCardProps & { position: number }) {
     const router = useRouter();
 
-    const handleStartCourse = (course: CoursePublicData) => {
+    const handleStartCourse = (course: StudentCourseListItemDto) => {
         router.push(`/courses/${course.canonicalId}/learn`);
     }
     return (
@@ -105,7 +103,7 @@ export function EmptyCourseProgressCard({ course, index }: CourseProgressCardPro
             )}>
                 {/* Contenido superior */}
                 <div className={cn("relative mb-4")}>
-                    <Image src={course.courseImage} alt={`Curso ${index + 1}`} className={cn('w-full h-auto rounded-lg object-cover')} width={350} height={200} />
+                    <Image src={course.courseImage} alt={`Curso ${position + 1}`} className={cn('w-full h-auto rounded-lg object-cover')} width={350} height={200} />
                     <div className={cn('absolute top-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full')}>
                         {course.courseDuration}
                     </div>

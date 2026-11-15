@@ -1,22 +1,20 @@
 import { fetchCategoryById } from '@/actions/category/list';
 import { CategoryCreateEditForm } from '@/components/category/category-form';
-import { CourseCategoryData } from '@/utils/types';
 import { notFound } from 'next/navigation';
 
-// @ts-expect-error: params
-export default async function EditCategoryPage({ params }) {
-    const { id } = await params;
-    const response = await fetchCategoryById({
-        data: {
-            id: Number(id)
-        }
-    });
+interface EditCategoryPageProps {
+    params: Promise<{ id: string }>;
+}
 
-    if (!response.success && !response.payload) {
+export default async function EditCategoryPage({ params }: EditCategoryPageProps) {
+    const { id } = await params;
+    const response = await fetchCategoryById({ id: Number(id) });
+
+    if (!response.ok) {
         notFound();
     }
 
     return (
-        <CategoryCreateEditForm data={response.payload as CourseCategoryData} />
+        <CategoryCreateEditForm data={response.data} />
     );
 }

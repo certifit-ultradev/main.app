@@ -14,6 +14,7 @@ declare module "next-auth" {
         id: string;
         isAdmin?: boolean;
         emailVerified?: Date | null;
+        rememberMe?: boolean;
     }
 }
 
@@ -22,5 +23,6 @@ declare module "next-auth/jwt" {
         id: string;
         isAdmin: boolean;
         emailVerified: Date | null;
+        sessionDeadline?: number;
     }
 }

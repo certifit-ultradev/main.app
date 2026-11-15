@@ -6,13 +6,12 @@ import { NextPage } from 'next';
 const CreateUsersPage: NextPage = () => {
     return (
         <UserCreateEditForm data={{
-            id: '',
             name: '',
             lastName: '',
             email: '',
             phoneNumber: '',
-            password: '',
-            confirmPassword: '',
+            identification: null,
+            identificationType: null,
         }} />
     );
 }

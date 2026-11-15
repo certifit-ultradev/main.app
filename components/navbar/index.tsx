@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, type JSX } from 'react'
 import MobileMenu from './components/mobileMenu'
 import { useRouter } from 'next/navigation'
 import { logout } from '@/actions/auth/logout'
@@ -9,9 +9,12 @@ import Dropdown from '../dropdown'
 import { Button } from '../ui/button'
 import { useSession } from 'next-auth/react'
 import { navbarListDesktop } from './constants'
+import { ProfileAvatar } from '@/components/user/profile-avatar'
+import { useOptionalClientProfile } from '@/features/users/client/client-profile-context'
 
 function Navbar(): JSX.Element {
     const { data: session, status } = useSession();
+    const clientProfile = useOptionalClientProfile()?.profile;
     const router = useRouter();
     const handleLogout = useCallback(async () => {
         await logout()
@@ -28,6 +31,8 @@ function Navbar(): JSX.Element {
 
     const handleLogin = useCallback(() => router.push(`/login`), [router])
     const handlerChangePassword = useCallback(() => router.push(`/users/change-password`), [router])
+    const handleProfile = useCallback(() => router.push('/users/profile'), [router])
+    const handleAdministration = useCallback(() => router.push('/admin'), [router])
     const handleRegister = useCallback(() => router.push(`/register`), [router])
 
     // Opciones para el menú móvil
@@ -39,12 +44,15 @@ function Navbar(): JSX.Element {
                 { label: 'Crear cuenta', value: 'register', handleClick: handleRegister },
             ]
             : [
-                { label: 'Cambiar contraseña', value: 'profile', handleClick: handlerChangePassword },
+                ...(role === 'user' ? [{ label: 'Mi perfil', value: 'profile', handleClick: handleProfile }] : []),
+                { label: 'Cambiar contraseña', value: 'change-password', handleClick: handlerChangePassword },
                 { label: 'Cerrar Sesión', value: 'logout', handleClick: handleLogout },
             ]
         ),
-        { label: 'Inicio', value: 'inicio', handleClick: () => { window.location.href = role == 'admin' ? '/admin' : '/dashboard' } },
-        role == 'admin' ? { label: 'Usuarios', value: '/admin/users', handleClick: () => { window.location.href = '/admin/users' } } : { label: 'Soporte', value: 'contact-us', handleClick: () => { window.location.hash = 'contact-us' } },
+        role === 'admin'
+            ? { label: 'Administración', value: 'admin', handleClick: handleAdministration }
+            : { label: 'Inicio', value: 'inicio', handleClick: () => router.push('/dashboard') },
+        role == 'admin' ? { label: 'Usuarios', value: '/admin/users', handleClick: () => router.push('/admin/users') } : { label: 'Soporte', value: 'contact-us', handleClick: () => { window.location.hash = 'contact-us' } },
     ];
 
     return (
@@ -77,10 +85,16 @@ function Navbar(): JSX.Element {
                 {isLogged ? (
                     <>
                         <Dropdown
-                            label={<div className="w-8 h-8 bg-gray-500 rounded-full" />} // Reemplazar con avatar real
+                            label={<ProfileAvatar
+                                name={clientProfile?.name ?? session?.user.name ?? ''}
+                                lastName={clientProfile?.lastName ?? ''}
+                                imageUrl={clientProfile?.profileImage ?? null}
+                            />}
                             optionContainerClass="mt-8 right-0 bg-[#222325] text-white shadow-2xl"
                             options={[
-                                { label: 'Cambiar contraseña', value: 'profile', handleClick: handlerChangePassword },
+                                ...(role === 'user' ? [{ label: 'Mi perfil', value: 'profile', handleClick: handleProfile }] : []),
+                                ...(role === 'admin' ? [{ label: 'Administración', value: 'admin', handleClick: handleAdministration }] : []),
+                                { label: 'Cambiar contraseña', value: 'change-password', handleClick: handlerChangePassword },
                                 { label: 'Cerrar Sesión', value: 'logout', handleClick: handleLogout },
                             ]}
                         />
@@ -99,7 +113,11 @@ function Navbar(): JSX.Element {
 
             {/* Menú Móvil (visible en pantallas pequeñas) */}
             <div className="md:hidden flex items-center space-x-4">
-                <MobileMenu options={mobileOptions} />
+                <MobileMenu options={mobileOptions} avatar={isLogged ? <ProfileAvatar
+                    name={clientProfile?.name ?? session?.user.name ?? ''}
+                    lastName={clientProfile?.lastName ?? ''}
+                    imageUrl={clientProfile?.profileImage ?? null}
+                /> : undefined} />
             </div>
         </nav>
     );

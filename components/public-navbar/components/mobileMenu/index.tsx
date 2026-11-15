@@ -10,21 +10,22 @@ type Options = Array<{
 
 interface MobileMenuProps {
     options: Options
+    avatar?: ReactElement
 }
 
 export default function MobileMenu(props: MobileMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const { options } = props;
+    const { options, avatar } = props;
 
     const handleToggle = () => setIsOpen(!isOpen);
     const handleClose = () => setIsOpen(false);
 
     return (
         <>
-            <button onClick={handleToggle}>
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor">
+            <button onClick={handleToggle} aria-label="Abrir menú">
+                {avatar ?? <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+                </svg>}
             </button>
             {isOpen && (
                 <div className={cn('fixed inset-0 bg-[#121313] bg-opacity-100 z-50 flex flex-col p-4 w-full')}>

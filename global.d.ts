@@ -7,10 +7,10 @@ declare global {
                 currency: string;
                 amountInCents: number;
                 reference: string;
-                signature: string;
+                signature: { integrity: string };
                 publicKey: string;
             }): {
-                open: (cb: (result: any) => void) => void;
+                open: (cb: (result: unknown) => void) => void;
             };
         };
     }

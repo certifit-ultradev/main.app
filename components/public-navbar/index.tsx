@@ -10,18 +10,25 @@ import { logout } from '@/actions/auth/logout'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react';
 import MobileMenu from './components/mobileMenu'
+import { ProfileAvatar } from '@/components/user/profile-avatar'
+import { useOptionalClientProfile } from '@/features/users/client/client-profile-context'
 
 export default function PublicNavbar() {
-    const { status } = useSession();
+    const { status, data: session } = useSession();
+    const clientProfile = useOptionalClientProfile()?.profile;
     const router = useRouter();
     const handleLogout = useCallback(async () => {
         await logout()
     }, []);
 
     const isLogged = status == "authenticated";
+    const isClient = isLogged && !session?.user.isAdmin;
+    const isAdmin = isLogged && session?.user.isAdmin;
 
     const handleLogin = useCallback(() => router.push(`/login`), [router]);
     const handlerChangePassword = useCallback(() => router.push(`/users/change-password`), [router])
+    const handleProfile = useCallback(() => router.push('/users/profile'), [router]);
+    const handleAdministration = useCallback(() => router.push('/admin'), [router]);
     const handleRegister = useCallback(() => router.push(`/register`), [router]);
 
     // Opciones para el menú móvil
@@ -33,6 +40,9 @@ export default function PublicNavbar() {
                 { label: 'Crear cuenta', value: 'register', handleClick: handleRegister },
             ]
             : [
+                ...(isClient ? [{ label: 'Mi perfil', value: 'profile', handleClick: handleProfile }] : []),
+                ...(isAdmin ? [{ label: 'Administración', value: 'admin', handleClick: handleAdministration }] : []),
+                { label: 'Cambiar contraseña', value: 'password', handleClick: handlerChangePassword },
                 { label: 'Cerrar Sesión', value: 'logout', handleClick: handleLogout },
             ]
         ),
@@ -69,9 +79,15 @@ export default function PublicNavbar() {
                 {isLogged ? (
                     <>
                         <Dropdown                            
-                            label={<div className="w-8 h-8 bg-gray-500 rounded-full" />} // Reemplazar con avatar real
+                            label={isClient ? <ProfileAvatar
+                                name={clientProfile?.name ?? session?.user.name ?? ''}
+                                lastName={clientProfile?.lastName ?? ''}
+                                imageUrl={clientProfile?.profileImage ?? null}
+                            /> : <div className="w-8 h-8 bg-gray-500 rounded-full" />}
                             optionContainerClass="mt-8 right-0 bg-[#222325] text-white shadow-2xl"
                             options={[
+                                ...(isClient ? [{ label: 'Mi perfil', value: 'profile', handleClick: handleProfile }] : []),
+                                ...(isAdmin ? [{ label: 'Administración', value: 'admin', handleClick: handleAdministration }] : []),
                                 { label: 'Cambiar contraseña', value: 'password', handleClick: handlerChangePassword },
                                 { label: 'Cerrar Sesión', value: 'logout', handleClick: handleLogout },
                             ]}
@@ -91,7 +107,11 @@ export default function PublicNavbar() {
 
             {/* Menú Móvil (visible en pantallas pequeñas) */}
             <div className="md:hidden flex items-center space-x-4">
-                <MobileMenu options={mobileOptions} />
+                <MobileMenu options={mobileOptions} avatar={isClient ? <ProfileAvatar
+                    name={clientProfile?.name ?? session?.user.name ?? ''}
+                    lastName={clientProfile?.lastName ?? ''}
+                    imageUrl={clientProfile?.profileImage ?? null}
+                /> : undefined} />
             </div>
         </nav>
     );

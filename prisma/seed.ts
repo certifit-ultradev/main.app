@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const prismaCli = new PrismaClient();
 
 async function main() {
+    console.log('Iniciando la inicialización de datos...');
     user();
 }
 
@@ -19,21 +20,21 @@ async function user() {
                 lastName: 'Admin',
                 password: hashedPassword,
                 isAdmin: true,
-                email: 'certifit.ultra@gmail.com',
+                email: 'pedro.reyes63@yahoo.es',
                 emailVerified: new Date,
                 phoneNumber: "123456789",
                 createdAt: new Date(),
                 updatedAt: new Date()
             },
         });
-    } catch (error) {
-        console.error('Usuario no creado.', error);
+    } catch {
+        process.stderr.write('No fue posible crear el usuario inicial.\n');
     }
 }
 
 main()
-    .catch((e) => {
-        console.error(e);
+    .catch(() => {
+        process.stderr.write('La inicialización de datos falló.\n');
         process.exit(1);
     })
     .finally(async () => {

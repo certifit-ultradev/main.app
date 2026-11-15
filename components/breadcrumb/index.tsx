@@ -5,6 +5,7 @@ import Link from "next/link";
 import React from 'react';
 
 export interface BreadcrumbItem {
+    id: string;
     label: string;
     href?: string;
 }
@@ -16,7 +17,7 @@ export function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
                 {items.map((item, index) => {
                     const isLast = index === items.length - 1;
                     return (
-                        <li key={index} className="inline-flex items-center">
+                        <li key={item.id} className="inline-flex items-center">
                             {index !== 0 && (
                                 <ChevronRight className="w-4 h-4 text-gray-400 mx-1" />
                             )}
@@ -66,4 +67,3 @@ export function fixRoute(segment: string): string {
     }
     return segment;
 }
-

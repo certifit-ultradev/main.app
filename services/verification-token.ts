@@ -1,24 +1,21 @@
-import { VerificationToken } from "@/models/verification-token";
-import { generateExpirationToken } from "@/utils/expiraton-token";
+import type { VerificationTokenRecord } from '@/application/identity/identity-token.records';
+import { ONE_HOUR_IDENTITY_TOKEN_TTL } from '@/application/identity/identity-token.ports';
+import { uuidIdentityTokenGenerator } from '@/infrastructure/identity/uuid-identity-token-generator';
 import { createVerificationToken, deleteVerificationToken, findVerificationTokenByToken } from "@/repository/verification-token";
-import { VerificationTokenResult } from "@/utils/types";
-import { sendVerificationEmail } from "@/repository/nodemailer";
-import { logPrismaError } from "@/exceptions/error-encoder";
+import { nodemailerEmailGateway } from '@/infrastructure/notifications/nodemailer-email-gateway';
+import { executeService } from "@/utils/service-wrapper";
+import { getUserByEmail } from './user';
 
 /**
  * 
  * @param email 
  * @returns 
  */
-export const generateVerificationTokenByEmail = async (email: string): Promise<VerificationToken | null> => {
-    try {
-        const { expires, token } = generateExpirationToken();
-
+export const generateVerificationTokenByEmail = async (email: string): Promise<VerificationTokenRecord | null> => {
+    return executeService(() => {
+        const { expires, token } = uuidIdentityTokenGenerator.generate(ONE_HOUR_IDENTITY_TOKEN_TTL);
         return createVerificationToken({ email, token, expires });
-    } catch (error) {
-        logPrismaError(error);
-        throw error;
-    }
+    });
 }
 
 /**
@@ -26,39 +23,39 @@ export const generateVerificationTokenByEmail = async (email: string): Promise<V
  * @param token 
  * @returns 
  */
-export const getVerificationTokenByToken = async (token: string): Promise<VerificationToken | null> => {
-    try {
+export const getVerificationTokenByToken = async (token: string): Promise<VerificationTokenRecord | null> => {
+    return executeService(() => {
         if (token === "") {
             throw new Error("El token de verificación no puede ser vacío");
         }
 
-        return await findVerificationTokenByToken(token);
-    } catch (error) {
-        logPrismaError(error);
-        throw error;
-    }
+        return findVerificationTokenByToken(token);
+    });
 }
+
+/** Sends mail only for an existing, unverified account; callers receive a neutral acknowledgement. */
+export const requestEmailVerification = async (email: string): Promise<void> => {
+    const user = await getUserByEmail(email);
+    if (!user || user.emailVerified) return;
+    await sendVerificationEmailWithToken(email);
+};
 
 /**
  * 
  * @param email 
  * @returns 
  */
-export const sendVerificationEmailWithToken = async (email: string): Promise<VerificationTokenResult> => {
-    try {
-        const verificationToken = await generateVerificationTokenByEmail(email);
-        if (!verificationToken) {
+export const sendVerificationEmailWithToken = async (email: string): Promise<void> => {
+    const verificationToken = await executeService(async () => {
+        const token = await generateVerificationTokenByEmail(email);
+        if (!token) {
             throw new Error("el token no se pudo generar");
         }
+        return token;
+    });
 
-        await sendVerificationEmail(email, verificationToken.token);
+    await executeService(() => nodemailerEmailGateway.sendVerificationLink({ email, token: verificationToken.token }));
 
-        return { success: true, message: "Se envío el mensaje de activación!" };
-    } catch (error) {
-        console.log("email error", error);
-        logPrismaError(error);
-        throw error;
-    }
 }
 
 /**
@@ -66,16 +63,6 @@ export const sendVerificationEmailWithToken = async (email: string): Promise<Ver
  * @param id 
  * @returns 
  */
-export const removeVerificationToken = async (id: string): Promise<VerificationTokenResult> => {
-    try {
-        const verificationToken = await deleteVerificationToken(id);
-        if (!verificationToken) {
-            throw new Error("el token no se ´pudo borrar");
-        }
-
-        return { success: true, message: "Se borro el token" };
-    } catch (error) {
-        logPrismaError(error);
-        throw error;
-    }
+export const removeVerificationToken = async (id: string): Promise<void> => {
+    await executeService(() => deleteVerificationToken(id));
 }

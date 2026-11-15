@@ -1,31 +1,25 @@
-"use server"
+'use server';
 
-import { activateCourse } from "@/services/courses";
-import { ActivateOrDeactivateCourse, ServerActionRequest, ServerActionResponse } from "@/utils/types"
-import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
-import { Middlewares } from "../server-action-middleware";
-import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
+import { activateCourse } from '@/services/courses';
+import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/actions/action-result';
+import { withAdminAction } from '@/interfaces/actions/action-context';
+import { CourseIdInputSchema } from '@/interfaces/actions/admin.contract';
+import { validateActionInput } from '@/interfaces/actions/validation';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
-/**
- * 
- * @param request 
- * @returns 
- */
-export const activate = async (request: ServerActionRequest<ActivateOrDeactivateCourse>): Promise<ServerActionResponse<null>> => {
-    return await Middlewares<null, ActivateOrDeactivateCourse>(
-        request,
-        [isAdmin, isEmailVerified],
-        async (request: ActivateOrDeactivateCourse) => {
-            try {
-                const result = await activateCourse(request.id);
-                if (!result) {
-                    return { success: false, error: "No se pudo activar el curso, intente mas tarde." }
-                }
+export async function activate(input: unknown): Promise<ActionResult<null>> {
+    const parsedInput = validateActionInput(CourseIdInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
 
-                return { success: true, message: result.message }
-            } catch (error) {
-                return mapErrorToServerActionResponse(error, true);
-            }
+    return withAdminAction(async () => {
+        try {
+            const result = await activateCourse(parsedInput.data.id);
+            return result.success
+                ? actionSuccess(null, result.message)
+                : actionFailure('VALIDATION', result.message);
+        } catch {
+            safeLogger.error('action.course.activate.failed', { courseId: parsedInput.data.id });
+            return actionFailure('UNEXPECTED', 'No fue posible activar el curso.');
         }
-    );
+    });
 }

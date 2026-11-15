@@ -90,14 +90,14 @@ const Loading = () => (
             <div className={cn('flex items-center gap-2 mt-4')}>
                 <button
                     className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium 
-      bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 disabled:pointer-events-none disabled:opacity-50"
+      bg-[#0BBBE7] text-white shadow hover:bg-[#009fdf] h-9 px-4 py-2 disabled:pointer-events-none disabled:opacity-50"
                     disabled
                 >
                     &lt;&lt;
                 </button>
                 <button
                     className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium 
-      bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 disabled:pointer-events-none disabled:opacity-50"
+      bg-[#0BBBE7] text-white shadow hover:bg-[#009fdf] h-9 px-4 py-2 disabled:pointer-events-none disabled:opacity-50"
                     disabled
                 >
                     &lt;
@@ -107,14 +107,14 @@ const Loading = () => (
                 </span>
                 <button
                     className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium 
-      bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 disabled:pointer-events-none disabled:opacity-50"
+      bg-[#0BBBE7] text-white shadow hover:bg-[#009fdf] h-9 px-4 py-2 disabled:pointer-events-none disabled:opacity-50"
                     disabled
                 >
                     &gt;
                 </button>
                 <button
                     className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium 
-      bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 disabled:pointer-events-none disabled:opacity-50"
+      bg-[#0BBBE7] text-white shadow hover:bg-[#009fdf] h-9 px-4 py-2 disabled:pointer-events-none disabled:opacity-50"
                     disabled
                 >
                     &gt;&gt;

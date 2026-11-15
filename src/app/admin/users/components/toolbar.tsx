@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { Button } from '@nextui-org/react'
+import { Button } from '@heroui/react'
 import { useRouter } from 'next/navigation'
 
 export function DataTableToolbar() {

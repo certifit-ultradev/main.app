@@ -13,6 +13,12 @@ const nextConfig = {
                 hostname: 'vnruzfzvnvdhb848.public.blob.vercel-storage.com',
                 port: '',
             },
+            {
+                protocol: 'https',
+                hostname: '*.public.blob.vercel-storage.com',
+                port: '',
+                pathname: '/users/**',
+            },
         ],
     },
     logging: {
@@ -21,11 +27,12 @@ const nextConfig = {
         },
     },
     experimental: {
-        forceSwcTransforms: true,
+        agentUpgrade: 'security',
         serverActions: {
-            bodySizeLimit: '900mb',
+            bodySizeLimit: '1000mb',
         }
-    }
+    },
+    allowedDevOrigins: ['192.168.253.242']
 }
 
 module.exports = nextConfig
