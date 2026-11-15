@@ -18,7 +18,7 @@ import {
 import { DataTableToolbar } from "./toolbar"
 import { cn } from "@/lib/utils"
 import { useEffect, useState } from "react"
-import { CourseList } from "@/utils/types"
+import type { CourseEditorListItemDto } from '@/application/courses/course-read.ports'
 import { CreateCourseDataTableColumns } from "./columns"
 import { listAll } from "@/actions/courses/list"
 import { Button } from "@/components/ui/button"
@@ -28,7 +28,7 @@ import { deactivate } from "@/actions/courses/deactivate"
 import { CheckIcon, XIcon } from "@/components/svg/certifit-icons"
 
 export function CourseListDataTable() {
-    const [data, setData] = useState<CourseList[]>([]);
+    const [data, setData] = useState<CourseEditorListItemDto[]>([]);
     const [totalPages, setTotalPages] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
@@ -46,13 +46,12 @@ export function CourseListDataTable() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await listAll({ data: { page: pagination.pageIndex + 1 } });
-                if (response.success) {
-                    setData(response?.payload?.data ?? []);
-                    setTotalPages(response.payload?.total ?? 0);
+                const response = await listAll({ page: pagination.pageIndex + 1 });
+                if (response.ok) {
+                    setData(response.data.data);
+                    setTotalPages(response.data.total);
                 }
-            } catch (error) {
-                console.error('Error al cargar datos:', error);
+            } catch {
             } finally {
                 setIsLoading(false); // Fin de la carga
             }
@@ -62,19 +61,19 @@ export function CourseListDataTable() {
     }, [pagination.pageIndex, pagination.pageSize]);
 
     const handleActivateCourse = async (id: number) => {
-        const result = await activate({ data: { id: id } });
+        const result = await activate({ id });
         setActivationResult({
-            success: true,
-            message: result.message ? result.message : ''
+            success: result.ok,
+            message: result.ok ? result.message ?? '' : result.error.message
         });
         setIsOpen(true);
     };
 
     const handleDectivateCourse = async (id: number) => {
-        const result = await deactivate({ data: { id: id } });
+        const result = await deactivate({ id });
         setActivationResult({
-            success: true,
-            message: result.message ? result.message : ''
+            success: result.ok,
+            message: result.ok ? result.message ?? '' : result.error.message
         });
         setIsOpen(true);
     };

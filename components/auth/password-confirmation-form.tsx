@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils';
-import { SecondStepRegisterSchema } from '@/utils/schemas';
+import { SecondStepRegisterSchema } from '@/features/auth/auth-form.schema';
 import { ErrorMessage } from '@hookform/error-message';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Dispatch, SetStateAction, useState } from 'react';
@@ -9,14 +9,14 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { FormError } from '@/components/form/form-error';
 import { FormSuccess } from '@/components/form/form-success';
-import { RegisterPageData } from '@/utils/types';
+import type { RegistrationFormValues } from '@/features/auth/registration/registration-form.types';
 import { Button } from '@/components/ui/button';
 import { register as createUser } from '@/actions/auth/register';
 import { CheckIcon, XIcon } from '@/components/svg/certifit-icons';
 
 interface RegisterFormProps {
-    data: RegisterPageData;
-    setData: Dispatch<SetStateAction<RegisterPageData>>;
+    data: RegistrationFormValues;
+    setData: Dispatch<SetStateAction<RegistrationFormValues>>;
     nextStep: () => void;
     previousStep: () => void;
 };
@@ -51,23 +51,21 @@ export const PasswordConfirmationForm = ({ data, setData, nextStep, previousStep
         setIsLoading(true);
         setError('');
         setSuccess('');
-        setData((prevDatos) => ({
-            ...prevDatos,
-            ...formData,
-        }));
+        const registrationData = { ...data, ...formData };
+        setData((prevDatos) => ({ ...prevDatos, ...formData }));
 
-        data.password = formData.password
-        createUser({
-            ...data
-        }).then((data) => {
+        createUser(registrationData).then((result) => {
             setIsLoading(false);
-            if (data?.success) {
-                setSuccess(data.message);
+            if (result.ok) {
+                setSuccess(result.message);
                 nextStep();
             } else {
-                setError(data.error);
+                setError(result.error.message);
             }
-        }).catch(() => setError('Algo ha pasado, intenta mas tarde!'));
+        }).catch(() => {
+            setIsLoading(false);
+            setError('Algo ha pasado, intenta mas tarde!');
+        });
     }
 
     return (
@@ -157,9 +155,10 @@ export const PasswordConfirmationForm = ({ data, setData, nextStep, previousStep
                     <div className={cn('grid grid-cols-6 gap-4')}>
                         <div className={cn('col-start-1 col-end-3')}>
                             <Button
-                                color='primary'
+                                type='button'
+                                variant='outline'
                                 onClick={previousStep}
-                                className={cn('w-full border border-[#0BBBE7] text-[#0BBBE7] px-6 py-2 rounded-full hover:bg-blue-50 transition-colors flex items-center gap-1')}
+                                className={cn('w-full border border-[#0BBBE7] text-[#0BBBE7] px-6 py-2 rounded-full hover:bg-[#0BBBE7]/10 transition-colors flex items-center gap-1')}
                             >
                                 Atras
                             </Button>
@@ -167,7 +166,6 @@ export const PasswordConfirmationForm = ({ data, setData, nextStep, previousStep
                         <div className={cn('col-end-7 col-span-2')}>
                             <Button
                                 type='submit'
-                                variant='outline'
                                 className={cn('w-full bg-[#0BBBE7] text-white py-2 rounded-full hover:bg-[#009fdf] transition-colors', {
                                     'opacity-50 cursor-not-allowed': isLoading
                                 })}

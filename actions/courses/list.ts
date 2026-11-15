@@ -1,118 +1,41 @@
-"use server";
+'use server';
 
-import { getAllCourses, getCourseById } from "@/services/courses";
-import { CourseData, CourseList, CourseModule, DataPaginated, FetchCourseByID, FetchPage, QuestionOption, QuizQuestions, ServerActionRequest, ServerActionResponse } from "@/utils/types";
-import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
-import { Middlewares } from "../server-action-middleware";
-import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
+import { getEditorCourseById, getEditorCoursePage } from '@/services/courses';
+import type { CourseEditorDto } from '@/application/courses/course.dto';
+import type { CourseEditorPageDto } from '@/application/courses/course-read.ports';
+import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/actions/action-result';
+import { withAdminAction } from '@/interfaces/actions/action-context';
+import { AdminPageInputSchema, CourseIdInputSchema } from '@/interfaces/actions/admin.contract';
+import { validateActionInput } from '@/interfaces/actions/validation';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
-/**
- * 
- * @param request 
- * @returns 
- */
-export const listAll = async (request: ServerActionRequest<FetchPage>): Promise<ServerActionResponse<DataPaginated<CourseList>>> => {
-    return await Middlewares<DataPaginated<CourseList>, FetchPage>(
-        request,
-        [isAdmin, isEmailVerified],
-        async (request: FetchPage) => {
-            try {
-                const coursesPaged = await getAllCourses({ page: request.page });
-                if (!coursesPaged) {
-                    return {
-                        success: false,
-                        payload: {
-                            data: [],
-                            page: 1,
-                            lastPage: 1,
-                            total: 0
-                        }
-                    };
-                }
+export async function listAll(input: unknown): Promise<ActionResult<CourseEditorPageDto>> {
+    const parsedInput = validateActionInput(AdminPageInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
 
-                return {
-                    success: true,
-                    payload: {
-                        ...coursesPaged,
-                        data: coursesPaged.data.map<CourseList>((course) => ({
-                            id: course.id,
-                            title: course.title,
-                            isActive: course.isActive
-                        }))
-                    }
-                };
-            } catch (error) {
-                return mapErrorToServerActionResponse(error, true);
-            }
+    return withAdminAction(async () => {
+        try {
+            const coursesPaged = await getEditorCoursePage({ page: parsedInput.data.page });
+            return actionSuccess<CourseEditorPageDto>(coursesPaged);
+        } catch {
+            safeLogger.error('action.course.list.failed');
+            return actionFailure('UNEXPECTED', 'No fue posible consultar los cursos.');
         }
-    );
+    });
 }
 
-/**
- * 
- * @param request 
- * @returns 
- */
-export const getCourseDataById = async (request: ServerActionRequest<FetchCourseByID>): Promise<ServerActionResponse<CourseData>> => {
-    return await Middlewares<CourseData, FetchCourseByID>(
-        request,
-        [isAdmin, isEmailVerified],
-        async (request: FetchCourseByID) => {
-            try {
-                const course = await getCourseById(request.id);
-                const modules = course.courseModules?.map((courseModule): CourseModule => ({
-                    id: courseModule.id,
-                    courseId: courseModule.courseId,
-                    title: courseModule.title,
-                    minRequiredPoints: courseModule.minRequiredPoints,
-                    classes: courseModule.moduleClass?.map((cls) => ({
-                        id: cls.id,
-                        courseModuleId: cls.courseModuleId,
-                        title: cls.title,
-                        description: cls.description,
-                        video: cls.videoPath,
-                        videoDuration: cls.videoDuration,
-                        videoSize: cls.videoSize
-                    })),
-                    quiz: {
-                        id: courseModule.moduleQuiz?.[0].id,
-                        courseModuleId: courseModule.moduleQuiz?.[0].courseModuleId,
-                        title: courseModule.moduleQuiz?.[0].title ?? '',
-                        description: courseModule.moduleQuiz?.[0].description ?? '',
-                        questions: courseModule.moduleQuiz?.[0].quizQuestion?.map((question): QuizQuestions => ({
-                            id: question.id,
-                            quizModuleId: question.quizId,
-                            type: question.type,
-                            title: question.title,
-                            points: question.points,
-                            options: question.possibleAnswerQuestion?.map((option): QuestionOption => ({
-                                id: option.id,
-                                quizQuestionId: option.questionId,
-                                value: option.value,
-                                isCorrect: option.isCorrect
-                            }))
-                        })),
-                    }
-                }));
+export async function getCourseDataById(input: unknown): Promise<ActionResult<CourseEditorDto>> {
+    const parsedInput = validateActionInput(CourseIdInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
 
-                return {
-                    success: true,
-                    payload: {
-                        id: course.id,
-                        title: course.title,
-                        description: course.description,
-                        courseImage: course.courseImage,
-                        instructorName: course.instructorName,
-                        instructorPhoto: course.instructorPhoto,
-                        expiresAt: new Date(course.expiresAt).toISOString().split('T')[0],
-                        category: course.category,
-                        price: course.price,
-                        modules: modules
-                    }
-                }
-            } catch (error) {
-                return mapErrorToServerActionResponse(error);
-            }
+    return withAdminAction(async () => {
+        try {
+            const course = await getEditorCourseById(parsedInput.data.id);
+            if (!course) return actionFailure('NOT_FOUND', 'El curso no existe.');
+            return actionSuccess(course);
+        } catch {
+            safeLogger.error('action.course.get_by_id.failed', { courseId: parsedInput.data.id });
+            return actionFailure('UNEXPECTED', 'No fue posible consultar el curso.');
         }
-    );
+    });
 }

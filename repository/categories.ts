@@ -1,23 +1,17 @@
-import { CourseCategory } from "@/models/course-category";
 import { prisma } from "@/lib/prisma";
 import { NotFoundError } from "@/exceptions/not-found";
+import type { CategoryRecord, CreateCategoryCommand, UpdateCategoryCommand } from '@/application/categories/category.records';
 
 /**
  * This repository is responsible for managing the course categories in the database.
  * It provides methods to create, update, delete and find course categories.
  */
-export const allCategories = async (): Promise<CourseCategory[]> => {
+export const allCategories = async (): Promise<CategoryRecord[]> => {
     const categories = await prisma.courseCategory.findMany();
-    if (categories.length == 0) {
-        return [];
-    }
-
-    return categories.map<CourseCategory>((category) => {
-        return new CourseCategory({ ...category });
-    })
+    return categories;
 }
 
-export const findCategoryById = async (id: number): Promise<CourseCategory> => {
+export const findCategoryById = async (id: number): Promise<CategoryRecord> => {
     const category = await prisma.courseCategory.findFirst({
         where: { id }
     });
@@ -26,13 +20,10 @@ export const findCategoryById = async (id: number): Promise<CourseCategory> => {
         throw new NotFoundError('Categoria no encontrada');
     }
 
-    return {
-        id: category?.id,
-        name: category?.name
-    };
+    return category;
 }
 
-export const createCourseCategory = async (category: CourseCategory): Promise<CourseCategory> => {
+export const createCourseCategory = async (category: CreateCategoryCommand): Promise<CategoryRecord> => {
     const createdCourseCategory = await prisma.courseCategory.create({
         data: {
             name: category.name
@@ -41,7 +32,7 @@ export const createCourseCategory = async (category: CourseCategory): Promise<Co
     return createdCourseCategory;
 }
 
-export const updateCourseCategory = async (category: CourseCategory): Promise<CourseCategory> => {
+export const updateCourseCategory = async (category: UpdateCategoryCommand): Promise<CategoryRecord> => {
     const updateCourseCategory = await prisma.courseCategory.update({
         where: { id: category.id },
         data: {
@@ -51,7 +42,7 @@ export const updateCourseCategory = async (category: CourseCategory): Promise<Co
     return updateCourseCategory;
 }
 
-export const deleteCourseCategory = async (id: number): Promise<CourseCategory> => {
+export const deleteCourseCategory = async (id: number): Promise<CategoryRecord> => {
     const deleteCourseCategory = await prisma.courseCategory.delete({
         where: { id }
     });

@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils";
-import { CoursePlainData } from "@/utils/types";
+import type { CatalogCourseCardDto } from '@/application/courses/course.dto';
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
@@ -10,12 +10,13 @@ import Modal from "../modal";
 import { ArrowTopLeftIcon } from "../svg/certifit-icons";
 import CertifitCheckoutComponent from "../certifit-checkout";
 import { Loading } from "./loading";
+import { getTopCourses } from '@/features/courses/learning/course-api.client';
 
 export const TopThreeCourses = () => {
-    const [courses, setCourses] = useState<CoursePlainData[]>([]);
+    const [courses, setCourses] = useState<CatalogCourseCardDto[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [selectedCourse, setSelectedCourse] = useState<CoursePlainData>({
+    const [selectedCourse, setSelectedCourse] = useState<CatalogCourseCardDto>({
         id: 0,
         canonicalId: '',
         title: '',
@@ -30,19 +31,15 @@ export const TopThreeCourses = () => {
             name: ''
         },
         description: '',
-        expiresAt: new Date,
+        expiresAt: new Date(0).toISOString(),
     });
     const router = useRouter();
 
     useEffect(() => {
         const fetchCourses = async () => {
             try {
-                const response = await fetch('/api/courses/top-three');
-                const activeCourses = await response.json();
-                // Asigna cursos
-                setCourses(activeCourses);
-            } catch (error) {
-                console.error(error);
+                setCourses(await getTopCourses());
+            } catch {
             } finally {
                 // Quita el loading
                 setIsLoading(false);
@@ -56,17 +53,17 @@ export const TopThreeCourses = () => {
         setIsOpen(false);
     };
 
-    const handleBuyCourse = (course: CoursePlainData) => {
+    const handleBuyCourse = (course: CatalogCourseCardDto) => {
         setIsOpen(true);
         setSelectedCourse(course);
     }
 
-    const handleStartCourse = (course: CoursePlainData) => {
+    const handleStartCourse = (course: CatalogCourseCardDto) => {
         router.push(`/courses/${course.canonicalId}/learn`);
     }
 
     const coursesElements = courses.map((course, index) => (
-        <div key={index} className={cn(
+        <div key={course.canonicalId} className={cn(
             "bg-white rounded-xl snap-center flex-shrink-0 w-full sm:w-auto border",
             "text-center px-4 py-2"
         )} style={{ scrollSnapAlign: "center" }}>
@@ -118,7 +115,7 @@ export const TopThreeCourses = () => {
 }
 
 type ModalCourseDetailProp = {
-    course: CoursePlainData
+    course: CatalogCourseCardDto
     isOpen: boolean;
     setOpen: () => void;
 }
@@ -195,4 +192,3 @@ const ModalCourseDetail = ({ course, isOpen, setOpen }: ModalCourseDetailProp) =
         </Modal>
     );
 }
-

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useState, type JSX } from 'react'
 import { DropdownProps } from './types'
 import ListOfOptions from './components/optionList'
 import { cn } from '@/lib/utils'

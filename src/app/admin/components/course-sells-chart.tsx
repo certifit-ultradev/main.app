@@ -6,7 +6,12 @@ import { ChartConfig, ChartContainer } from "@/components/ui/chart"
 import { useEffect, useState } from "react"
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CountVariation, PorcentialVariation } from "@/utils/types";
+import type { CountVariation, PorcentialVariation } from '@/features/courses/analytics/course-analytics.client.types';
+import {
+    getCourseSalesReport,
+    getMonthlySalesReport,
+    getMonthlyUsersReport,
+} from '@/features/courses/analytics/reports-http.client';
 
 const chartConfig = {
     desktop: {
@@ -16,14 +21,15 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export function CourseSellsChart() {
-    const [chartData, setChartData] = useState([]);
+    const [chartData, setChartData] = useState<{ course_name: string; total: number }[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchReportsData = async () => {
-            const response = await fetch('/api/courses/reports/total-sales', { method: 'GET' });
-            const result = await response.json();
-            if (result.success) {
-                setChartData(result.data);
+            try {
+                setChartData(await getCourseSalesReport());
+            } catch {
+                setError('No fue posible cargar las ventas por curso.');
             }
         }
 
@@ -31,43 +37,17 @@ export function CourseSellsChart() {
     }, []);
 
     return (
-        <ChartContainer config={chartConfig} className={cn("min-h-[80px] w-full")}>
-            <BarChart accessibilityLayer data={chartData}>
-                <XAxis
-                    dataKey="course_name"
-                    tickLine={false}
-                    tickMargin={10}
-                    axisLine={false}
-                />
-                <YAxis />
-                <Bar dataKey="total" fill="var(--color-desktop)" radius={4} />
-            </BarChart>
-        </ChartContainer>
+        <>
+            <ChartContainer config={chartConfig} className={cn("min-h-[80px] w-full")}>
+                <BarChart accessibilityLayer data={chartData}>
+                    <XAxis dataKey="course_name" tickLine={false} tickMargin={10} axisLine={false} />
+                    <YAxis />
+                    <Bar dataKey="total" fill="var(--color-desktop)" radius={4} />
+                </BarChart>
+            </ChartContainer>
+            {error && <p role="alert">{error}</p>}
+        </>
     )
-}
-
-async function fetchTotalSalesLasthMonth() {
-    const response = await fetch('/api/courses/reports/total-sales-last-month', { method: 'GET' });
-    const result = await response.json();
-    if (!result.success) {
-        return {
-            count: 0,
-            arrowDirection: 'down'
-        };
-    }
-    return result.data;
-}
-
-async function fetchTotalUsersLasthMonth() {
-    const response = await fetch('/api/courses/reports/total-users-last-month', { method: 'GET' });
-    const result = await response.json();
-    if (!result.success) {
-        return {
-            percentage: 0,
-            arrowDirection: 0
-        };
-    }
-    return result.data;
 }
 
 export function LastMonthCharts() {
@@ -79,18 +59,16 @@ export function LastMonthCharts() {
         count: 0,
         arrowDirection: 'down'
     });
+    const [error, setError] = useState<string | null>(null);
 
 
     useEffect(() => {
-        (async () => {
-            const res = await fetchTotalUsersLasthMonth();
-            setUserStats(res);
-        })();
-
-        (async () => {
-            const res = await fetchTotalSalesLasthMonth();
-            setCourseStats(res);
-        })();
+        void Promise.all([getMonthlyUsersReport(), getMonthlySalesReport()])
+            .then(([users, sales]) => {
+                setUserStats(users);
+                setCourseStats(sales);
+            })
+            .catch(() => setError('No fue posible cargar las métricas mensuales.'));
     }, []);
 
     const isUpUsers = userStats.arrowDirection === 'up';
@@ -98,6 +76,7 @@ export function LastMonthCharts() {
 
     return (
         <div className={cn("flex flex-col gap-6")}>
+            {error && <p role="alert">{error}</p>}
             <Card className={cn("w-[15rem] h-[12rem] bg-[#2C95AF] rounded-xl p-4 text-white")}>
                 <CardContent className="h-full flex flex-col justify-between">
                     {/* Título */}

@@ -1,11 +1,18 @@
-import { mapErrorToAPIResponse } from '@/exceptions/error-encoder';
 import { updateCoursePaymentTransaction } from '@/services/payments';
-import { verifyEventSignature } from '@/utils/signature';
+import { getServerEnv } from '@/config/env';
 import { NextRequest } from 'next/server';
+import { parseWompiWebhook, toApplyPaymentEventCommand, verifyWompiWebhook } from '@/infrastructure/payments/wompi-webhook';
+import { parseJsonBody } from '@/interfaces/http/parse-json-body';
+import { MalformedJsonError } from '@/exceptions/malformed-json';
+import { z } from 'zod';
+import type { ApplyPaymentEventResult } from '@/application/payments/payment.dto';
 
 const SIGNATURE_HEADER = 'X-Event-Checksum'
 
-const eventKey = process.env.WOMPI_EVENT_KEY;
+const acknowledgementMessages: Record<ApplyPaymentEventResult['outcome'], string> = {
+    applied: 'Actualización del pago registrado correctamente.',
+    already_applied: 'Evento de pago ya aplicado.',
+};
 
 /**
  * 
@@ -14,26 +21,21 @@ const eventKey = process.env.WOMPI_EVENT_KEY;
  */
 export async function POST(req: NextRequest) {
     try {
-        const request = await req.json();
-        const { data, signature } = request;
-        const headers = req.headers;
+        const eventKey = getServerEnv().WOMPI_EVENT_KEY;
+        if (!eventKey) return Response.json({ success: false, message: 'Configuración de webhook incompleta' }, { status: 500 });
+        const event = parseWompiWebhook(await parseJsonBody(req));
+        const valid = await verifyWompiWebhook(event, req.headers.get(SIGNATURE_HEADER), eventKey);
+        // Invalid signatures are permanent client errors and must not be retried.
+        if (!valid) return Response.json({ success: false, message: 'Evento no válido' }, { status: 400 });
+        const result = await updateCoursePaymentTransaction(toApplyPaymentEventCommand(event));
 
-        const eventSignature = await verifyEventSignature({ ...data, properties: signature.properties }, request.timestamp, eventKey);
-        if (eventSignature !== headers.get(SIGNATURE_HEADER)) {
-            return Response.json({
-                success:false,
-                message:"el evento no es válido"
-            });
-        }
-
-        const result = await updateCoursePaymentTransaction(data.transaction);
-
-        return Response.json(result);
+        return Response.json({ success: true, message: acknowledgementMessages[result.outcome] });
     } catch (error) {
-        console.error(mapErrorToAPIResponse(error));
+        if (error instanceof SyntaxError || error instanceof MalformedJsonError) return Response.json({ success: false, message: 'JSON inválido' }, { status: 400 });
+        if (error instanceof z.ZodError) return Response.json({ success: false, message: 'Payload inválido' }, { status: 422 });
         return Response.json({
             success: false,
             message: "Error al procesar el evento"
-        });
+        }, { status: 500 });
     }
 }

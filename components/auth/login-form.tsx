@@ -4,9 +4,9 @@ import { useForm } from 'react-hook-form';
 import { useState, useTransition } from 'react';
 import { login } from '@/actions/auth/login';
 import Image from 'next/image';
-import { Button } from '@nextui-org/react';
+import SubmitButton from '@/components/submitButton';
 import { ErrorMessage } from '@hookform/error-message';
-import { LoginSchema } from '@/utils/schemas';
+import { LoginSchema } from '@/features/auth/auth-form.schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FormError } from '@/components/form/form-error';
 import { FormSuccess } from '@/components/form/form-success';
@@ -29,24 +29,23 @@ export const LoginForm = () => {
         formState: { errors },
     } = useForm<z.infer<typeof LoginSchema>>({
         resolver: zodResolver(LoginSchema),
+        defaultValues: { rememberMe: false },
     });
 
     const onSubmit = (values: z.infer<typeof LoginSchema>) => {
         setError('');
         setSuccess('');
         startTransition(() => {
-            login(values, callbackUrl)
+            login({ ...values, callbackUrl })
                 .then((data) => {
-                    if (data?.error) {
-                        setError(data.error);
-                    }
-                    if (data?.success) {
+                    if (data.ok) {
                         reset();
                         setSuccess(data.message);
+                    } else {
+                        setError(data.error.message);
                     }
-                }).catch((e) => {
+                }).catch(() => {
                     setError('Algo ha pasado, intenta mas tarde!');
-                    console.error(e);
                 });
         });
     };
@@ -116,8 +115,8 @@ export const LoginForm = () => {
 
                     <div className={cn('flex justify-between items-center mb-4 text-sm')}>
                         <label className={cn('flex items-center text-gray-500')}>
-                            <input type='checkbox' className={cn('mr-2')} />
-                            Recuérdame
+                            <input type='checkbox' className={cn('mr-2')} {...register('rememberMe')} />
+                            Recuérdame por 30 días
                         </label>
                         <a href='/reset-password' className={cn('text-[#0BBBE7] hover:underline')}>
                             Recuperar contraseña
@@ -127,16 +126,7 @@ export const LoginForm = () => {
                         <FormError error={error} />
                         <FormSuccess message={success} />
                     </div>
-                    <Button
-                        type='submit'
-                        isLoading={isPending}
-                        isDisabled={isPending}
-                        color='primary'
-                        className={cn('w-full bg-[#0BBBE7] text-white py-2 rounded-full hover:bg-[#009fdf] transition-colors')}
-                        fullWidth
-                    >
-                        Ingresar
-                    </Button>
+                    <SubmitButton label='Ingresar' isLoading={isPending} disabled={isPending} />
                 </form>
 
                 <p className={cn('mt-6 text-sm text-gray-500')}>

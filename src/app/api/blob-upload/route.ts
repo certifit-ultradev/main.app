@@ -1,13 +1,15 @@
-import { auth } from '@/auth';
-import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
+import { BlobUploadRequestSchema, BlobUploadResponseSchema } from '@/interfaces/http/blob-upload.contract';
+import { BlobUploadPolicyError, handleCourseBlobUpload } from '@/infrastructure/blob/vercel-client-upload';
+import { getAuthenticatedActor } from '@/infrastructure/auth/authenticated-actor';
+import { InsufficientRoleError } from '@/exceptions/actor-access-errors';
+import { UserNotLoggedError } from '@/exceptions/user-not-logged';
 import { NextResponse } from 'next/server';
 
-// create comment in swagger
 // @swagger
 // /api/blob-upload:
 //   post:
-//     summary: Upload a file
-//     description: Upload a file to the server
+//     summary: Genera un token temporal para subida directa de assets de cursos
+//     description: Recibe el sobre JSON del SDK de Vercel Blob; no recibe el archivo binario.
 //     tags:
 //       - Blob Upload
 //     requestBody:
@@ -15,120 +17,82 @@ import { NextResponse } from 'next/server';
 //       content:
 //         application/json:
 //           schema:
-//             type: object
-//             properties:
-//               file:
-//                 type: string
-//                 format: binary
+//             oneOf:
+//               - $ref: '#/components/schemas/BlobGenerateClientTokenEvent'
+//               - $ref: '#/components/schemas/BlobUploadCompletedEvent'
 //     responses:
 //       200:
-//         description: File uploaded successfully
+//         description: Token de cliente o acuse de subida completada según el evento.
 //         content:
 //           application/json:
 //             schema:
-//               type: object
-//               properties:
-//                 success:
-//                   type: boolean
-//                   description: Indicates if the upload was successful
-//                 url:
-//                   type: string
-//                   description: The URL of the uploaded file
-//       400:
-//         description: Bad request
-//         content:
-//           application/json:
-//             schema:
-//               type: object
-//               properties:
-//                 error:
-//                   type: string
-//                   description: Error message
-//       500:
-//         description: Internal server error
-//         content:
-//           application/json:
-//             schema:
-//               type: object
-//               properties:
-//                 error:
-//                   type: string
-//                   description: Error message
-//     security:
-//       - bearerAuth: []
-//     components:
-//       securitySchemes:
-//         bearerAuth:
-//           type: http
-//           scheme: bearer
-//           bearerFormat: JWT
-//       schemas:
-//         FileUploadResponse:
-//           type: object
-//           properties:
-//             success:
-//               type: boolean
-//               description: Indicates if the upload was successful
-//             url:
-//               type: string
-//               description: The URL of the uploaded file
-//         ErrorResponse:
-//           type: object
-//           properties:
-//             error:
-//               type: string
-//               description: Error message
+//               oneOf:
+//                 - type: object
+//                   required: [type, clientToken]
+//                   properties:
+//                     type:
+//                       type: string
+//                       enum: [blob.generate-client-token]
+//                     clientToken:
+//                       type: string
+//                 - type: object
+//                   required: [type, response]
+//                   properties:
+//                     type:
+//                       type: string
+//                       enum: [blob.upload-completed]
+//                     response:
+//                       type: string
+//                       enum: [ok]
+//       401:
+//         description: El actor no tiene una sesión válida.
+//       403:
+//         description: El actor no es administrador.
+//       422:
+//         description: Evento o ruta de asset inválido/no permitido.
+//       502:
+//         description: El proveedor devolvió una respuesta de protocolo inválida.
 export async function POST(request: Request): Promise<NextResponse> {
-    const body = (await request.json()) as HandleUploadBody;
+    let payload: unknown;
+    try {
+        payload = await request.json();
+    } catch {
+        return NextResponse.json({ error: 'El cuerpo de la solicitud no contiene JSON válido.' }, { status: 400 });
+    }
+
+    const parsed = BlobUploadRequestSchema.safeParse(payload);
+    if (!parsed.success) {
+        return NextResponse.json({ error: 'El evento de subida no es válido.' }, { status: 422 });
+    }
 
     try {
-        const jsonResponse = await handleUpload({
-            body,
+        const response = await handleCourseBlobUpload({
             request,
-            onBeforeGenerateToken: async (
-                pathname,
-                /* clientPayload */
-            ) => {
-                const session = await auth();
-                console.log('pathname', pathname);
-                if (!session?.user.isAdmin) {
-                    return {
-                        success: false,
-                        error: "No tienes permisos de administrador.",
-                    };
-                }
-
-                return {
-                    allowedContentTypes: ['video/mp4', 'image/jpeg', 'image/png'],
-                    addRandomSuffix: true,
-                    tokenPayload: JSON.stringify({
-                        userId: session.user.id,
-                    }),
-                };
-            },
-            onUploadCompleted: async ({ blob, tokenPayload }) => {
-                // Get notified of client upload completion
-                // ⚠️ This will not work on `localhost` websites,
-                // Use ngrok or similar to get the full upload flow
-
-                console.log('blob upload completed', blob, tokenPayload);
-
+            body: parsed.data,
+            authorizeAdmin: async () => {
                 try {
-                    // Run any logic after the file upload completed
-                    // const { userId } = JSON.parse(tokenPayload);
-                    // await db.update({ avatar: blob.url, userId });
+                    // Course drafts exist before assets are uploaded; an admin session is still required.
+                    return await getAuthenticatedActor({ requireAdmin: true, requireEmailVerified: false });
                 } catch (error) {
-                    console.error('Error updating user', error);
-                    throw new Error('Could not update user');
+                    if (error instanceof UserNotLoggedError) {
+                        throw new BlobUploadPolicyError(401, 'Debes iniciar sesión.');
+                    }
+                    if (error instanceof InsufficientRoleError) {
+                        throw new BlobUploadPolicyError(403, 'No tienes permisos de administrador.');
+                    }
+                    throw error;
                 }
             },
         });
-
-        return NextResponse.json(jsonResponse);
+        const parsedResponse = BlobUploadResponseSchema.safeParse(response);
+        if (!parsedResponse.success) {
+            return NextResponse.json({ error: 'No se pudo procesar la subida.' }, { status: 502 });
+        }
+        return NextResponse.json(parsedResponse.data);
     } catch (error) {
-        return NextResponse.json(
-            { error: (error as Error).message },
-            { status: 400 }, // The webhook will retry 5 times waiting for a 200
-        );
+        if (error instanceof BlobUploadPolicyError) {
+            return NextResponse.json({ error: error.message }, { status: error.status });
+        }
+        return NextResponse.json({ error: 'No se pudo procesar la subida.' }, { status: 400 });
     }
 }

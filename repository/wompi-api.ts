@@ -1,30 +1,48 @@
-import { TransactionError } from "@/exceptions/transaction-error";
-import { Transaction } from "@/models/transaction";
-import { TransactionWompiResponse } from "@/utils/types";
-
-const urlSanbox = 'https://sandbox.wompi.co/v1';
-const urlProd = 'https://production.wompi.co/v1';
-
-const baseUrl = process.env.APP_ENV != 'PROD' ? urlSanbox : urlProd;
+import { PaymentProviderError } from '@/exceptions/payment-provider-error';
+import { TransactionWompiResponseSchema } from '@/infrastructure/payments/wompi.types';
+import { getWompiBaseUrl } from "@/config/env";
+import type { PaymentTransactionRecord } from '@/application/payments/payment.records';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 /**
  * Obtains the information of a Wompi transaction
  * @param {string} trxId - ID of the transaction you want to query
- * @returns {Promise<any>} Transaction data (JSON object) or an error if it fails
+ * @returns Validated payment transaction data or an error if it fails
  */
-export const getTransaction = async (trxId: string): Promise<Transaction> => {
-    const response = await fetch(`${baseUrl}/transactions/${trxId}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    });
+export const getTransaction = async (trxId: string): Promise<PaymentTransactionRecord> => {
+    const baseUrl = getWompiBaseUrl();
 
-    if (!response.ok) {
-        throw new TransactionError(`Error Wompi: Status ${response.status}`);
+    let response: Response;
+    try {
+        response = await fetch(`${baseUrl}/transactions/${trxId}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+        });
+    } catch {
+        safeLogger.error('repository.payment_provider.transaction.request.failed');
+        throw new PaymentProviderError('unavailable');
     }
 
-    const originalData = await response.json();
+    if (!response.ok) {
+        throw new PaymentProviderError(response.status === 404 ? 'transaction_not_found' : 'upstream_error');
+    }
 
-    return Transaction.fromWompiResponse(originalData as TransactionWompiResponse);
+    let originalData: unknown;
+    try {
+        originalData = await response.json();
+    } catch {
+        safeLogger.error('repository.payment_provider.transaction.response_invalid');
+        throw new PaymentProviderError('invalid_response');
+    }
+    const parsed = TransactionWompiResponseSchema.safeParse(originalData);
+    if (!parsed.success) throw new PaymentProviderError('invalid_response');
+
+    const { data } = parsed.data;
+    return {
+        id: data.id,
+        reference: data.reference,
+        status: data.status,
+        paymentMethodType: data.payment_method_type,
+        createdAt: data.created_at,
+    };
 }

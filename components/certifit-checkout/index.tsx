@@ -7,6 +7,7 @@ import { CheckIcon, XIcon } from '../svg/certifit-icons';
 import SubmitButton from '../submitButton';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { parseCheckoutWidgetTransactionId, quoteCourseCheckout, registerCourseCheckout } from '@/features/payments/checkout.client';
 
 interface CertifitCheckoutProps {
     courseCanonicalId: string
@@ -28,58 +29,37 @@ export default function CertifitCheckoutComponent({ courseCanonicalId }: Certifi
         setIsLoading(true);
         const startTrx = async () => {
             try {
-                const response = await fetch('/api/payment/transactions/quote', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ courseCanonicalId }),
+                const trx = await quoteCourseCheckout(courseCanonicalId);
+                const widget = new window.WidgetCheckout({
+                    currency: trx.currency,
+                    amountInCents: trx.amountInCents,
+                    reference: trx.reference,
+                    signature: { integrity: trx.signature.integrity },
+                    publicKey: trx.publicKey
                 });
-                const trx = await response.json();
-                if (trx.success) {
-                    const widget = new window.WidgetCheckout({
-                        currency: trx.currency,
-                        amountInCents: trx.amountInCents,
-                        reference: trx.reference,
-                        signature: trx.signature,
-                        publicKey: trx.publicKey
-                    });
-                    widget.open(async (result) => {
-                        const response = await fetch('/api/payment/transactions', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ purchaseId: trx.purchaseId, id: result.transaction.id }),
-                        });
-                        const resultPurchase = await response.json();
+                widget.open(async (result) => {
+                    try {
+                        const transactionId = parseCheckoutWidgetTransactionId(result);
+                        const resultPurchase = await registerCourseCheckout(trx.purchaseId, transactionId);
                         setResult({
-                            success: resultPurchase.success,
+                            success: true,
                             message: resultPurchase.message
                         });
                         setIsOpen(true);
-                        setIsLoading(false);
-                    });
-                } else {
-                    setResult({
-                        success: false,
-                        message: trx.message
-                    });
-                    setIsLoading(false);
-                    setIsOpen(true);
-                }
+                    } catch (error) {
+                        setResult({ success: false, message: error instanceof Error ? error.message : 'No fue posible registrar el pago.' });
+                        setIsOpen(true);
+                    }
+                });
+                setIsLoading(false);
             } catch (error) {
-                if (error instanceof Error) {
-                    setResult({
-                        success: false,
-                        message: error.message
-                    });
-                    setIsLoading(false);
-                    setIsOpen(true);
-                }
+                setResult({ success: false, message: error instanceof Error ? error.message : 'No fue posible iniciar el pago.' });
+                setIsLoading(false);
+                setIsOpen(true);
             }
         };
         startTrx();
 
-        setInterval(() => {
-            setIsLoading(false);
-        }, 5000);
     };
 
     const handleModalClose = () => {

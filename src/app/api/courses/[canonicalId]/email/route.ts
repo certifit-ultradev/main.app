@@ -1,6 +1,14 @@
 import { mapErrorToAPIResponse } from '@/exceptions/error-encoder';
 import { sendEmailCourseRequestInfo } from '@/services/email';
+import {
+    CourseEmailParamsSchema,
+    CourseInformationRequestSchema,
+    type CourseInformationSentResponse,
+    type CourseEmailRouteContext,
+} from '@/interfaces/http/courses/course-email.contract';
+import { parseJsonBody } from '@/interfaces/http/parse-json-body';
 import { NextRequest } from 'next/server';
+import { apiSuccess } from '@/interfaces/http/api-response';
 
 
 /**
@@ -10,33 +18,15 @@ import { NextRequest } from 'next/server';
  * @param context - El contexto de la ruta, que incluye los parámetros de la URL.
  * @returns - Respuesta JSON con el resultado del envío del correo electrónico.
  */
-// @ts-expect-error: params
-export async function POST(req: NextRequest, context) {
+export async function POST(req: NextRequest, context: CourseEmailRouteContext) {
     try {
-        // Obtener el canonicalId desde los parámetros de la URL
-        const { canonicalId } = await context.params;
+        const { canonicalId } = CourseEmailParamsSchema.parse(await context.params);
+        const requestData = CourseInformationRequestSchema.parse(await parseJsonBody(req));
+        await sendEmailCourseRequestInfo({ canonicalId, ...requestData });
 
-        // Leer los datos del form (JSON) enviado en la request
-        const requestData = await req.json();
-
-        // Mapear los datos y enviarlos a la función sendEmailCourseRequestInfo
-        await sendEmailCourseRequestInfo({
-            canonicalId,
-            nombre: requestData.nombre,
-            empresa: requestData.empresa,
-            email: requestData.email,
-            telefono: requestData.telefono,
-            curso: requestData.curso,
-            detalles: requestData.detalles,
-            terminos: requestData.terminos,
-        });
-
-        return Response.json({
-            success: true,  
-            message: 'Correo electrónico enviado correctamente.',
-        });
+        const body = { message: 'Correo electrónico enviado correctamente.' } satisfies CourseInformationSentResponse;
+        return Response.json(apiSuccess(body));
     } catch (error) {
-        console.error('Error al enviar el correo electrónico:', error);
         return mapErrorToAPIResponse(error);
     }
 }

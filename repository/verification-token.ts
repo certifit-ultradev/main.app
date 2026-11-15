@@ -1,22 +1,17 @@
-import { NotFoundError } from "@/exceptions/not-found";
 import { prisma } from "@/lib/prisma";
-import { VerificationToken } from "@/models/verification-token";
+import type { NewVerificationToken, VerificationTokenRecord } from '@/application/identity/identity-token.records';
 
 /**
  * 
  * @param token 
  * @returns 
  */
-export const findVerificationTokenByToken = async (token: string): Promise<VerificationToken> => {
+export const findVerificationTokenByToken = async (token: string): Promise<VerificationTokenRecord | null> => {
     const verificationToken = await prisma.verificationToken.findUnique({
         where: { token },
     });
 
-    if (!verificationToken) {
-        throw new NotFoundError('Token de verificación no encontrado');
-    }
-
-    return new VerificationToken(verificationToken);
+    return verificationToken;
 };
 
 /**
@@ -24,16 +19,12 @@ export const findVerificationTokenByToken = async (token: string): Promise<Verif
  * @param email 
  * @returns 
  */
-export const findVertificationTokenByEmail = async (email: string): Promise<VerificationToken> => {
+export const findVerificationTokenByEmail = async (email: string): Promise<VerificationTokenRecord | null> => {
     const verificationToken = await prisma.verificationToken.findFirst({
         where: { email },
     });
 
-    if (!verificationToken) {
-        throw new NotFoundError('Token de verificación no encontrado');
-    }
-
-    return new VerificationToken(verificationToken);
+    return verificationToken;
 }
 
 /**
@@ -41,7 +32,7 @@ export const findVertificationTokenByEmail = async (email: string): Promise<Veri
  * @param phoneNumber 
  * @returns 
  */
-export const createVerificationToken = async (verification: VerificationToken): Promise<VerificationToken | null> => {
+export const createVerificationToken = async (verification: NewVerificationToken): Promise<VerificationTokenRecord | null> => {
     const verificationToken = await prisma.verificationToken.create({
         data: verification
     });
@@ -50,7 +41,7 @@ export const createVerificationToken = async (verification: VerificationToken): 
         return null;
     }
 
-    return new VerificationToken(verificationToken);
+    return verificationToken;
 }
 
 /**
@@ -58,7 +49,7 @@ export const createVerificationToken = async (verification: VerificationToken): 
  * @param id 
  * @returns 
  */
-export const deleteVerificationToken = async (id: string) => {
+export const deleteVerificationToken = async (id: string): Promise<VerificationTokenRecord> => {
     return await prisma.verificationToken.delete({
         where: { id },
     });

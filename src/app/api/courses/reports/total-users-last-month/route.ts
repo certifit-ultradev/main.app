@@ -1,5 +1,6 @@
-import { mapErrorToAPIResponse } from '@/exceptions/error-encoder';
+import { toPercentageVariationReport } from '@/interfaces/http/courses/reports.contract';
 import { calculateUsersRegisteredByMonth } from '@/services/courses';
+import { reportFailureResponse, reportSuccessResponse } from '../report-api-response';
 
 /**
  * @returns 
@@ -7,25 +8,8 @@ import { calculateUsersRegisteredByMonth } from '@/services/courses';
 export async function GET(): Promise<Response> {
     try {
         const result = await calculateUsersRegisteredByMonth();
-        if (result.previous_month_count === 0) {
-            return Response.json({
-                percentage: 100,
-                arrowDirection: 'up',
-            });
-        }
-
-        const diff = result.current_month_count - result.previous_month_count;
-        const percentageChange = result.previous_month_count > 0 ? (diff / result.previous_month_count) * 100 : 0;
-        const arrowDirection = percentageChange > 0 ? 'up' : 'down';
-
-        return Response.json({
-            success: true,
-            data: {
-                percentage: Math.abs(Math.round(percentageChange)),
-                arrowDirection,
-            }
-        });
+        return reportSuccessResponse(toPercentageVariationReport(result));
     } catch (error) {
-        return mapErrorToAPIResponse(error);
+        return reportFailureResponse(error);
     }
 }

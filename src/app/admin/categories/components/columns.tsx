@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { CourseCategoryData } from '@/utils/types';
+import type { CategoryDto } from '@/interfaces/actions/categories/category.contract';
 import { ColumnDef } from '@tanstack/react-table'
 import { MoreVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation'
@@ -13,7 +13,7 @@ interface CategoriesColumnsProps {
 }
 
 
-export const CategoriesDataTableColumns = ({onDelete}:CategoriesColumnsProps): ColumnDef<CourseCategoryData>[] => {
+export const CategoriesDataTableColumns = ({onDelete}:CategoriesColumnsProps): ColumnDef<CategoryDto>[] => {
     const router = useRouter();
     return [
         {
@@ -51,7 +51,7 @@ export const CategoriesDataTableColumns = ({onDelete}:CategoriesColumnsProps): C
                             <DropdownMenuItem
                                 className='hover:bg-gray-100'
                                 onClick={async () => {
-                                    await onDelete(category.id as number);
+                                    await onDelete(category.id);
                                 }}
                             >
                                 Eliminar categoria

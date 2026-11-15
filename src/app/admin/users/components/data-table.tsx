@@ -20,14 +20,14 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useEffect, useState } from 'react'
 import { listAll } from '@/actions/user/list'
-import { UserList } from '@/utils/types'
+import type { AdminUserDto } from '@/application/users/user.dto'
 import { UserDataTableColumns } from './columns';
 import { activate, deactivate } from '@/actions/user/register'
 import Modal from '@/components/modal'
 import { CheckIcon, XIcon } from '@/components/svg/certifit-icons'
 
 export function UserListDataTable() {
-    const [data, setData] = useState<UserList[]>([]);
+    const [data, setData] = useState<AdminUserDto[]>([]);
     const [totalPages, setTotalPages] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
@@ -47,13 +47,12 @@ export function UserListDataTable() {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const response = await listAll({ data: { page: pagination.pageIndex + 1 } });
-                if (response.success) {
-                    setData(response?.payload?.data ?? []);
-                    setTotalPages(response.payload?.total ?? 0);
+                const response = await listAll({ page: pagination.pageIndex + 1 });
+                if (response.ok) {
+                    setData(response.data.data);
+                    setTotalPages(response.data.total);
                 }
-            } catch (error) {
-                console.error('Error al cargar datos:', error);
+            } catch {
             } finally {
                 setIsLoading(false); // Fin de la carga
             }
@@ -64,19 +63,19 @@ export function UserListDataTable() {
     }, [pagination.pageIndex, pagination.pageSize]);
 
     const handleActivateCourse = async (id: string) => {
-        const result = await activate({ data: { id: id } });
+        const result = await activate({ id });
         setActivationResult({
-            success: true,
-            message: result.message ? result.message : ''
+            success: result.ok,
+            message: result.ok ? result.message ?? '' : result.error.message
         });
         setIsOpen(true);
     };
 
     const handleDectivateCourse = async (id: string) => {
-        const result = await deactivate({ data: { id: id } });
+        const result = await deactivate({ id });
         setActivationResult({
-            success: true,
-            message: result.message ? result.message : ''
+            success: result.ok,
+            message: result.ok ? result.message ?? '' : result.error.message
         });
         setIsOpen(true);
     };

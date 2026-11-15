@@ -1,80 +1,41 @@
-"use server";
+'use server';
 
-import { getUserByEmail, getUserById } from "@/services/user"
-import { FetchUserByEmail, FetchUserByID, ServerActionRequest, ServerActionResponse, UserList } from "@/utils/types";
-import { isAdmin, isEmailVerified } from "../middlewares/middlewares";
-import { Middlewares } from "../server-action-middleware";
-import { mapErrorToServerActionResponse } from "@/exceptions/error-encoder";
+import { getAdminUserById, userExistsByEmail } from '@/services/user';
+import type { AdminUserDto } from '@/application/users/user.dto';
+import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/actions/action-result';
+import { withAdminAction } from '@/interfaces/actions/action-context';
+import { AdminEmailInputSchema, UserIdInputSchema } from '@/interfaces/actions/admin.contract';
+import { validateActionInput } from '@/interfaces/actions/validation';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
-/**
- * 
- * @param request 
- * @returns 
- */
-export const fetchUserByEmail = async (request: ServerActionRequest<FetchUserByEmail>): Promise<ServerActionResponse<null>> => {
-    return await Middlewares<null, FetchUserByEmail>(
-        request,
-        [isAdmin, isEmailVerified],
-        async (data: FetchUserByEmail) => {
-            try {
-                const existingUser = await getUserByEmail(data.email);
-                if (existingUser) {
-                    return {
-                        success: false,
-                        message: 'Si ya tienes una cuenta, por favor inicia sesión.',
-                    };
-                }
+export async function fetchUserByEmail(input: unknown): Promise<ActionResult<null>> {
+    const parsedInput = validateActionInput(AdminEmailInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
 
-                return { success: true };
-            } catch (error) {
-                console.error('Error al verificar el correo electrónico:', error);
-                return {
-                    success: false,
-                    message: 'Ocurrió un error al procesar tu solicitud.',
-                };
-            }
+    return withAdminAction(async () => {
+        try {
+            return await userExistsByEmail(parsedInput.data.email)
+                ? actionFailure('CONFLICT', 'Ya existe un usuario con este correo.')
+                : actionSuccess(null);
+        } catch {
+            safeLogger.error('action.user.email_exists.failed');
+            return actionFailure('UNEXPECTED', 'No fue posible verificar el correo electrónico.');
         }
-    );
+    });
 }
 
-/**
- * 
- * @param request 
- * @returns 
- */
-export const fetchUserById = async (request: ServerActionRequest<FetchUserByID>): Promise<ServerActionResponse<UserList>> => {
-    return await Middlewares<UserList, FetchUserByID>(
-        request,
-        [isAdmin, isEmailVerified],
-        async (data: FetchUserByID) => {
-            try {
-                const existingUser = await getUserById(data.id);
-                if (!existingUser) {
-                    return {
-                        success: false,
-                        message: 'El usuario no existe',
-                    };
-                }
-                return {
-                    success: true,
-                    payload: {
-                        id: existingUser.id,
-                        name: existingUser.name,
-                        lastName: existingUser.lastName,
-                        email: existingUser.email,
-                        phoneNumber: existingUser.phoneNumber,
-                        isAdmin: existingUser.isAdmin,
-                        emailVerified: existingUser.emailVerified,
-                        identification: existingUser.identification,
-                        identificationType: existingUser.identificationType,
-                        createdAt: existingUser.createdAt,
-                        updatedAt: existingUser.updatedAt
-                    }
-                };
-            } catch (error) {
-                return mapErrorToServerActionResponse(error);
-            }
-        }
-    );
-}
+export async function fetchUserById(input: unknown): Promise<ActionResult<AdminUserDto>> {
+    const parsedInput = validateActionInput(UserIdInputSchema, input);
+    if (!parsedInput.ok) return parsedInput;
 
+    return withAdminAction(async () => {
+        try {
+            const user = await getAdminUserById(parsedInput.data.id);
+            if (!user) return actionFailure('NOT_FOUND', 'El usuario no existe.');
+            return actionSuccess(user);
+        } catch {
+            safeLogger.error('action.user.get_by_id.failed');
+            return actionFailure('UNEXPECTED', 'No fue posible consultar el usuario.');
+        }
+    });
+}
