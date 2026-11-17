@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## 1.2.0
+
 ### Added
 
 - Added client self-service profiles with authenticated own-account APIs, optional profile photos, initials fallback, and a nullable profile-image migration.
