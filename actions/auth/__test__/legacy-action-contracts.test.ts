@@ -40,6 +40,33 @@ describe('legacy identity action contracts', () => {
         expect(signIn).toHaveBeenCalledWith('credentials', expect.objectContaining({ rememberMe: expected }));
     });
 
+    it('returns a successful login without a server redirect and preserves a local callback', async () => {
+        (signIn as jest.Mock).mockResolvedValue('http://localhost:3000/courses/course-1/learn');
+
+        await expect(login({
+            email: registration.email,
+            password: registration.password,
+            callbackUrl: '/courses/course-1/learn',
+        })).resolves.toEqual({
+            ok: true,
+            data: { redirectTo: '/courses/course-1/learn' },
+            message: 'Ha iniciado sesión correctamente.',
+        });
+        expect(signIn).toHaveBeenCalledWith('credentials', expect.objectContaining({
+            redirect: false,
+            redirectTo: '/courses/course-1/learn',
+        }));
+    });
+
+    it('rejects protocol-relative callbacks before authentication', async () => {
+        await expect(login({
+            email: registration.email,
+            password: registration.password,
+            callbackUrl: '//example.com',
+        })).resolves.toMatchObject({ ok: false, error: { code: 'VALIDATION' } });
+        expect(signIn).not.toHaveBeenCalled();
+    });
+
     it('rejects a non-boolean remember choice', async () => {
         await expect(login({ email: registration.email, password: registration.password, rememberMe: 'true' }))
             .resolves.toMatchObject({ ok: false, error: { code: 'VALIDATION' } });

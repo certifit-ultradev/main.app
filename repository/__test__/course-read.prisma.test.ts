@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma';
 jest.mock('@/lib/prisma', () => ({
     prisma: {
         course: { findMany: jest.fn(), findFirst: jest.fn(), count: jest.fn() },
-        userCourse: { findFirst: jest.fn() },
+        userCourse: { findFirst: jest.fn(), findMany: jest.fn() },
         userQuizAnswer: { findMany: jest.fn() },
         userQuizState: { findFirst: jest.fn() },
     },
@@ -167,6 +167,41 @@ describe('Prisma course-read ports', () => {
         const unlocked = await prismaStudentCourseReadPort.findEnrolledCourse('typescript', 'student-1');
         expect(unlocked?.modules[1].locked).toBe(false);
         expect(unlocked?.modules[1].classes[0].video).toBe('https://example.com/private-video.mp4');
+    });
+
+    it('keeps locked class titles out of the course list while preserving global progress', async () => {
+        const futureModule = {
+            ...course.courseModules[0], id: 21, title: 'Avanzado',
+            moduleClass: [{ ...course.courseModules[0].moduleClass[0], id: 22, courseModuleId: 21, title: 'Clase reservada' }],
+            moduleQuiz: [{ ...course.courseModules[0].moduleQuiz[0], id: 23, courseModuleId: 21 }],
+        };
+        const enrollment = {
+            course: { ...course, courseModules: [course.courseModules[0], futureModule] },
+            userClassesState: [{ classId: 12, completed: true }],
+            userQuizState: [],
+        };
+        (prisma.userCourse.findMany as jest.Mock).mockResolvedValueOnce([enrollment])
+            .mockResolvedValueOnce([{ ...enrollment, userQuizState: [{ quizId: 13 }] }]);
+
+        const [locked] = await prismaStudentCourseReadPort.findEnrolledCourses('student-1');
+        expect(locked).toMatchObject({
+            progressPercent: 50,
+            totalClasses: 2,
+            visibleClasses: [{ position: 1, title: 'Introducción', completed: true, isCurrent: true }],
+        });
+        expect(JSON.stringify(locked)).not.toContain('Clase reservada');
+        expect(locked).not.toHaveProperty('classesWithCompletion');
+        expect(locked).not.toHaveProperty('classViewed');
+
+        const [unlocked] = await prismaStudentCourseReadPort.findEnrolledCourses('student-1');
+        expect(unlocked?.visibleClasses).toEqual([
+            { position: 1, title: 'Introducción', completed: true, isCurrent: false },
+            { position: 2, title: 'Clase reservada', completed: false, isCurrent: true },
+        ]);
+
+        const query = (prisma.userCourse.findMany as jest.Mock).mock.calls[0][0];
+        expect(query.include.userQuizState).toEqual({ where: { passed: true }, select: { quizId: true } });
+        expect(query.include.course.select.courseModules.select.moduleQuiz.select).toEqual({ id: true });
     });
 
     it('exposes a single expected answer to the author without fake text options', async () => {
