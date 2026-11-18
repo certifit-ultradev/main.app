@@ -18,6 +18,7 @@ import { getServerEnv } from "@/config/env";
 import { prismaPaymentCourseReadPort } from '@/repository/payment-course-read.prisma';
 import type { PurchaseRecord } from '@/application/payments/payment.records';
 import { PaymentProviderError } from '@/exceptions/payment-provider-error';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 /**
  * 
@@ -50,37 +51,50 @@ export const quoteCoursePaymentTransaction = async (command: QuoteCoursePaymentC
 
         const course = await prismaPaymentCourseReadPort.findCourseForQuote(command.canonicalId);
         if (course === null) {
+            safeLogger.error('service.payment.quote.course_not_found');
             throw new NotFoundError("Curso no encontrado");
         }
 
         if (!course.isActive) {
+            safeLogger.error('service.payment.quote.course_inactive', { courseId: course.id });
             throw new CourseInvalidStateError("El curso no esta activo");
         }
 
         if (course.expiresAt < new Date()) {
+            safeLogger.error('service.payment.quote.course_expired', { courseId: course.id });
             throw new CourseInvalidStateError("El curso ha expirado");
         }
 
         if (!Number.isFinite(course.price) || course.price <= 0) {
+            safeLogger.error('service.payment.quote.invalid_price', { courseId: course.id });
             throw new CourseInvalidStateError('El precio del curso no es válido');
         }
 
         if (await prismaPaymentCourseReadPort.hasEnrollment(course.id, user.id)) {
+            safeLogger.error('service.payment.quote.already_purchased', { courseId: course.id });
             throw new CourseAlreadyPurchasedError("Curso ya ha sido comprado.");
         }
 
         const courseId = requirePersistentId(course.id, 'El curso');
         let currentPurchase: PurchaseRecord | null = await findLastCoursePendingPurchase(courseId, user.id);
         if (!currentPurchase) {
+            safeLogger.info('service.payment.quote.purchase_create_started', { courseId });
             currentPurchase = await storeCoursePaymentTransaction({
                 courseId, userId: user.id, reference: uuidv4(), occurredAt: new Date(),
             });
         }
 
-        if (!currentPurchase) throw new TransactionError('No se pudo crear la compra');
+        if (!currentPurchase) {
+            safeLogger.error('service.payment.quote.purchase_create_failed', { courseId });
+            throw new TransactionError('No se pudo crear la compra');
+        }
+
         const purchaseId = requirePersistentId(currentPurchase.id, 'La compra');
         const reference = currentPurchase.reference;
-        if (!reference) throw new TransactionError('La compra no tiene referencia.');
+        if (!reference) {
+            safeLogger.error('service.payment.quote.purchase_reference_missing', { purchaseId });
+            throw new TransactionError('La compra no tiene referencia.');
+        }
         const amountInCents = course.price * 100;
 
         return {
