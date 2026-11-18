@@ -4,6 +4,7 @@ import { PaymentQuoteRequestSchema, type PaymentQuoteResponse } from '@/interfac
 import { parseJsonBody } from '@/interfaces/http/parse-json-body';
 import { NextRequest } from 'next/server';
 import { apiSuccess } from '@/interfaces/http/api-response';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 /**
  * @param req 
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest) {
         } satisfies PaymentQuoteResponse;
         return Response.json(apiSuccess(body));
     } catch (error) {
+        safeLogger.error('http.payment.quote.failed', { name: error instanceof Error ? error.name : 'unknown' });
         return mapErrorToAPIResponse(error);
     }
 }
