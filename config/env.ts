@@ -6,6 +6,14 @@ const publicEnvSchema = z.object({
     NEXT_PUBLIC_APP_URL: z.string().url().optional(),
 });
 
+const emailAddressSchema = z.string().email();
+const senderSchema = z.string().trim().refine((sender) => {
+    if (emailAddressSchema.safeParse(sender).success) return true;
+
+    const namedSender = /^[^<>,;\r\n]+[ \t]+<([^<>\s,;]+)>$/.exec(sender);
+    return namedSender !== null && emailAddressSchema.safeParse(namedSender[1]).success;
+}, 'FROM_EMAIL must be an email address or a named sender');
+
 const serverEnvSchema = publicEnvSchema.extend({
     APP_ENV: z.enum(['DEV', 'PROD']).default('DEV'),
     WOMPI_PUB_KEY: z.string().min(1, 'WOMPI_PUB_KEY is required'),
@@ -13,7 +21,7 @@ const serverEnvSchema = publicEnvSchema.extend({
     WOMPI_EVENT_KEY: z.string().optional(),
     DATABASE_URL: z.string().url('DATABASE_URL must be a valid URL'),
     AUTH_SECRET: z.string().min(1, 'AUTH_SECRET is required'),
-    FROM_EMAIL: z.string().email('FROM_EMAIL must be a valid email'),
+    FROM_EMAIL: senderSchema,
     MAILERSEND_SMTP_USER: z.string().min(1, 'MAILERSEND_SMTP_USER is required'),
     MAILERSEND_SMTP_PASSWORD: z.string().min(1, 'MAILERSEND_SMTP_PASSWORD is required'),
 });

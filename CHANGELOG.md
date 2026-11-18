@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+## 1.2.1
+
+### Fixed
+
+- Fixed payment quote requests failing when `FROM_EMAIL` uses a named sender (`Name <email@example.com>`), while keeping sender address validation.
+
 ## 1.2.0
 
 ### Added

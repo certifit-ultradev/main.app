@@ -34,6 +34,27 @@ describe('environment configuration', () => {
         expect(getServerEnv().WOMPI_PUB_KEY).toBe('pub_key');
     });
 
+    it('accepts a named sender and preserves it for Nodemailer', () => {
+        process.env.FROM_EMAIL = 'Certifit <sender@example.com>';
+        resetEnvCache();
+        expect(getServerEnv().FROM_EMAIL).toBe('Certifit <sender@example.com>');
+    });
+
+    it.each([
+        'Certifit <invalid-address>',
+        'Certifit <sender@example.com>, another@example.com',
+        'Certifit\r\nBCC: another@example.com <sender@example.com>',
+    ])('rejects an invalid or unsafe sender', (sender) => {
+        const log = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        process.env.FROM_EMAIL = sender;
+        resetEnvCache();
+        try {
+            expect(getServerEnv).toThrow('Invalid environment variables');
+        } finally {
+            log.mockRestore();
+        }
+    });
+
     it('uses APP_URL before DOMAIN and removes its trailing slash', () => {
         process.env.NEXT_PUBLIC_APP_URL = 'https://app.example.com/';
         resetEnvCache();
