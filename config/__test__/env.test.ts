@@ -41,8 +41,18 @@ describe('environment configuration', () => {
     });
 
     it('rejects an incomplete server configuration', () => {
+        const log = jest.spyOn(console, 'error').mockImplementation(() => undefined);
         delete process.env.AUTH_SECRET;
         resetEnvCache();
-        expect(getServerEnv).toThrow('Invalid environment variables');
+        try {
+            expect(getServerEnv).toThrow('Invalid environment variables');
+            expect(JSON.parse(log.mock.calls[0][0] as string)).toEqual({
+                level: 'error',
+                event: 'configuration.server.invalid',
+                invalidFields: 'AUTH_SECRET',
+            });
+        } finally {
+            log.mockRestore();
+        }
     });
 });
