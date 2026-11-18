@@ -49,7 +49,12 @@ export const getServerEnv = (): EnvConfig => {
     if (!cachedServerEnv) {
         const result = serverEnvSchema.safeParse(process.env);
         if (!result.success) {
-            safeLogger.error('configuration.server.invalid');
+            const invalidFields = [...new Set(result.error.issues
+                .map((issue) => issue.path[0])
+                .filter((field): field is string => typeof field === 'string'))]
+                .sort()
+                .join(',');
+            safeLogger.error('configuration.server.invalid', { invalidFields });
             throw new Error('Invalid environment variables');
         }
         cachedServerEnv = result.data;

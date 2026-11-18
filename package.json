@@ -12,7 +12,7 @@
     "test": "jest",
     "typecheck": "tsc --noEmit",
     "architecture:check": "node --test scripts/__test__/*.test.mjs && node scripts/check-architecture-boundaries.mjs",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate --no-engine"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
