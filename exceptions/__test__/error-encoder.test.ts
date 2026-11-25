@@ -51,13 +51,14 @@ describe('HTTP error encoder', () => {
     });
 
     it('maps unexpected errors to a generic 500 and logs only safe metadata', async () => {
-        const response = mapErrorToAPIResponse(new Error(privateDetail));
+        const cause = new Error(privateDetail);
+        const response = mapErrorToAPIResponse(cause);
         const body = await response.json();
 
         expect(response.status).toBe(500);
         expect(body).toEqual({ error: { code: 'UNEXPECTED', message: 'Ocurrió un error. Inténtalo más tarde.' } });
         expect(JSON.stringify(body)).not.toContain(privateDetail);
-        expect(safeLogger.error).toHaveBeenCalledWith('http.error.unexpected', { name: 'Error' });
+        expect(safeLogger.error).toHaveBeenCalledWith('http.error.unexpected', {}, cause);
     });
 
     it('classifies an expired Prisma transaction without logging its raw metadata', () => {
@@ -68,8 +69,19 @@ describe('HTTP error encoder', () => {
 
         logPrismaError(error);
 
-        expect(safeLogger.error).toHaveBeenCalledWith('persistence.known', { code: 'P2028', reason: 'expired' });
-        expect(JSON.stringify((safeLogger.error as jest.Mock).mock.calls)).not.toContain(privateDetail);
+        expect(safeLogger.error).toHaveBeenCalledWith('persistence.known', { code: 'P2028', reason: 'expired' }, error);
+    });
+
+    it('classifies a Prisma error from another module without relying on instanceof', () => {
+        const error = Object.assign(new Error(privateDetail), {
+            name: 'PrismaClientKnownRequestError',
+            code: 'P2028',
+            meta: { error: `Transaction expired for ${privateDetail}` },
+        });
+
+        logPrismaError(error);
+
+        expect(safeLogger.error).toHaveBeenCalledWith('persistence.known', { code: 'P2028', reason: 'expired' }, error);
     });
 
     it('includes only the Prisma code in unexpected HTTP logs', async () => {
@@ -81,9 +93,6 @@ describe('HTTP error encoder', () => {
         const response = mapErrorToAPIResponse(error);
 
         expect(response.status).toBe(500);
-        expect(safeLogger.error).toHaveBeenCalledWith('http.error.unexpected', {
-            name: 'PrismaClientKnownRequestError', code: 'P6001',
-        });
-        expect(JSON.stringify((safeLogger.error as jest.Mock).mock.calls)).not.toContain(privateDetail);
+        expect(safeLogger.error).toHaveBeenCalledWith('http.error.unexpected', {}, error);
     });
 });

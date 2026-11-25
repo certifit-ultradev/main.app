@@ -20,7 +20,7 @@ const DashboardPage: NextPage = async ({ }) => {
                     </div>
                 </div>
                 <WompiProvider>
-                    <section id="top-courses" className={cn('text-white py-16 px-4 sm:px-6 lg:px-8')}>
+                    <section id="top-courses" className={cn('py-16 text-white')}>
                         <div className={cn('max-w-7xl mx-auto')}>
                             <h5 className={cn('sm:text-4xl font-bold mb-4 text-black text-left')}>Explorar</h5>
                             <Suspense fallback={<Loading />}>

@@ -44,7 +44,7 @@ export const findUnsafeConsoleReferences = (source, filePath) => {
 
     const visit = (node) => {
         const method = consoleMethod(node);
-        if (method !== null && !(normalizedPath === SAFE_LOGGER_FILE && (method === 'error' || method === 'info'))) {
+        if (method !== null && !(normalizedPath === SAFE_LOGGER_FILE && ['debug', 'info', 'warn', 'error'].includes(method))) {
             const { line, character } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
             violations.push(`${normalizedPath}:${line + 1}:${character + 1}: uso directo de console.${method}; usa safeLogger`);
         }

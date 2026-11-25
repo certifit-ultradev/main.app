@@ -64,7 +64,7 @@ export const TopThreeCourses = () => {
 
     const coursesElements = courses.map((course, index) => (
         <div key={course.canonicalId} className={cn(
-            "bg-white rounded-xl snap-center flex-shrink-0 w-full sm:w-auto border",
+            "bg-white rounded-xl snap-center flex-shrink-0 w-full sm:w-auto min-w-0 border",
             "text-center px-4 py-2"
         )} style={{ scrollSnapAlign: "center" }}>
             <div className={cn('relative mb-4')}>
@@ -103,7 +103,7 @@ export const TopThreeCourses = () => {
         <>
             <div className={cn(
                 "relative flex overflow-x-auto snap-x snap-mandatory gap-4",
-                "md:grid md:grid-cols-3 md:gap-8 md:overflow-hidden"
+                "md:grid md:grid-cols-2 xl:grid-cols-3 md:gap-8 md:overflow-hidden"
             )}>
                 {isLoading ? (<Loading />) : coursesElements.length > 0 ? coursesElements : EmptyCourse()}
             </div>
@@ -122,7 +122,7 @@ type ModalCourseDetailProp = {
 
 const EmptyCourse = () => {
     return (
-        <div className={cn('flex col-start-2 justify-center')}>
+        <div className={cn('col-span-full flex justify-center')}>
             <p className={cn('text-gray-500')}>No hay cursos disponibles</p>
         </div>
     );

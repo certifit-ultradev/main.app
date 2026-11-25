@@ -21,7 +21,7 @@ export function CourseProgressCard({ course }: CourseProgressCardProps) {
         <>
             <div
                 className={cn(
-                    "bg-white border border-gray-200 rounded-xl p-4 shadow-sm",
+                    "bg-white border border-gray-200 rounded-xl p-4 shadow-sm min-w-0",
                     "h-full flex flex-col"
                 )}
             >
@@ -35,15 +35,15 @@ export function CourseProgressCard({ course }: CourseProgressCardProps) {
                 </div>
 
                 {/* Tarjeta interna con progreso */}
-                <Card className={cn('mt-10 bg-[#F2F6FC] shadow-lg')}>
-                    <CardContent>
-                        <div className={cn('flex items-center space-x-4 mb-4')}>
-                            <div className={cn("flex-1 mr-4")}>
+                <Card className={cn('mt-10 min-w-0 bg-[#F2F6FC] shadow-lg')}>
+                    <CardContent className="p-4">
+                        <div className={cn('flex flex-wrap items-center justify-between gap-4')}>
+                            <div className={cn("min-w-0 flex-[1_1_10rem]")}>
                                 {course.visibleClasses.map((cls) => {
-                                    const isCurrentGlobal = course.classesWithCompletion.findIndex((c) => c.id === cls.id) === course.currentIndex;
+                                    const isCurrentGlobal = cls.isCurrent;
 
                                     return (
-                                        <div key={cls.id} className={cn("flex items-center mb-2")}>
+                                        <div key={cls.position} className={cn("flex items-center mb-2")}>
                                             <div className={cn("mr-2")}>
                                                 {cls.completed ? (
                                                     <div className={cn("w-4 h-4 bg-[#0BBBE7] rounded-full flex items-center justify-center text-white text-xs")}>
@@ -60,17 +60,16 @@ export function CourseProgressCard({ course }: CourseProgressCardProps) {
                                                 )}
                                             </div>
 
-                                            <div className={cn(`text-md ${isCurrentGlobal ? 'font-semibold' : ''}`)}>
+                                            <div className={cn(`min-w-0 break-words text-md ${isCurrentGlobal ? 'font-semibold' : ''}`)}>
                                                 {/* Dibuja la posición real en todo el curso */}
-                                                <p className={cn(`text-xs`)}>Clase {course.classesWithCompletion.findIndex((c) => c.id === cls.id) + 1}</p>
+                                                <p className={cn(`text-xs`)}>Clase {cls.position}</p>
                                                 <p>{cls.title}</p>
                                             </div>
                                         </div>
                                     );
                                 })}
                             </div>
-                            <div className={cn('flex justify-end m-6')}>
-                                {/* Este div simula un gráfico circular del 80% */}
+                            <div className={cn('shrink-0 mx-auto')}>
                                 <CircularProgress progress={course.progressPercent} size={127} strokeWidth={15} withLegend={true} />
                             </div>
                         </div>

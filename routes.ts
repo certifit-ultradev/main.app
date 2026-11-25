@@ -7,6 +7,7 @@ export const publicRoutes = [
   '/login',
   '/terms-of-service',
   '/privacy-policy',
+  '/support',
 ];
 
 export const authRoutes = ['/login', '/signup'];

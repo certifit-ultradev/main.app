@@ -7,7 +7,7 @@ import type { CategoryRecord, CreateCategoryCommand, UpdateCategoryCommand } fro
  * @returns 
  */
 export const getAllCourseCategories = async (): Promise<CategoryRecord[]> => {
-    return executeService(() => allCategories());
+    return executeService(() => allCategories(), { event: 'service.category.list.failed' });
 }
 
 /**
@@ -16,7 +16,7 @@ export const getAllCourseCategories = async (): Promise<CategoryRecord[]> => {
  * @returns 
  */
 export const registerCourseCategory = async (data: CreateCategoryCommand): Promise<CategoryRecord> => {
-    return executeService(() => createCourseCategory(data));
+    return executeService(() => createCourseCategory(data), { event: 'service.category.create.failed' });
 }
 
 /**
@@ -25,7 +25,7 @@ export const registerCourseCategory = async (data: CreateCategoryCommand): Promi
  * @returns 
  */
 export const changeCourseCategory = async (data: UpdateCategoryCommand): Promise<CategoryRecord> => {
-    return executeService(() => updateCourseCategory(data));
+    return executeService(() => updateCourseCategory(data), { event: 'service.category.update.failed', metadata: { categoryId: data.id } });
 }
 
 /**
@@ -34,7 +34,7 @@ export const changeCourseCategory = async (data: UpdateCategoryCommand): Promise
  * @returns 
  */
 export const removeCourseCategory = async (id: number) => {
-    await executeService(() => deleteCourseCategory(id));
+    await executeService(() => deleteCourseCategory(id), { event: 'service.category.delete.failed', metadata: { categoryId: id } });
 }
 
 /**
@@ -43,5 +43,5 @@ export const removeCourseCategory = async (id: number) => {
  * @returns 
  */
 export const getCategoryById = async (id: number): Promise<CategoryRecord> => {
-    return executeService(() => findCategoryById(id));
+    return executeService(() => findCategoryById(id), { event: 'service.category.get_by_id.failed', metadata: { categoryId: id } });
 }

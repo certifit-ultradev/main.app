@@ -18,8 +18,8 @@ export async function requestPasswordReset(email: string): Promise<void> {
                 try {
                     const user = await getUserByEmail(candidateEmail);
                     return user ? { email: user.email } : null;
-                } catch {
-                    safeLogger.error('service.password_reset.account_lookup.failed');
+                } catch (error) {
+                    safeLogger.error('service.password_reset.account_lookup.failed', {}, error);
                     return null;
                 }
             },

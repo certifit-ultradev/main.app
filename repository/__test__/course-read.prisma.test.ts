@@ -5,11 +5,12 @@ import {
     prismaStudentQuizReadPort,
 } from '@/repository/course-read.prisma';
 import { prisma } from '@/lib/prisma';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 jest.mock('@/lib/prisma', () => ({
     prisma: {
         course: { findMany: jest.fn(), findFirst: jest.fn(), count: jest.fn() },
-        userCourse: { findFirst: jest.fn() },
+        userCourse: { findFirst: jest.fn(), findMany: jest.fn() },
         userQuizAnswer: { findMany: jest.fn() },
         userQuizState: { findFirst: jest.fn() },
     },
@@ -169,6 +170,41 @@ describe('Prisma course-read ports', () => {
         expect(unlocked?.modules[1].classes[0].video).toBe('https://example.com/private-video.mp4');
     });
 
+    it('keeps locked class titles out of the course list while preserving global progress', async () => {
+        const futureModule = {
+            ...course.courseModules[0], id: 21, title: 'Avanzado',
+            moduleClass: [{ ...course.courseModules[0].moduleClass[0], id: 22, courseModuleId: 21, title: 'Clase reservada' }],
+            moduleQuiz: [{ ...course.courseModules[0].moduleQuiz[0], id: 23, courseModuleId: 21 }],
+        };
+        const enrollment = {
+            course: { ...course, courseModules: [course.courseModules[0], futureModule] },
+            userClassesState: [{ classId: 12, completed: true }],
+            userQuizState: [],
+        };
+        (prisma.userCourse.findMany as jest.Mock).mockResolvedValueOnce([enrollment])
+            .mockResolvedValueOnce([{ ...enrollment, userQuizState: [{ quizId: 13 }] }]);
+
+        const [locked] = await prismaStudentCourseReadPort.findEnrolledCourses('student-1');
+        expect(locked).toMatchObject({
+            progressPercent: 50,
+            totalClasses: 2,
+            visibleClasses: [{ position: 1, title: 'Introducción', completed: true, isCurrent: true }],
+        });
+        expect(JSON.stringify(locked)).not.toContain('Clase reservada');
+        expect(locked).not.toHaveProperty('classesWithCompletion');
+        expect(locked).not.toHaveProperty('classViewed');
+
+        const [unlocked] = await prismaStudentCourseReadPort.findEnrolledCourses('student-1');
+        expect(unlocked?.visibleClasses).toEqual([
+            { position: 1, title: 'Introducción', completed: true, isCurrent: false },
+            { position: 2, title: 'Clase reservada', completed: false, isCurrent: true },
+        ]);
+
+        const query = (prisma.userCourse.findMany as jest.Mock).mock.calls[0][0];
+        expect(query.include.userQuizState).toEqual({ where: { passed: true }, select: { quizId: true } });
+        expect(query.include.course.select.courseModules.select.moduleQuiz.select).toEqual({ id: true });
+    });
+
     it('exposes a single expected answer to the author without fake text options', async () => {
         (prisma.course.findFirst as jest.Mock).mockResolvedValue(course);
 
@@ -183,6 +219,31 @@ describe('Prisma course-read ports', () => {
         const query = (prisma.course.findFirst as jest.Mock).mock.calls[0][0];
         expect(query.include.courseModules.orderBy).toEqual([{ position: 'asc' }, { id: 'asc' }]);
         expect(query.include.courseModules.include.moduleClass.orderBy).toEqual([{ position: 'asc' }, { id: 'asc' }]);
+    });
+
+    it('loads a legacy quiz without a marked correct option so an admin can repair it', async () => {
+        const legacyCourse = structuredClone(course);
+        legacyCourse.courseModules[0].moduleQuiz[0].quizQuestion[0].possibleAnswerQuestion.forEach((answer) => {
+            answer.isCorrect = false;
+        });
+        (prisma.course.findFirst as jest.Mock).mockResolvedValue(legacyCourse);
+        const log = jest.spyOn(safeLogger, 'info').mockImplementation(() => undefined);
+
+        try {
+            const result = await prismaCourseEditorReadPort.findEditorCourseById(7);
+            expect(result?.modules[0].quiz?.questions[0]).toMatchObject({
+                id: 14,
+                validationIssue: 'invalid_correct_answer_count',
+                options: [{ id: 15, isCorrect: false }, { id: 18, isCorrect: false }],
+            });
+            expect(log).toHaveBeenCalledWith('course.editor.question_requires_correction', expect.objectContaining({
+                courseId: 7,
+                questionId: 14,
+                correctAnswerCount: 0,
+            }));
+        } finally {
+            log.mockRestore();
+        }
     });
 
     it('reads a new text question without options and an unmigrated historical question', async () => {

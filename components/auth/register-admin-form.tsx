@@ -59,7 +59,7 @@ export const RegistrationAdminForm = ({ data, setData, nextStep }: RegisterFormP
                 Proporcione su nombre completo y dirección de correo electrónico para comenzar a crear su cuenta.
             </span>
 
-            <form onSubmit={handleSubmit(onSubmit)} className={cn('w-full max-w-lg min-w-[20rem]')}>
+            <form onSubmit={handleSubmit(onSubmit)} className={cn('w-full min-w-0 max-w-lg')}>
                 <BasicFieldsForm register={register} control={control} errors={errors} />
                 <div className={cn('relative mb-4')}>
                     <FormError error={error} />

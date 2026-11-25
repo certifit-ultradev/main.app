@@ -196,9 +196,9 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
 
     return (
         <>
-            <div className={cn("flex flex-col lg:flex-row w-full h-full p-6")}>
+            <div className={cn("mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-3 lg:px-8 xl:grid-cols-4")}>
                 {/* Panel izquierdo: listado de módulos y clases */}
-                <div className={cn("lg:w-1/4 w-full border border-[#CCD2DB] rounded-2xl p-4 mb-4 lg:mb-0 overflow-y-auto max-h-[70vh]")} ref={containerRef}>
+                <div className={cn("min-w-0 w-full border border-[#CCD2DB] rounded-2xl p-4 overflow-y-auto max-h-[70vh]")} ref={containerRef}>
                     <h1 className={cn("text-2xl font-bold")}>{data.title}</h1>
                     <p className={cn("text-gray-600 mb-6")}>
                         {data.modules?.reduce((sum, module) => sum + (module.classes?.length || 0), 0)} clases
@@ -314,7 +314,7 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                 </div>
 
                 {/* Panel central: reproductor de video o quiz */}
-                <div className={cn("lg:w-2/4 w-full xl:px-6")}>
+                <div className={cn("min-w-0 w-full lg:col-span-2")}>
                     {progressError && <p role="alert" className="mb-3 text-sm text-red-600">{progressError}</p>}
                     {selectedQuiz && failedModuleId === selectedQuiz.moduleId && (
                         <button type="button" onClick={() => void storeModuleComplete()} className="mb-3 text-sm text-[#0BBBE7] underline hover:text-[#009fdf]">
@@ -388,7 +388,7 @@ export const ClientCourseView = ({ data }: CourseViewProps) => {
                 </div>
 
                 {/* Panel derecho: Tabs con descripción e instructor */}
-                <div className={cn("lg:w-1/4 w-full border border-[#dde1e7] rounded-2xl p-6 shadow-md max-h-[70vh] overflow-y-auto")}>
+                <div className={cn("min-w-0 w-full border border-[#dde1e7] rounded-2xl p-6 shadow-md max-h-[70vh] overflow-y-auto lg:col-span-2 lg:col-start-2 xl:col-span-1 xl:col-start-auto")}>
                     <Tabs defaultValue="description">
                         <TabsList className={cn("mb-4")}>
                             <TabsTrigger value="description">Descripción</TabsTrigger>

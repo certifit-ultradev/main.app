@@ -9,12 +9,12 @@ import { CourseSellsChart, LastMonthCharts } from './components/course-sells-cha
 const DashboardPage: NextPage = async () => {
 
     return (
-        <Card className={cn('w-full mt-10 max-w-lg min-w-0 md:min-w-[50rem] lg:min-w-[110rem]')}>
-            <CardContent>
-                <div className={cn('flex justify-center m-4 space-x-4')}>
+        <Card className={cn('mt-10 w-full min-w-0')}>
+            <CardContent className={cn('min-w-0 p-4 sm:p-6')}>
+                <div className={cn('flex min-w-0 flex-col gap-4 xl:flex-row')}>
                     <LastMonthCharts />
-                    <Card className={cn('min-w-0 w-[55rem] bg-[#F9F9FC]')}>
-                        <CardContent>
+                    <Card className={cn('w-full min-w-0 flex-1 bg-[#F9F9FC]')}>
+                        <CardContent className={cn('min-w-0 p-3 sm:p-6')}>
                             <CourseSellsChart />
                         </CardContent>
                     </Card>

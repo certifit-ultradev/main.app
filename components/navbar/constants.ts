@@ -30,7 +30,7 @@ export const navbarListDesktop: Array<NavbarItem> = [
   {
     to: '/support',
     icon: SupportIcon,
-    roles: ['user'],
+    roles: ['user', 'admin'],
     label: 'Soporte'
   },
 ];

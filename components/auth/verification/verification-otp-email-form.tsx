@@ -54,7 +54,7 @@ export const VerificationOtpEmailForm = ({ data }: VerificationOtpEmailProps) =>
     return (
         <div className={cn('justify-center items-center')}>
             <div className={cn('flex flex-col justify-center items-center bg-white p-10')}>
-                <div className={cn('w-full max-w-lg min-w-[20rem]')}>
+                <div className={cn('w-full min-w-0 max-w-lg')}>
                     <h1 className={cn('text-2xl font-semibold mb-4 text-left')}>¡Registro casi completo!</h1>
                     <p className={cn('text-gray-500 mb-6 text-left')}>
                         Revisa tu bandeja de entrada y confirma tu correo desde el enlace recibido. Después podrás iniciar sesión.

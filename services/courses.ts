@@ -22,36 +22,41 @@ import { safeLogger } from '@/shared/observability/safe-logger';
 import { assertValidCourseQuestion } from '@/application/courses/course-question.validation';
 import type { CourseSalesDto, MonthlyCountDto } from '@/application/courses/course-analytics.ports';
 import { prismaCourseAnalyticsReadPort } from '@/repository/course-analytics.prisma';
+import { CourseInvalidStateError } from '@/exceptions/course-invalid-state';
 
 export const COURSES_PAGE_SIZE = 10;
 
 const cleanupCourseAssets = async (courseId?: number) => {
     try {
         await processCourseAssetCleanup(courseId);
-    } catch {
+    } catch (error) {
         // A committed course write must not become a false failure when cleanup is unavailable.
-        safeLogger.error('course.asset_cleanup.unavailable', { courseId });
+        safeLogger.warn('course.asset_cleanup.unavailable', { courseId }, error);
     }
 };
 
 /** Catalog projection for the optional current viewer. */
 export const getCatalogCourses = async (): Promise<CatalogCourseCardDto[]> => {
     const viewerId = await getOptionalUserId();
-    return executeService(() => prismaCourseCatalogReadPort.findActiveCatalogCourses(viewerId ?? undefined));
+    return executeService(() => prismaCourseCatalogReadPort.findActiveCatalogCourses(viewerId ?? undefined),
+        { event: 'service.course.catalog_read.failed' });
 };
 
 /** Student-only projection; a missing enrollment is an ordinary null result. */
 export const getStudentCourseByCanonicalId = withAuth(async (user, canonicalId: string): Promise<StudentCourseDto | null> => {
-    return executeService(() => prismaStudentCourseReadPort.findEnrolledCourse(canonicalId, user.id));
+    return executeService(() => prismaStudentCourseReadPort.findEnrolledCourse(canonicalId, user.id),
+        { event: 'service.course.student_read.failed' });
 });
 
 /** Editor projection. It never exposes a persistence model to its caller. */
 export const getEditorCourseById = async (id: number): Promise<CourseEditorDto | null> => {
-    return executeService(() => prismaCourseEditorReadPort.findEditorCourseById(id));
+    return executeService(() => prismaCourseEditorReadPort.findEditorCourseById(id),
+        { event: 'service.course.editor_read.failed', metadata: { courseId: id } });
 };
 
 export const getEditorCoursePage = async (request: { page: number }): Promise<CourseEditorPageDto> => {
-    return executeService(() => prismaCourseEditorReadPort.findEditorCoursePage(request.page, COURSES_PAGE_SIZE));
+    return executeService(() => prismaCourseEditorReadPort.findEditorCoursePage(request.page, COURSES_PAGE_SIZE),
+        { event: 'service.course.editor_page.failed', metadata: { page: request.page } });
 };
 
 /**
@@ -61,7 +66,8 @@ export const getEditorCoursePage = async (request: { page: number }): Promise<Co
  * @returns 
  */
 export const getUserCourseQuizAnswers = withAuth(async (user, canonicalId: string, quizId: number): Promise<StudentQuizAnswerDto[]> => {
-    return executeService(() => prismaStudentQuizReadPort.findAnswers(canonicalId, user.id, quizId));
+    return executeService(() => prismaStudentQuizReadPort.findAnswers(canonicalId, user.id, quizId),
+        { event: 'service.course.quiz_answers_read.failed', metadata: { quizId } });
 });
 
 /** Compact enrollment list for the authenticated student; persistence entities never cross this boundary. */
@@ -69,7 +75,7 @@ export const getUserCourses = withAuth(async (user): Promise<StudentCourseListIt
     try {
         return await prismaStudentCourseReadPort.findEnrolledCourses(user.id);
     } catch (error) {
-        safeLogger.error('service.course.user_courses.failed');
+        safeLogger.error('service.course.user_courses.failed', {}, error);
         logPrismaError(error);
         return [];
     }
@@ -91,7 +97,7 @@ export const registerCourse = async (command: CreateCourseCommand): Promise<Cour
         if (!course) throw new Error('No fue posible leer el curso creado');
         return course;
     } catch (error) {
-        safeLogger.error('service.course.register.failed');
+        safeLogger.error('service.course.register.failed', {}, error);
         logPrismaError(error);
         throw error;
     }
@@ -104,7 +110,7 @@ export const createCourseDraft = async (command: CourseBasicsCommand): Promise<C
         if (!course) throw new Error('No fue posible leer el borrador creado');
         return course;
     } catch (error) {
-        safeLogger.error('service.course.create_draft.failed');
+        safeLogger.error('service.course.create_draft.failed', {}, error);
         logPrismaError(error);
         throw error;
     }
@@ -115,7 +121,7 @@ export const updateCourseBasics = async (courseId: number, command: CourseBasics
         await prismaCourseEditorWritePort.updateBasics(courseId, command);
         await cleanupCourseAssets(courseId);
     } catch (error) {
-        safeLogger.error('service.course.update_basics.failed', { courseId });
+        safeLogger.error('service.course.update_basics.failed', { courseId }, error);
         logPrismaError(error);
         throw error;
     }
@@ -132,7 +138,7 @@ export const saveCourseContent = async (courseId: number, command: CourseContent
         if (!course) throw new Error('No fue posible leer el curso actualizado');
         return course;
     } catch (error) {
-        safeLogger.error('service.course.save_content.failed', { courseId });
+        safeLogger.error('service.course.save_content.failed', { courseId }, error);
         logPrismaError(error);
         throw error;
     }
@@ -156,7 +162,7 @@ export const editCourse = async (courseId: number, patch: CourseEditorPatch) => 
         await prismaCourseEditorWritePort.updateCourse(courseId, patch);
         await cleanupCourseAssets(courseId);
     } catch (error) {
-        safeLogger.error('service.course.edit.failed', { courseId });
+        safeLogger.error('service.course.edit.failed', { courseId }, error);
         logPrismaError(error);
         throw error;
     }
@@ -175,7 +181,7 @@ export const updateClassVideoPath = async (clsId: number, videoPath: string, vid
         await cleanupCourseAssets();
         return updated;
     } catch (error) {
-        safeLogger.error('service.course.class_video.update.failed', { classId: clsId });
+        safeLogger.error('service.course.class_video.update.failed', { classId: clsId }, error);
         logPrismaError(error);
         throw error;
     }
@@ -195,7 +201,7 @@ export const activateCourse = async (id: number) => {
 
         return { success: true, message: "Curso activado correctamente" };
     } catch (error) {
-        safeLogger.error('service.course.activate.failed', { courseId: id });
+        safeLogger.error('service.course.activate.failed', { courseId: id }, error);
         logPrismaError(error);
         throw error;
     }
@@ -215,7 +221,7 @@ export const deactivateCourse = async (id: number) => {
 
         return { success: true, message: "Curso desactivado" };
     } catch (error) {
-        safeLogger.error('service.course.deactivate.failed', { courseId: id });
+        safeLogger.error('service.course.deactivate.failed', { courseId: id }, error);
         logPrismaError(error);
         throw error;
     }
@@ -290,7 +296,9 @@ export const registerClassCurrentState = withAuth(async (user, courseId: string,
 
         return { success: true };
     } catch (error) {
-        safeLogger.error('service.course.class_progress.failed', { classId });
+        if (error instanceof CourseInvalidStateError) {
+            safeLogger.debug('service.course.class_progress.blocked', { classId });
+        } else safeLogger.error('service.course.class_progress.failed', { classId }, error);
         logPrismaError(error);
         throw error;
     }
@@ -312,7 +320,9 @@ export const registerModuleFinishtState = withAuth(async (user, courseId: string
 
         return { success: true };
     } catch (error) {
-        safeLogger.error('service.course.module_progress.failed', { moduleId });
+        if (error instanceof CourseInvalidStateError) {
+            safeLogger.debug('service.course.module_progress.blocked', { moduleId });
+        } else safeLogger.error('service.course.module_progress.failed', { moduleId }, error);
         logPrismaError(error);
         throw error;
     }
@@ -341,7 +351,9 @@ export const registerQuestionAnswer = withAuth(async (user, data: SubmitQuizAnsw
 
         return { success: true };
     } catch (error) {
-        safeLogger.error('service.course.quiz_answer.failed', { quizId: data.quizId, questionId: data.questionId });
+        if (error instanceof CourseInvalidStateError) {
+            safeLogger.debug('service.course.quiz_answer.blocked', { quizId: data.quizId, questionId: data.questionId });
+        } else safeLogger.error('service.course.quiz_answer.failed', { quizId: data.quizId, questionId: data.questionId }, error);
         logPrismaError(error);
         throw error;
     }
@@ -361,7 +373,9 @@ export const calculateQuizScore = withAuth(async (user, data: CalculateQuizScore
             quizId: data.quizId,
         }, calculateQuizAttemptResult);
     } catch (error) {
-        safeLogger.error('service.course.quiz_score.failed', { quizId: data.quizId });
+        if (error instanceof CourseInvalidStateError) {
+            safeLogger.debug('service.course.quiz_score.blocked', { quizId: data.quizId });
+        } else safeLogger.error('service.course.quiz_score.failed', { quizId: data.quizId }, error);
         logPrismaError(error);
         throw error;
     }
@@ -374,7 +388,8 @@ export const calculateQuizScore = withAuth(async (user, data: CalculateQuizScore
  * @returns 
  */
 export const getUserQuizState = withAuth(async (user, canonicalId: string, quizId: number): Promise<StudentQuizAttemptDto | null> => {
-    return executeService(() => prismaStudentQuizReadPort.findLatestAttempt(canonicalId, user.id, quizId));
+    return executeService(() => prismaStudentQuizReadPort.findLatestAttempt(canonicalId, user.id, quizId),
+        { event: 'service.course.quiz_state_read.failed', metadata: { quizId } });
 });
 
 /**
@@ -386,7 +401,7 @@ export const calculateTotalSalesPerCourse = withAuth(async (): Promise<CourseSal
     try {
         return await prismaCourseAnalyticsReadPort.findSalesByCourse();
     } catch (error) {
-        safeLogger.error('service.course.sales_by_course.failed');
+        safeLogger.error('service.course.sales_by_course.failed', {}, error);
         logPrismaError(error);
         throw error;
     }
@@ -400,7 +415,7 @@ export const calculateTotalSalesByMonth = withAuth(async (): Promise<MonthlyCoun
     try {
         return await prismaCourseAnalyticsReadPort.findApprovedSalesByMonth();
     } catch (error) {
-        safeLogger.error('service.course.sales_by_month.failed');
+        safeLogger.error('service.course.sales_by_month.failed', {}, error);
         logPrismaError(error);
         throw error;
     }
@@ -414,7 +429,7 @@ export const calculateUsersRegisteredByMonth = withAuth(async (): Promise<Monthl
     try {
         return await prismaCourseAnalyticsReadPort.findRegisteredUsersByMonth();
     } catch (error) {
-        safeLogger.error('service.course.users_by_month.failed');
+        safeLogger.error('service.course.users_by_month.failed', {}, error);
         logPrismaError(error);
         throw error;
     }

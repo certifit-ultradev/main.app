@@ -1,4 +1,4 @@
-import { toAuthorQuestionDto, toStudentQuestionDto } from '@/mappers/course-question-mapper';
+import { toAuthorQuestionDto, toEditableAuthorQuestionDto, toStudentQuestionDto } from '@/mappers/course-question-mapper';
 
 const base = { id: 1, title: 'Pregunta', points: 5 };
 
@@ -16,6 +16,19 @@ describe('course question audience mapping', () => {
         expect(() => toAuthorQuestionDto({ ...base, type: 'multiple', possibleAnswerQuestion: [
             { id: 2, value: 'A', isCorrect: true }, { id: 3, value: 'B', isCorrect: true },
         ] })).toThrow('una correcta');
+    });
+
+    it('preserves incomplete legacy answers for editing without choosing a correct option', () => {
+        const options = [
+            { id: 2, value: 'A', isCorrect: false },
+            { id: 3, value: 'B', isCorrect: false },
+        ];
+        expect(toEditableAuthorQuestionDto({ ...base, type: 'multiple', possibleAnswerQuestion: options }))
+            .toEqual({ ...base, type: 'multiple', options, validationIssue: 'invalid_correct_answer_count' });
+        expect(toEditableAuthorQuestionDto({ ...base, type: 'text', possibleAnswerQuestion: [] }))
+            .toEqual({ ...base, type: 'text', expectedAnswer: { value: '' }, validationIssue: 'missing_text_answer' });
+        expect(() => toEditableAuthorQuestionDto({ ...base, type: 'other', possibleAnswerQuestion: [] }))
+            .toThrow('Tipo de pregunta');
     });
 
     it('prefers the column and falls back only to one valid legacy option', () => {

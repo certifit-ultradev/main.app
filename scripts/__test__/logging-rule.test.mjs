@@ -20,10 +20,12 @@ test('ignora comentarios y cadenas con la palabra console', () => {
     assert.deepEqual(findUnsafeConsoleReferences(source, 'components/example.tsx'), []);
 });
 
-test('permite sólo los sinks error e info de safe-logger', () => {
+test('permite los cuatro sinks de safe-logger', () => {
     const file = 'shared/observability/safe-logger.ts';
     assert.deepEqual(findUnsafeConsoleReferences('console.error(message);', file), []);
     assert.deepEqual(findUnsafeConsoleReferences('console.info(message);', file), []);
+    assert.deepEqual(findUnsafeConsoleReferences('console.warn(message);', file), []);
+    assert.deepEqual(findUnsafeConsoleReferences('console.debug(message);', file), []);
     assert.equal(findUnsafeConsoleReferences('console.log(message);', file).length, 1);
     assert.equal(findUnsafeConsoleReferences('console.info(message);', 'services/payments.ts').length, 1);
 });

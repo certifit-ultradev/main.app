@@ -87,7 +87,7 @@ export const CourseBasicForm = ({ data, setData, nextStep, isSaving = false, sav
     };
 
     return (
-        <div className={cn('w-full lg:w-3/4')}>
+        <div className={cn('w-full min-w-0 lg:w-3/4')}>
             {saveError && <p role="alert" className={cn('mb-4 text-sm text-red-600')}>{saveError}</p>}
             <div className={cn('mb-6')}>
                 <h2 className={cn('text-2xl font-semibold')}>Información Básica</h2>

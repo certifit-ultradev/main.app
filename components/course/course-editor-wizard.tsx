@@ -270,8 +270,8 @@ export function CourseEditorWizard({ courseId }: { courseId?: number }) {
     if (loadError) return <p role="alert" className="p-6 text-red-600">{loadError}</p>;
 
     return (
-        <div className={cn('mt-10 items-center justify-center')}>
-            <div className={cn('flex flex-col lg:flex-row gap-8 p-6 mx-auto w-full max-w-lg min-w-0 md:min-w-[50rem] lg:min-w-[110rem]')}>
+        <div className={cn('mt-10 w-full min-w-0')}>
+            <div className={cn('mx-auto flex w-full min-w-0 flex-col gap-8 p-0 lg:flex-row')}>
                 <CourseStepProgress currentStep={step} />
                 {step === 1 && <CourseBasicForm data={data} setData={setData} nextStep={saveBasics} isSaving={isSaving} saveError={saveError} />}
                 {step === 2 && <CourseClassesForm data={data} setData={setData} nextStep={saveModules} previousStep={() => goToStep(1)} isSaving={isSaving} saveError={saveError} videoUploads={videoUploads} contentPhase={contentPhase} />}

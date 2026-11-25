@@ -3,6 +3,7 @@
 import type { CourseEditorDto } from '@/application/courses/course.dto';
 import { cn } from "@/lib/utils";
 import Image from 'next/image'
+import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useRef, useState } from "react";
@@ -29,6 +30,10 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
         : null;
     const selectedQuizData = selectedQuiz ? data.modules?.[selectedQuiz.moduleIndex!].quiz : null;
     const currentAuthorQuestion = selectedQuizData?.questions[quizState.currentQuestion];
+    const questionsToCorrect = data.modules.reduce(
+        (count, module) => count + (module.quiz?.questions.filter((question) => question.validationIssue).length ?? 0),
+        0,
+    );
 
 
     const handleStartQuiz = () => setQuizState({ started: true, finished: false, currentQuestion: 0 });
@@ -47,9 +52,15 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
     const handleRetryQuiz = () => setQuizState({ started: true, finished: false, currentQuestion: 0 });
 
     return (
-        <div className={cn("flex flex-col lg:flex-row w-full h-full p-6")}>
+        <div className={cn("mx-auto grid w-full min-w-0 grid-cols-1 gap-6 py-6 lg:grid-cols-3 xl:grid-cols-4")}>
+            {questionsToCorrect > 0 && (
+                <div role="alert" className="col-span-full flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950">
+                    <p>{questionsToCorrect} {questionsToCorrect === 1 ? 'pregunta necesita' : 'preguntas necesitan'} una respuesta válida antes de volver a guardar el contenido del curso.</p>
+                    <Link href={`/admin/courses/${data.id}/edit?step=2`} className="font-semibold underline">Corregir preguntas</Link>
+                </div>
+            )}
             {/* Panel izquierdo: listado de módulos y clases */}
-            <div className={cn("lg:w-1/4 w-full border border-[#CCD2DB] rounded-2xl p-4 mb-4 lg:mb-0 overflow-y-auto max-h-[70vh]")}>
+            <div className={cn("min-w-0 w-full border border-[#CCD2DB] rounded-2xl p-4 overflow-y-auto max-h-[70vh]")}>
                 <h1 className={cn("text-2xl font-bold")}>{data.title}</h1>
                 <p className={cn("text-gray-600 mb-6")}>
                     {data.modules?.reduce((sum, module) => sum + (module.classes?.length || 0), 0)} clases
@@ -135,7 +146,7 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
             </div>
 
             {/* Panel central: reproductor de video o quiz */}
-            <div className={cn("lg:w-2/4 max-h-[70vh] w-full xl:px-6")}>
+            <div className={cn("min-w-0 w-full max-h-[70vh] lg:col-span-2 xl:px-6")}>
                 <div className={cn("relative bg-white")}>
                     {selectedClassData && selectedClassData.video ? (
                         <div className="relative">
@@ -175,6 +186,9 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
                                     <div className={cn('bg-gray-100 p-4 rounded-2xl mb-2')}> <StepProgress step={quizState.currentQuestion + 1} max={selectedQuizData.questions.length} label="Pregunta" /> </div>
                                     <div>
                                         <p className={cn('text-lg font-semibold mb-1')}>{quizState.currentQuestion + 1}. {selectedQuizData.questions[quizState.currentQuestion].title}</p>
+                                        {currentAuthorQuestion?.validationIssue && (
+                                            <p role="alert" className="mb-2 text-sm font-medium text-amber-800">Esta pregunta necesita una respuesta válida. Corrígela en el editor del curso.</p>
+                                        )}
                                         <p className={cn('text-sm text-gray-500 mb-4')}>Puntos: {selectedQuizData.questions[quizState.currentQuestion].points}</p>
                                         {selectedQuizData.questions[quizState.currentQuestion].type === 'multiple' && (
                                             <div className={cn('space-y-4')}>
@@ -264,7 +278,7 @@ export const AdminCourseView = ({ data }: CourseViewProps) => {
             <div
                 className={cn(
                     "border border-[#dde1e7] rounded-2xl p-6 shadow-md max-h-[70vh] overflow-y-auto",
-                    "lg:w-1/4 w-full",
+                    "min-w-0 w-full lg:col-span-2 lg:col-start-2 xl:col-span-1 xl:col-start-auto",
                     "hidden sm:block",
                     "lg:block lg:static lg:order-none",
                     "order-3 mt-4 lg:mt-0"

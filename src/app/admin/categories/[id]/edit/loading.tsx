@@ -9,7 +9,7 @@ const Loading = () => (
         <div className={cn('relative mb-4')}>
         </div>
 
-        <form className={cn('w-full max-w-lg min-w-[20rem] space-y-4')}>
+        <form className={cn('w-full min-w-0 max-w-lg space-y-4')}>
             <div className={cn('flex flex-wrap -mx-2 mb-4')}>
                 <div className={cn('w-full px-2')}>
                     <div className={cn('h-10 bg-gray-200 rounded')}></div>

@@ -5,8 +5,7 @@ import { cn } from '@/lib/utils'
 type Options = {
     label: string | ReactElement
     value: string
-    handleClick: MouseEventHandler<HTMLElement>
-}
+} & ({ handleClick: MouseEventHandler<HTMLElement>; href?: never } | { href: string; openInNewTab?: boolean; handleClick?: never })
 
 interface MobileMenuProps {
     options: Options[]
@@ -40,11 +39,9 @@ export default function MobileMenu(props: MobileMenuProps) {
                     <div className={cn('flex items-center justify-center')}>
                         <span className={cn('text-gray-400 mb-6')}>Menu</span>
                     </div>
-                    {options.map((option, i) => {
-                        return (
-                            <button key={i} type='button' onClick={(e) => { handleClose(); option.handleClick(e); }} className={cn('hover:bg-white hover:text-black text-white font-semibold px-4 py-2 rounded-full mb-4')}>{option.label}</button>
-                        )
-                    })}
+                    {options.map((option, i) => option.href
+                        ? <a key={i} href={option.href} target={option.openInNewTab ? '_blank' : undefined} rel={option.openInNewTab ? 'noopener noreferrer' : undefined} onClick={handleClose} className={cn('hover:bg-white hover:text-black text-white text-center font-semibold px-4 py-2 rounded-full mb-4')}>{option.label}</a>
+                        : <button key={i} type='button' onClick={(e) => { handleClose(); option.handleClick?.(e); }} className={cn('hover:bg-white hover:text-black text-white font-semibold px-4 py-2 rounded-full mb-4')}>{option.label}</button>)}
                 </div>
             )}
         </>

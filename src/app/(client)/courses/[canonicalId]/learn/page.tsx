@@ -5,6 +5,7 @@ import { CourseParamsSchema } from "@/interfaces/http/courses/params.contract";
 import { parseStudentCourseResponse, StudentCourseHttpError } from "@/features/courses/learning/student-course-api";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 type LearnPageProps = {
     params: Promise<{ canonicalId: string }>;
@@ -29,6 +30,11 @@ const LearnPage = async ({ params }: LearnPageProps) => {
             if (error.status === 401) {
                 redirect(`/login?callbackUrl=${encodeURIComponent(`/courses/${canonicalId}/learn`)}`);
             }
+
+            safeLogger.error('course.student.view.http_failed', {
+                canonicalId,
+                status: error.status,
+            });
 
             // Do not disclose whether a course exists to an unauthorised student.
             if (error.status === 403 || error.status === 404) {

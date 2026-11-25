@@ -17,8 +17,8 @@ export async function listAll(input: unknown): Promise<ActionResult<CourseEditor
         try {
             const coursesPaged = await getEditorCoursePage({ page: parsedInput.data.page });
             return actionSuccess<CourseEditorPageDto>(coursesPaged);
-        } catch {
-            safeLogger.error('action.course.list.failed');
+        } catch (error) {
+            safeLogger.error('action.course.list.failed', { page: parsedInput.data.page }, error);
             return actionFailure('UNEXPECTED', 'No fue posible consultar los cursos.');
         }
     });
@@ -31,10 +31,13 @@ export async function getCourseDataById(input: unknown): Promise<ActionResult<Co
     return withAdminAction(async () => {
         try {
             const course = await getEditorCourseById(parsedInput.data.id);
-            if (!course) return actionFailure('NOT_FOUND', 'El curso no existe.');
+            if (!course) {
+                safeLogger.info('action.course.get_by_id.not_found', { courseId: parsedInput.data.id });
+                return actionFailure('NOT_FOUND', 'El curso no existe.');
+            }
             return actionSuccess(course);
-        } catch {
-            safeLogger.error('action.course.get_by_id.failed', { courseId: parsedInput.data.id });
+        } catch (error) {
+            safeLogger.error('action.course.get_by_id.failed', { courseId: parsedInput.data.id }, error);
             return actionFailure('UNEXPECTED', 'No fue posible consultar el curso.');
         }
     });

@@ -82,7 +82,7 @@ export const CategoryCreateEditForm = ({ data }: CategoryFormProps) => {
                 <FormError error={error} />
                 <FormSuccess message={success} />
             </div>
-            <form onSubmit={handleSubmit(onSubmit)} className={cn('w-full max-w-lg min-w-[20rem]')}>
+            <form onSubmit={handleSubmit(onSubmit)} className={cn('w-full min-w-0 max-w-lg')}>
                 <div className={cn('flex flex-wrap -mx-2 mb-4')}>
                     <div className={cn('w-full px-2 ')}>
                         <input

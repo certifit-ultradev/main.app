@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import type { CreatePersistedUserCommand, UpdatePersistedUserCommand } from '@/application/users/user.commands';
 import type { ClientProfileRecord, PersistedUserRecord, UserCourseEnrollmentRecord } from '@/application/users/user.records';
-import { Prisma } from '@/prisma/app/generated/prisma/client';
 import { UserExistError } from '@/exceptions/user-exist';
 import { safeLogger } from '@/shared/observability/safe-logger';
+import { getSafePrismaErrorCode } from '@/shared/observability/prisma-error-code';
 
 const toUserRecord = (user: {
     id: string; name: string; lastName: string; email: string; password: string | null; isAdmin: boolean;
@@ -153,10 +153,10 @@ export const createUser = async (user: CreatePersistedUserCommand): Promise<Pers
         });
         return toUserRecord(createdUser);
     } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        if (getSafePrismaErrorCode(error) === 'P2002') {
             throw new UserExistError('registro duplicado');
         }
-        safeLogger.error('repository.user.create.failed');
+        safeLogger.error('repository.user.create.failed', {}, error);
         throw error;
     }
 }

@@ -53,8 +53,8 @@ function Layout(props: LayoutProps): JSX.Element {
             })}
         >
             {<Navbar />}
-            <div className={cn('w-full max-w-lg min-w-0 md:min-w-[48rem] lg:min-w-[110rem]')}>
-                <div className={cn('mx-20 mt-10')}>
+            <div className={cn('w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8')}>
+                <div className={cn('mt-10')}>
                     <div className={cn('mb-5 justify-start')}>
                         <Breadcrumb>
                             <BreadcrumbList>

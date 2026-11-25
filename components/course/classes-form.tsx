@@ -40,6 +40,12 @@ export type VideoUploadStatus = {
     status: 'pending' | 'uploading' | 'uploaded' | 'reused' | 'retry';
 };
 
+const needsAnswerCorrection = (question: CourseEditorQuestion): boolean => question.type === 'text'
+    ? !question.expectedAnswer.value.trim()
+    : question.options.length < 2
+        || question.options.some((option) => !option.value.trim())
+        || question.options.filter((option) => option.isCorrect).length !== 1;
+
 export const CourseClassesForm = ({
     data, setData, nextStep, previousStep, isSaving = false, saveError,
     videoUploads = [], contentPhase = 'idle',
@@ -219,7 +225,7 @@ export const CourseClassesForm = ({
     }
 
     return (
-        <div className={cn('w-full lg:w-3/4')}>
+        <div className={cn('w-full min-w-0 lg:w-3/4')}>
             {(videoUploads.length > 0 || contentPhase === 'uploading' || contentPhase === 'saving') && (
                 <section ref={uploadProgressRef} aria-label="Progreso de videos" className="mb-6 scroll-mt-4 rounded-md border border-sky-200 bg-sky-50 p-4">
                     <h2 className="font-semibold">Estado de los videos</h2>
@@ -263,16 +269,17 @@ export const CourseClassesForm = ({
                 </button>
 
                 <TabGroup>
-                    <TabList className={cn('flex space-x-1 rounded-md p-4 mb-6  border border-gray-300')}>
+                    <TabList className={cn('mb-6 flex w-full min-w-0 gap-1 overflow-x-auto rounded-md border border-gray-300 p-4')}>
                         {modules.map((module, index) => (
                             <Tab
                                 key={module.clientKey}
                                 className={({ selected }) =>
-                                    `w-full py-2.5 text-sm leading-5 font-medium text-[#0BBBE7] rounded-lg focus:outline-none ${selected ? 'bg-[#E8EFF5] shadow' : 'text-[#0BBBE7] hover:bg-white/[0.12]'
+                                    `min-w-32 flex-1 px-4 py-2.5 text-sm leading-5 font-medium text-[#0BBBE7] rounded-lg focus:outline-none ${selected ? 'bg-[#E8EFF5] shadow' : 'text-[#0BBBE7] hover:bg-white/[0.12]'
                                     }`
                                 }
                             >
                                 Módulo {index + 1} {moduleHasErrors(index) > 0 ? (<span className={cn('text-red-600')}>(Tiene {moduleHasErrors(index)} errores)</span>) : ''}
+                                {module.quiz.questions.some(needsAnswerCorrection) && <span className="block text-amber-700">Revisar respuestas</span>}
                             </Tab>
                         ))}
                     </TabList>
@@ -492,6 +499,7 @@ export const CourseClassesForm = ({
                                                             }
                                                         >
                                                             Pregunta {questionIndex + 1} {questionHasErrors(questionIndex, moduleIndex) > 0 ? (<span className={cn('text-red-600')}>(Tiene {questionHasErrors(questionIndex, moduleIndex)} errores)</span>) : ''}
+                                                            {needsAnswerCorrection(question) && <span className="block text-amber-700">Revisar respuesta</span>}
                                                         </Tab>
                                                         <button
                                                             type="button"

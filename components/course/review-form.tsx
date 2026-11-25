@@ -11,7 +11,7 @@ type Props = { data: CourseEditorFormValues; isActive: boolean; previousStep: ()
 export const CourseReviewForm = ({ data, isActive, previousStep }: Props) => {
     const router = useRouter();
     return (
-        <section className="w-full lg:w-3/4 space-y-5 rounded-md border border-gray-300 p-6">
+        <section className="w-full min-w-0 space-y-5 rounded-md border border-gray-300 p-6 lg:w-3/4">
             <h1 className="text-xl font-semibold">Resumen del curso</h1>
             <p className="text-sm text-gray-600">{isActive
                 ? 'Los cambios ya están guardados en el curso activo.'
@@ -26,7 +26,7 @@ export const CourseReviewForm = ({ data, isActive, previousStep }: Props) => {
                 <div><dt className="inline font-medium">Duración: </dt><dd className="inline">{formatEditorVideoDuration(calculateEditorVideoDuration(data.modules))}</dd></div>
             </dl>
             <p>{data.description}</p>
-            <div className="flex gap-6 text-sm">
+            <div className="flex flex-wrap gap-4 text-sm">
                 <span>{data.modules.length} módulos</span>
                 <span>{data.modules.reduce((sum, module) => sum + module.classes.length, 0)} clases</span>
                 <span>{data.modules.filter((module) => module.quiz.questions.length > 0).length} evaluaciones</span>

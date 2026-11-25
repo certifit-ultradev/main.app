@@ -9,6 +9,7 @@ import {
     RETRYABLE_COURSE_ASSET_CLEANUP_DELAY_MS,
 } from '@/shared/course-assets';
 import type { Prisma } from '@/prisma/app/generated/prisma/client';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 const invalid = (message: string): never => { throw new Error(message); };
 
@@ -199,6 +200,9 @@ const setClassVideo = async (classId: number, videoPath: string, videoSize: numb
 
 /** Reconciles an editor aggregate by stable IDs; its input never contains UI paths or Partial entities. */
 const reconcileContent = async (courseId: number, patch: CourseContentCommand, basics?: CourseBasicsCommand): Promise<void> => {
+    let phase = 'load_course';
+    let moduleId: number | undefined;
+    let questionId: number | undefined;
     await prisma.$transaction(async (tx) => {
         const current = await tx.course.findUnique({
             where: { id: courseId },
@@ -209,15 +213,29 @@ const reconcileContent = async (courseId: number, patch: CourseContentCommand, b
                 courseModules: {
                     select: {
                         id: true,
-                        moduleClass: { select: { id: true, videoPath: true } },
+                        position: true,
+                        title: true,
+                        minRequiredPoints: true,
+                        moduleClass: { select: {
+                            id: true, position: true, title: true, description: true,
+                            videoPath: true, videoSize: true, videoDuration: true,
+                        } },
                         moduleQuiz: {
                             select: {
                                 id: true,
+                                title: true,
+                                description: true,
                                 quizQuestion: {
                                     select: {
                                         id: true,
                                         type: true,
-                                        possibleAnswerQuestion: { where: { deletedAt: null }, select: { id: true } },
+                                        title: true,
+                                        points: true,
+                                        expectedAnswer: true,
+                                        possibleAnswerQuestion: {
+                                            where: { deletedAt: null },
+                                            select: { id: true, value: true, isCorrect: true },
+                                        },
                                     },
                                 },
                             },
@@ -229,6 +247,7 @@ const reconcileContent = async (courseId: number, patch: CourseContentCommand, b
         if (!current) throw new Error('Curso inválido');
         const course = current;
 
+        phase = 'validate_references';
         const modulesById = new Map(course.courseModules.map((module) => [module.id, module]));
         for (const module of patch.modules) {
             if (module.id !== undefined && !modulesById.has(module.id)) invalid('Módulo inválido para el curso');
@@ -265,19 +284,24 @@ const reconcileContent = async (courseId: number, patch: CourseContentCommand, b
 
         const cleanupUrls: string[] = [];
         if (basics) {
+            phase = 'update_basics';
             await tx.course.update({ where: { id: courseId }, data: courseBasicsData(basics) });
             if (course.courseImage !== basics.courseImage) cleanupUrls.push(course.courseImage);
             if (course.instructorPhoto !== basics.instructorPhoto) cleanupUrls.push(course.instructorPhoto);
         }
 
         const requestedModuleIds = new Set(patch.modules.flatMap((module) => module.id === undefined ? [] : [module.id]));
+        phase = 'remove_modules';
         for (const module of course.courseModules.filter((item) => !requestedModuleIds.has(item.id))) {
             cleanupUrls.push(...module.moduleClass.map((lesson) => lesson.videoPath));
             await tx.courseModules.delete({ where: { id: module.id } });
         }
 
         for (const [modulePosition, module] of patch.modules.entries()) {
+            moduleId = module.id;
+            questionId = undefined;
             if (module.id === undefined) {
+                phase = 'create_module';
                 // A draft has no persisted content yet. One nested write avoids a
                 // separate Accelerate round trip for every class, question and answer.
                 await tx.courseModules.create({ data: {
@@ -299,12 +323,17 @@ const reconcileContent = async (courseId: number, patch: CourseContentCommand, b
                 } });
                 continue;
             }
-            const savedModule = await tx.courseModules.update({
-                where: { id: module.id },
-                data: { position: modulePosition, title: module.title, minRequiredPoints: module.minRequiredPoints },
-            });
-            const existing = modulesById.get(savedModule.id);
+            const existing = modulesById.get(module.id);
+            phase = 'update_module';
+            if (!existing || existing.position !== modulePosition || existing.title !== module.title
+                || existing.minRequiredPoints !== module.minRequiredPoints) {
+                await tx.courseModules.update({
+                    where: { id: module.id },
+                    data: { position: modulePosition, title: module.title, minRequiredPoints: module.minRequiredPoints },
+                });
+            }
             const requestedClassIds = new Set(module.classes.flatMap((lesson) => lesson.id === undefined ? [] : [lesson.id]));
+            phase = 'save_classes';
             for (const lesson of existing?.moduleClass ?? []) if (!requestedClassIds.has(lesson.id)) {
                 cleanupUrls.push(lesson.videoPath);
                 await tx.moduleClass.delete({ where: { id: lesson.id } });
@@ -313,25 +342,42 @@ const reconcileContent = async (courseId: number, patch: CourseContentCommand, b
                 const previous = existing?.moduleClass.find((item) => item.id === lesson.id);
                 if (previous && previous.videoPath !== lesson.videoPath) cleanupUrls.push(previous.videoPath);
                 const data = { position, title: lesson.title, description: lesson.description, videoPath: lesson.videoPath, videoSize: lesson.videoSize, videoDuration: lesson.videoDuration };
-                if (lesson.id === undefined) await tx.moduleClass.create({ data: { ...data, courseModuleId: savedModule.id } });
-                else await tx.moduleClass.update({ where: { id: lesson.id }, data });
+                if (lesson.id === undefined) await tx.moduleClass.create({ data: { ...data, courseModuleId: module.id } });
+                else if (!previous || previous.position !== data.position || previous.title !== data.title
+                    || previous.description !== data.description || previous.videoPath !== data.videoPath
+                    || previous.videoSize !== data.videoSize || previous.videoDuration !== data.videoDuration) {
+                    await tx.moduleClass.update({ where: { id: lesson.id }, data });
+                }
             }
 
             const existingQuiz = existing?.moduleQuiz[0];
+            phase = 'save_quiz';
             const savedQuiz = existingQuiz === undefined
-                ? await tx.moduleQuiz.create({ data: { courseModuleId: savedModule.id, title: module.quiz.title, description: module.quiz.description } })
-                : await tx.moduleQuiz.update({ where: { id: existingQuiz.id }, data: { title: module.quiz.title, description: module.quiz.description } });
+                ? await tx.moduleQuiz.create({ data: { courseModuleId: module.id, title: module.quiz.title, description: module.quiz.description } })
+                : existingQuiz;
+            if (existingQuiz && (existingQuiz.title !== module.quiz.title || existingQuiz.description !== module.quiz.description)) {
+                await tx.moduleQuiz.update({ where: { id: existingQuiz.id }, data: { title: module.quiz.title, description: module.quiz.description } });
+            }
             const existingQuestions = new Map((existingQuiz?.quizQuestion ?? []).map((question) => [question.id, question]));
             const requestedQuestionIds = new Set(module.quiz.questions.flatMap((question) => question.id === undefined ? [] : [question.id]));
+            phase = 'save_questions';
             for (const question of existingQuestions.values()) if (!requestedQuestionIds.has(question.id)) await tx.quizQuestion.delete({ where: { id: question.id } });
             for (const question of module.quiz.questions) {
+                questionId = question.id;
+                phase = 'save_question';
                 const data = {
                     title: question.title, type: question.type, points: question.points,
                     expectedAnswer: question.type === 'text' ? question.expectedAnswer.value : null,
                 };
+                const previousQuestion = question.id === undefined ? undefined : existingQuestions.get(question.id);
                 const savedQuestion = question.id === undefined
                     ? await tx.quizQuestion.create({ data: { ...data, quizId: savedQuiz.id } })
-                    : await tx.quizQuestion.update({ where: { id: question.id }, data });
+                    : { id: question.id };
+                if (question.id !== undefined && (!previousQuestion || previousQuestion.title !== data.title
+                    || previousQuestion.type !== data.type || previousQuestion.points !== data.points
+                    || previousQuestion.expectedAnswer !== data.expectedAnswer)) {
+                    await tx.quizQuestion.update({ where: { id: question.id }, data });
+                }
                 const existingOptions = new Map((existingQuestions.get(savedQuestion.id)?.possibleAnswerQuestion ?? []).map((option) => [option.id, option]));
                 const retainedOptionIds = new Set(
                     question.type === 'multiple' && existingQuestions.get(savedQuestion.id)?.type === 'multiple'
@@ -344,13 +390,21 @@ const reconcileContent = async (courseId: number, patch: CourseContentCommand, b
                     data: { deletedAt: new Date() },
                 });
                 if (question.type === 'text') continue;
+                phase = 'save_options';
                 for (const option of question.options) {
                     const optionData = { value: option.value, isCorrect: option.isCorrect };
                     if (option.id === undefined) await tx.possibleAnswerQuestion.create({ data: { ...optionData, questionId: savedQuestion.id } });
-                    else await tx.possibleAnswerQuestion.update({ where: { id: option.id }, data: optionData });
+                    else {
+                        const previousOption = existingOptions.get(option.id);
+                        if (!previousOption || previousOption.value !== optionData.value
+                            || previousOption.isCorrect !== optionData.isCorrect) {
+                            await tx.possibleAnswerQuestion.update({ where: { id: option.id }, data: optionData });
+                        }
+                    }
                 }
             }
         }
+        phase = 'queue_cleanup';
         await enqueueCleanup(tx, courseId, cleanupUrls);
         const retainedUrls = [...new Set(patch.modules.flatMap((module) =>
             module.classes.map((lesson) => lesson.videoPath).filter(isManagedCourseAssetUrl),
@@ -358,7 +412,15 @@ const reconcileContent = async (courseId: number, patch: CourseContentCommand, b
         if (retainedUrls.length > 0) await tx.courseAssetCleanup.deleteMany({
             where: { courseId, url: { in: retainedUrls } },
         });
-    }, { isolationLevel: 'Serializable', timeout: 12_000 });
+    }, { isolationLevel: 'Serializable', timeout: 12_000 }).catch((error: unknown) => {
+        safeLogger.error('course.content.persistence_failed', {
+            courseId,
+            phase,
+            moduleId,
+            questionId,
+        }, error);
+        throw error;
+    });
 };
 
 const saveContent: CourseEditorWritePort['saveContent'] = async (courseId, command) => reconcileContent(courseId, command);

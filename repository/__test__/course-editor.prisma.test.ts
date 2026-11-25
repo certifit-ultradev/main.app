@@ -1,6 +1,7 @@
 import { prismaCourseEditorWritePort } from '@/repository/course-editor.prisma';
 import { prisma } from '@/lib/prisma';
 import { toSnakeCase } from '@/shared/text/snake-case';
+import { safeLogger } from '@/shared/observability/safe-logger';
 import type { CourseEditorPatch, CreateCourseCommand } from '@/application/courses/course-editor.commands';
 
 jest.mock('@/lib/prisma', () => ({
@@ -12,6 +13,7 @@ jest.mock('@/lib/prisma', () => ({
     },
 }));
 jest.mock('@/shared/text/snake-case', () => ({ toSnakeCase: jest.fn() }));
+jest.mock('@/shared/observability/safe-logger', () => ({ safeLogger: { error: jest.fn(), info: jest.fn() } }));
 
 const command: CreateCourseCommand = {
     title: 'TypeScript avanzado', description: 'Curso', price: 120, categoryId: 2,
@@ -360,6 +362,72 @@ describe('prismaCourseEditorWritePort.createCourse', () => {
         expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
             isolationLevel: 'Serializable', timeout: 12_000,
         });
+    });
+
+    it('updates only the corrected answer when existing course content is otherwise unchanged', async () => {
+        const videoPath = 'https://example.com/class.mp4';
+        const tx = {
+            course: { findUnique: jest.fn().mockResolvedValue({
+                id: 7, courseImage: '', instructorPhoto: '', courseModules: [{
+                    id: 8, position: 0, title: 'Fundamentos', minRequiredPoints: 10,
+                    moduleClass: [{
+                        id: 9, position: 0, title: 'Introducción', description: 'Clase',
+                        videoPath, videoSize: 10, videoDuration: 20,
+                    }],
+                    moduleQuiz: [{
+                        id: 10, title: 'Quiz', description: 'Evaluación', quizQuestion: [{
+                            id: 11, type: 'multiple', title: 'Seleccione', points: 5, expectedAnswer: null,
+                            possibleAnswerQuestion: [
+                                { id: 12, value: 'A', isCorrect: false },
+                                { id: 13, value: 'B', isCorrect: false },
+                            ],
+                        }],
+                    }],
+                }],
+            }) },
+            courseModules: { update: jest.fn(), delete: jest.fn() },
+            moduleClass: { update: jest.fn(), delete: jest.fn() },
+            moduleQuiz: { update: jest.fn() },
+            quizQuestion: { update: jest.fn(), delete: jest.fn() },
+            possibleAnswerQuestion: { update: jest.fn(), updateMany: jest.fn() },
+            courseAssetCleanup: { deleteMany: jest.fn() },
+        };
+        (prisma.$transaction as jest.Mock).mockImplementation((callback) => callback(tx));
+        const content: CourseEditorPatch = {
+            ...command,
+            modules: [{
+                id: 8, title: 'Fundamentos', minRequiredPoints: 10,
+                classes: [{ id: 9, title: 'Introducción', description: 'Clase', videoPath, videoSize: 10, videoDuration: 20 }],
+                quiz: { id: 10, title: 'Quiz', description: 'Evaluación', questions: [{
+                    id: 11, title: 'Seleccione', type: 'multiple', points: 5,
+                    options: [{ id: 12, value: 'A', isCorrect: true }, { id: 13, value: 'B', isCorrect: false }],
+                }] },
+            }],
+        };
+
+        await prismaCourseEditorWritePort.saveContent(7, content);
+
+        expect(tx.courseModules.update).not.toHaveBeenCalled();
+        expect(tx.moduleClass.update).not.toHaveBeenCalled();
+        expect(tx.moduleQuiz.update).not.toHaveBeenCalled();
+        expect(tx.quizQuestion.update).not.toHaveBeenCalled();
+        expect(tx.possibleAnswerQuestion.update).toHaveBeenCalledTimes(1);
+        expect(tx.possibleAnswerQuestion.update).toHaveBeenCalledWith({
+            where: { id: 12 }, data: { value: 'A', isCorrect: true },
+        });
+    });
+
+    it('logs a safe Prisma code and write phase when the transaction fails', async () => {
+        const error = Object.assign(new Error('private@example.com'), {
+            name: 'PrismaClientKnownRequestError', code: 'P2028',
+        });
+        (prisma.$transaction as jest.Mock).mockRejectedValueOnce(error);
+
+        await expect(prismaCourseEditorWritePort.saveContent(7, { modules: [] })).rejects.toBe(error);
+
+        expect(safeLogger.error).toHaveBeenCalledWith('course.content.persistence_failed', expect.objectContaining({
+            courseId: 7, phase: 'load_course',
+        }), error);
     });
 
     it('defers failed-upload cleanup long enough for safe URL reuse', async () => {
