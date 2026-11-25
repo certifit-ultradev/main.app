@@ -9,7 +9,8 @@ import type { CatalogCourseCardDto, CourseEditorDto } from '@/application/course
 import type { StudentCourseDto, StudentCourseListItemDto } from '@/application/courses/student-course.dto';
 import { unlockedModuleIds } from '@/application/courses/module-access';
 import { prisma } from '@/lib/prisma';
-import { toAuthorQuestionDto, toStudentQuestionDto } from '@/mappers/course-question-mapper';
+import { toEditableAuthorQuestionDto, toStudentQuestionDto } from '@/mappers/course-question-mapper';
+import { safeLogger } from '@/shared/observability/safe-logger';
 import type { Prisma } from '@/prisma/app/generated/prisma/client';
 
 const presentationOrder = [{ position: 'asc' as const }, { id: 'asc' as const }];
@@ -215,7 +216,35 @@ function toEditorCourse(row: EditorCourseRow): CourseEditorDto {
                     id: quiz.id,
                     title: quiz.title,
                     description: quiz.description,
-                    questions: quiz.quizQuestion.map(toAuthorQuestionDto),
+                    questions: quiz.quizQuestion.map((question) => {
+                        try {
+                            const mapped = toEditableAuthorQuestionDto(question);
+                            if (mapped.validationIssue) {
+                                safeLogger.info('course.editor.question_requires_correction', {
+                                    courseId: row.id,
+                                    moduleId: module.id,
+                                    quizId: quiz.id,
+                                    questionId: question.id,
+                                    reason: mapped.validationIssue,
+                                    answerCount: question.possibleAnswerQuestion.length,
+                                    correctAnswerCount: question.possibleAnswerQuestion.filter((answer) => answer.isCorrect).length,
+                                });
+                            }
+                            return mapped;
+                        } catch (error) {
+                            safeLogger.error('course.editor.question_projection.failed', {
+                                courseId: row.id,
+                                moduleId: module.id,
+                                quizId: quiz.id,
+                                questionId: question.id,
+                                type: question.type === 'text' || question.type === 'multiple' ? question.type : 'unknown',
+                                answerCount: question.possibleAnswerQuestion.length,
+                                correctAnswerCount: question.possibleAnswerQuestion.filter((answer) => answer.isCorrect).length,
+                                hasExpectedAnswer: Boolean(question.expectedAnswer?.trim()),
+                            }, error);
+                            throw error;
+                        }
+                    }),
                 } : null,
             };
         }),
@@ -262,7 +291,21 @@ function toStudentCourse(enrollment: StudentEnrollmentRow): StudentCourseDto {
                     courseModuleId: quiz.courseModuleId,
                     title: quiz.title,
                     description: quiz.description,
-                    questions: quiz.quizQuestion.map(toStudentQuestionDto),
+                    questions: quiz.quizQuestion.map((question) => {
+                        try {
+                            return toStudentQuestionDto(question);
+                        } catch (error) {
+                            safeLogger.error('course.student.question_projection.failed', {
+                                courseId: course.id,
+                                moduleId: module.id,
+                                quizId: quiz.id,
+                                questionId: question.id,
+                                type: question.type === 'text' || question.type === 'multiple' ? question.type : 'unknown',
+                                answerCount: question.possibleAnswerQuestion.length,
+                            }, error);
+                            throw error;
+                        }
+                    }),
                 } : null,
             };
         }),
@@ -364,14 +407,33 @@ export const prismaCourseCatalogReadPort: CourseCatalogReadPort = {
 
 export const prismaStudentCourseReadPort: StudentCourseReadPort = {
     async findEnrolledCourse(canonicalId, studentId) {
-        const enrollment = await prisma.userCourse.findFirst({
-            include: studentEnrollmentInclude,
-            where: {
-                userId: studentId,
-                course: { canonicalId, deleted: false },
-            },
-        });
-        return enrollment ? toStudentCourse(enrollment) : null;
+        let enrollment;
+        try {
+            enrollment = await prisma.userCourse.findFirst({
+                include: studentEnrollmentInclude,
+                where: {
+                    userId: studentId,
+                    course: { canonicalId, deleted: false },
+                },
+            });
+        } catch (error) {
+            safeLogger.error('course.student.query.failed', {
+                canonicalId,
+            }, error);
+            throw error;
+        }
+        if (!enrollment) {
+            safeLogger.debug('course.student.enrollment_not_found', { canonicalId });
+            return null;
+        }
+        try {
+            return toStudentCourse(enrollment);
+        } catch (error) {
+            safeLogger.error('course.student.projection.failed', {
+                courseId: enrollment.course.id,
+            }, error);
+            throw error;
+        }
     },
     async findEnrolledCourses(studentId) {
         const enrollments = await prisma.userCourse.findMany({
@@ -412,8 +474,27 @@ export const prismaStudentQuizReadPort: StudentQuizReadPort = {
 
 export const prismaCourseEditorReadPort: CourseEditorReadPort = {
     async findEditorCourseById(courseId) {
-        const course = await prisma.course.findFirst({ include: editorInclude, where: { id: courseId } });
-        return course ? toEditorCourse(course) : null;
+        let course;
+        try {
+            course = await prisma.course.findFirst({ include: editorInclude, where: { id: courseId } });
+        } catch (error) {
+            safeLogger.error('course.editor.query.failed', {
+                courseId,
+            }, error);
+            throw error;
+        }
+        if (!course) {
+            safeLogger.debug('course.editor.record_not_found', { courseId });
+            return null;
+        }
+        try {
+            return toEditorCourse(course);
+        } catch (error) {
+            safeLogger.error('course.editor.projection.failed', {
+                courseId,
+            }, error);
+            throw error;
+        }
     },
     async findEditorCoursePage(page, pageSize): Promise<CourseEditorPageDto> {
         const safePage = Math.max(1, page);

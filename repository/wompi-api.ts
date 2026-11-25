@@ -18,24 +18,30 @@ export const getTransaction = async (trxId: string): Promise<PaymentTransactionR
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
         });
-    } catch {
-        safeLogger.error('repository.payment_provider.transaction.request.failed');
+    } catch (error) {
+        safeLogger.warn('repository.payment_provider.transaction.request.failed', {}, error);
         throw new PaymentProviderError('unavailable');
     }
 
     if (!response.ok) {
+        if (response.status !== 404) {
+            safeLogger.warn('repository.payment_provider.transaction.http_failed', { status: response.status });
+        }
         throw new PaymentProviderError(response.status === 404 ? 'transaction_not_found' : 'upstream_error');
     }
 
     let originalData: unknown;
     try {
         originalData = await response.json();
-    } catch {
-        safeLogger.error('repository.payment_provider.transaction.response_invalid');
+    } catch (error) {
+        safeLogger.error('repository.payment_provider.transaction.response_invalid', { status: response.status }, error);
         throw new PaymentProviderError('invalid_response');
     }
     const parsed = TransactionWompiResponseSchema.safeParse(originalData);
-    if (!parsed.success) throw new PaymentProviderError('invalid_response');
+    if (!parsed.success) {
+        safeLogger.error('repository.payment_provider.transaction.schema_invalid', { status: response.status });
+        throw new PaymentProviderError('invalid_response');
+    }
 
     const { data } = parsed.data;
     return {

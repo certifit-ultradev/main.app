@@ -50,7 +50,8 @@ export const listAdminUsers = async (request: { page: number }): Promise<AdminUs
                 lastPage: totalPages,
                 total: totalPages
             };
-        }
+        },
+        { event: 'service.user.admin_list.failed', metadata: { page: request.page } }
     );
 }
 
@@ -60,7 +61,7 @@ export const listAdminUsers = async (request: { page: number }): Promise<AdminUs
  * @returns 
  */
 export const getUserByEmail = async (email: string): Promise<PersistedUserRecord | null> => {
-    return executeService(() => findUserByEmail(email));
+    return executeService(() => findUserByEmail(email), { event: 'service.user.find_by_email.failed' });
 }
 
 /**
@@ -69,7 +70,7 @@ export const getUserByEmail = async (email: string): Promise<PersistedUserRecord
  * @returns 
  */
 export const getUserByPhoneNumber = async (phoneNumber: string): Promise<PersistedUserRecord | null> => {
-    return executeService(() => findUserByPhoneNumber(phoneNumber));
+    return executeService(() => findUserByPhoneNumber(phoneNumber), { event: 'service.user.find_by_phone.failed' });
 }
 
 /**
@@ -83,14 +84,14 @@ export const getAdminUserById = async (id: string): Promise<AdminUserDto | null>
         const user = await findUserById(id);
         if (!user) return null;
         return toAdminUserDto(user);
-    });
+    }, { event: 'service.user.admin_read.failed' });
 }
 
 /** Administrative existence check that does not expose the persistence model. */
 export const userExistsByEmail = async (email: string): Promise<boolean> => {
     return executeService(async () => {
         return (await findUserByEmail(email)) !== null;
-    });
+    }, { event: 'service.user.email_exists.failed' });
 }
 
 /**
@@ -109,7 +110,7 @@ export const registerUser = async (userInfo: CreateUserCommand): Promise<Persist
         identification: userInfo.identification,
         identificationType: userInfo.identificationType,
         phoneNumber: userInfo.phoneNumber,
-    }));
+    }), { event: 'service.user.register.failed' });
 }
 
 /**
@@ -125,5 +126,5 @@ export const editUserById = async (id: string, userInfo: UpdateUserCommand): Pro
             ...profile,
             ...(password ? { passwordHash: await bcryptPasswordHasher.hash(password) } : {}),
         });
-    });
+    }, { event: 'service.user.update.failed' });
 }

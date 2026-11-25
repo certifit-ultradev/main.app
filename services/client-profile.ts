@@ -5,6 +5,7 @@ import type { UpdateClientProfileInput } from '@/interfaces/http/users/profile.c
 import { InsufficientRoleError } from '@/exceptions/actor-access-errors';
 import { NotFoundError } from '@/exceptions/not-found';
 import { assertOwnedProfileImage, removeOldProfileImage } from '@/infrastructure/blob/profile-image';
+import { executeService } from '@/utils/service-wrapper';
 
 const toClientProfileDto = (user: ClientProfileRecord): ClientProfileDto => ({
     id: user.id,
@@ -19,7 +20,8 @@ const toClientProfileDto = (user: ClientProfileRecord): ClientProfileDto => ({
 });
 
 const requireClient = async (userId: string): Promise<ClientProfileRecord> => {
-    const user = await findClientProfileById(userId);
+    const user = await executeService(() => findClientProfileById(userId),
+        { event: 'service.client_profile.read.failed' });
     if (!user) throw new NotFoundError('El usuario no existe.');
     if (user.isAdmin) throw new InsufficientRoleError();
     return user;
@@ -37,7 +39,8 @@ export const editClientProfile = async (
         await assertOwnedProfileImage(patch.profileImage, userId);
     }
 
-    const updated = await updateClientProfileById(userId, patch);
+    const updated = await executeService(() => updateClientProfileById(userId, patch),
+        { event: 'service.client_profile.update.failed' });
     if (previous.profileImage && previous.profileImage !== updated.profileImage
         && !await isProfileImageReferenced(previous.profileImage)) {
         await removeOldProfileImage(previous.profileImage, userId);

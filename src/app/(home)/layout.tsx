@@ -5,6 +5,7 @@ import { auth } from '@/auth';
 import { AppHeroUIProvider } from '@/components/heroui-provider';
 import type { Metadata } from 'next'
 import { ClientProfileProvider } from '@/features/users/client/client-profile-context';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata: Metadata = {
     title: 'Certifit',
@@ -30,6 +31,7 @@ export default async function RootLayout({
                         </AppHeroUIProvider>
                     </ClientProfileProvider>
                 </SessionProvider>
+                <SpeedInsights />
             </body>
         </html>
     )

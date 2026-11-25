@@ -1,8 +1,20 @@
-/** Executes an application operation without translating or logging infrastructure errors. */
+import { safeLogger, type SafeLogMetadata } from '@/shared/observability/safe-logger';
+import { isExpectedApplicationError } from '@/exceptions/is-expected-application-error';
+
+/** Executes a service operation and attaches safe context when it fails. */
 export async function executeService<T>(
     operation: () => Promise<T>,
+    failure?: { event: string; metadata?: SafeLogMetadata },
 ): Promise<T> {
-    return operation();
+    try {
+        return await operation();
+    } catch (error) {
+        if (failure) {
+            if (isExpectedApplicationError(error)) safeLogger.debug(failure.event, failure.metadata);
+            else safeLogger.error(failure.event, failure.metadata, error);
+        }
+        throw error;
+    }
 }
 
 /** Discriminated result for callers that deliberately handle an operation failure. */

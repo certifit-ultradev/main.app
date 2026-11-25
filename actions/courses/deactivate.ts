@@ -17,8 +17,8 @@ export async function deactivate(input: unknown): Promise<ActionResult<null>> {
             return deactivated
                 ? actionSuccess(null, 'Curso desactivado correctamente.')
                 : actionFailure('NOT_FOUND', 'No se pudo desactivar el curso.');
-        } catch {
-            safeLogger.error('action.course.deactivate.failed', { courseId: parsedInput.data.id });
+        } catch (error) {
+            safeLogger.error('action.course.deactivate.failed', { courseId: parsedInput.data.id }, error);
             return actionFailure('UNEXPECTED', 'No fue posible desactivar el curso.');
         }
     });

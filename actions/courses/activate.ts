@@ -17,8 +17,8 @@ export async function activate(input: unknown): Promise<ActionResult<null>> {
             return result.success
                 ? actionSuccess(null, result.message)
                 : actionFailure('VALIDATION', result.message);
-        } catch {
-            safeLogger.error('action.course.activate.failed', { courseId: parsedInput.data.id });
+        } catch (error) {
+            safeLogger.error('action.course.activate.failed', { courseId: parsedInput.data.id }, error);
             return actionFailure('UNEXPECTED', 'No fue posible activar el curso.');
         }
     });

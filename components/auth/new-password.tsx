@@ -57,7 +57,7 @@ export const NewPasswordForm = () => {
     return (
         <div className={cn('justify-center items-center')}>
             <div className={cn('flex flex-col justify-center items-center bg-white p-10')}>
-                <form onSubmit={handleSubmit(onSubmit)} className={cn('w-full max-w-lg min-w-[20rem]')}>
+                <form onSubmit={handleSubmit(onSubmit)} className={cn('w-full min-w-0 max-w-lg')}>
                     <h1 className={cn('text-2xl font-semibold mb-4 text-left w-full max-w-lg')}>Ingresa una contraseña</h1>
                     <span className={cn('text-gray-500 mb-6 text-left w-full max-w-lg')}>Configure una contraseña segura para su cuenta y confirme su creación.</span>
                     <div className={cn('flex flex-wrap mb-4 relative')}>

@@ -15,7 +15,7 @@ export const generateVerificationTokenByEmail = async (email: string): Promise<V
     return executeService(() => {
         const { expires, token } = uuidIdentityTokenGenerator.generate(ONE_HOUR_IDENTITY_TOKEN_TTL);
         return createVerificationToken({ email, token, expires });
-    });
+    }, { event: 'service.verification_token.create.failed' });
 }
 
 /**
@@ -52,9 +52,10 @@ export const sendVerificationEmailWithToken = async (email: string): Promise<voi
             throw new Error("el token no se pudo generar");
         }
         return token;
-    });
+    }, { event: 'service.verification_email.issue_token.failed' });
 
-    await executeService(() => nodemailerEmailGateway.sendVerificationLink({ email, token: verificationToken.token }));
+    await executeService(() => nodemailerEmailGateway.sendVerificationLink({ email, token: verificationToken.token }),
+        { event: 'service.verification_email.send.failed' });
 
 }
 
@@ -64,5 +65,5 @@ export const sendVerificationEmailWithToken = async (email: string): Promise<voi
  * @returns 
  */
 export const removeVerificationToken = async (id: string): Promise<void> => {
-    await executeService(() => deleteVerificationToken(id));
+    await executeService(() => deleteVerificationToken(id), { event: 'service.verification_token.delete.failed' });
 }

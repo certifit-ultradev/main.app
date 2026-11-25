@@ -24,6 +24,11 @@ export default function PublicNavbar() {
     const isLogged = status == "authenticated";
     const isClient = isLogged && !session?.user.isAdmin;
     const isAdmin = isLogged && session?.user.isAdmin;
+    const avatar = <ProfileAvatar
+        name={isClient ? clientProfile?.name ?? session?.user.name ?? '' : session?.user.name ?? ''}
+        lastName={isClient ? clientProfile?.lastName ?? '' : ''}
+        imageUrl={isClient ? clientProfile?.profileImage ?? null : null}
+    />;
 
     const handleLogin = useCallback(() => router.push(`/login`), [router]);
     const handlerChangePassword = useCallback(() => router.push(`/users/change-password`), [router])
@@ -68,22 +73,18 @@ export default function PublicNavbar() {
             </div>
 
             {/* Menú Desktop (Mostrado en pantallas medianas o mayores) */}
-            <div className="hidden md:flex flex-grow justify-center space-x-6">
+            <div className="hidden lg:flex flex-grow justify-center space-x-6">
                 <a href="#about-us" className="text-white hover:text-gray-300">Acerca de Nosotros</a>
                 <a href="#courses" className="text-white hover:text-gray-300">Cursos</a>
                 <a href="#contact-us" className="text-white hover:text-gray-300">Contactanos</a>
             </div>
 
             {/* Sección Usuario Desktop */}
-            <div className="hidden md:flex items-center space-x-4">
+            <div className="hidden lg:flex items-center space-x-4">
                 {isLogged ? (
                     <>
                         <Dropdown                            
-                            label={isClient ? <ProfileAvatar
-                                name={clientProfile?.name ?? session?.user.name ?? ''}
-                                lastName={clientProfile?.lastName ?? ''}
-                                imageUrl={clientProfile?.profileImage ?? null}
-                            /> : <div className="w-8 h-8 bg-gray-500 rounded-full" />}
+                            label={avatar}
                             optionContainerClass="mt-8 right-0 bg-[#222325] text-white shadow-2xl"
                             options={[
                                 ...(isClient ? [{ label: 'Mi perfil', value: 'profile', handleClick: handleProfile }] : []),
@@ -106,12 +107,8 @@ export default function PublicNavbar() {
             </div>
 
             {/* Menú Móvil (visible en pantallas pequeñas) */}
-            <div className="md:hidden flex items-center space-x-4">
-                <MobileMenu options={mobileOptions} avatar={isClient ? <ProfileAvatar
-                    name={clientProfile?.name ?? session?.user.name ?? ''}
-                    lastName={clientProfile?.lastName ?? ''}
-                    imageUrl={clientProfile?.profileImage ?? null}
-                /> : undefined} />
+            <div className="flex items-center space-x-4 lg:hidden">
+                <MobileMenu options={mobileOptions} avatar={isLogged ? avatar : undefined} />
             </div>
         </nav>
     );

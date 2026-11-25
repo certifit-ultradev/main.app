@@ -7,8 +7,8 @@ import Loading from './loading';
 
 const CategoryIndexPage: NextPage = async () => {
     return (
-        <Card className={cn('mt-10 w-full max-w-lg min-w-0 md:min-w-[30rem] lg:min-w-[110rem]')}>
-            <CardContent>
+        <Card className={cn('mt-10 w-full min-w-0')}>
+            <CardContent className={cn('min-w-0 p-4 sm:p-6')}>
                 <Suspense fallback={<Loading/>}>
                     <CategoryListDataTable />
                 </Suspense>

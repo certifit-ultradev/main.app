@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import '../../globals.css';
 import { auth } from '@/auth';
 import { AppHeroUIProvider } from '@/components/heroui-provider';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 // These styles apply to every route in the application
 
@@ -31,6 +32,7 @@ export default async function RootLayout({
                     </div>
                 </nav>
                 <AppHeroUIProvider>{children}</AppHeroUIProvider>
+                <SpeedInsights />
             </body>
         </html>
     )

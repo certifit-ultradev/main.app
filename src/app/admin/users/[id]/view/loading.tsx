@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 export default function Loading() {
     return (
-        <div className={cn('p-6 w-[110rem] my-4 mx-auto bg-white rounded-xl shadow-md space-y-4')}>
+        <div className={cn('my-4 mx-auto w-full min-w-0 rounded-xl bg-white p-6 shadow-md space-y-4')}>
             <div className={cn('animate-pulse')}>
                 <h2 className={cn('text-2xl font-semibold mb-4')}>
                     <div className={cn('h-6 bg-gray-200 rounded w-40')}></div>

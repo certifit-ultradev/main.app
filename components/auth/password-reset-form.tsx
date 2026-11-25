@@ -55,7 +55,7 @@ export const PasswordResetForm = () => {
                 Escribe tu correo electrónico y te enviaremos un código para restablecer tu contraseña.
             </span>
 
-            <form onSubmit={handleSubmit(onSubmit)} className={cn('w-full max-w-lg min-w-[20rem]')}>
+            <form onSubmit={handleSubmit(onSubmit)} className={cn('w-full min-w-0 max-w-lg')}>
                 <div className={cn('w-full mb-2')}>
                     <input
                         type='text'

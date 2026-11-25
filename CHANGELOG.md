@@ -2,6 +2,8 @@
 
 ## [unreleased]
 
+## 1.3.0
+
 ### Changed
 
 - Reduced the enrolled-course list response to progress and visible class summaries, removing detailed class and module state from the client payload.
@@ -11,6 +13,13 @@
 
 - Fixed login error message after a successful login.
 - Hid classes in locked modules from enrolled-course summaries and excluded deleted modules and classes from progress calculations.
+- Fixed admin course previews and editing for legacy quizzes with incomplete answers by showing which questions need correction.
+- Fixed course-content saves on larger edits by skipping unchanged database writes and identifying the failing persistence phase.
+- Fixed production diagnostics with severity-based, server-only logs, safe Prisma error classifications, and fewer duplicate failure events.
+- Fixed support navigation for clients and admins with a new-tab WhatsApp redirect using an environment-configured number and message.
+- Fixed the landing-page avatar so it reflects the client profile photo or name initials.
+- Fixed tablet and intermediate-width overflow in navigation, forms, course cards, learning views, admin charts, and tables.
+- Fixed missing site-wide performance tracking by mounting Vercel Speed Insights in every root layout.
 
 ## 1.2.1
 

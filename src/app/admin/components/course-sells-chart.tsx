@@ -38,7 +38,7 @@ export function CourseSellsChart() {
 
     return (
         <>
-            <ChartContainer config={chartConfig} className={cn("min-h-[80px] w-full")}>
+            <ChartContainer config={chartConfig} className={cn("h-64 w-full min-w-0 !aspect-auto sm:h-80 xl:h-[28rem]")}>
                 <BarChart accessibilityLayer data={chartData}>
                     <XAxis dataKey="course_name" tickLine={false} tickMargin={10} axisLine={false} />
                     <YAxis />
@@ -75,9 +75,9 @@ export function LastMonthCharts() {
     const isUpCourses = courseStats.arrowDirection === 'up';
 
     return (
-        <div className={cn("flex flex-col gap-6")}>
+        <div className={cn("grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:w-60 xl:shrink-0 xl:grid-cols-1")}>
             {error && <p role="alert">{error}</p>}
-            <Card className={cn("w-[15rem] h-[12rem] bg-[#2C95AF] rounded-xl p-4 text-white")}>
+            <Card className={cn("h-48 w-full min-w-0 bg-[#2C95AF] rounded-xl p-4 text-white")}>
                 <CardContent className="h-full flex flex-col justify-between">
                     {/* Título */}
                     <h2 className="text-sm font-medium">Ventas</h2>
@@ -94,7 +94,7 @@ export function LastMonthCharts() {
             </Card>
 
             {/* Tarjeta: Nuevos usuarios */}
-            <Card className={cn("w-[15rem] h-[12rem] rounded-xl p-4 border border-gray-200")}>
+            <Card className={cn("h-48 w-full min-w-0 rounded-xl border border-gray-200 p-4")}>
                 <CardContent className="h-full flex flex-col justify-between">
                     <h2 className="text-sm font-medium">Nuevos usuarios</h2>
                     <div className="flex items-center gap-2">

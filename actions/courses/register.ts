@@ -19,7 +19,7 @@ import { safeLogger } from '@/shared/observability/safe-logger';
 
 const logCourseActionError = (event: string, error: unknown, courseId?: number) => {
     // Do not log input, Blob URLs or exception messages: they may contain user data.
-    safeLogger.error(event, { courseId, name: error instanceof Error ? error.name : 'unknown' });
+    safeLogger.error(event, { courseId }, error);
 };
 
 export async function createDraft(input: unknown): Promise<ActionResult<CourseEditorDto>> {

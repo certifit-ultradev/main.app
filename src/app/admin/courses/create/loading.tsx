@@ -20,7 +20,7 @@ const SVGSkeleton = ({ className }: { className: string }) => (
 const Loading = () => (
     <>
         <div className={cn('mt-10 items-center justify-center')}>
-            <div className={cn('flex flex-col lg:flex-row gap-8 p-6 mx-auto w-full max-w-lg min-w-0 md:min-w-[50rem] lg:min-w-[110rem]')}>
+            <div className={cn('mx-auto flex w-full min-w-0 flex-col gap-8 p-0 lg:flex-row')}>
                 <div className={cn('w-full lg:w-1/4 p-4 h-60')}>
                     <nav className={cn('flex flex-col gap-4')}>
                         <div className={cn('flex items-center gap-2')}>

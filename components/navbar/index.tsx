@@ -52,7 +52,8 @@ function Navbar(): JSX.Element {
         role === 'admin'
             ? { label: 'Administración', value: 'admin', handleClick: handleAdministration }
             : { label: 'Inicio', value: 'inicio', handleClick: () => router.push('/dashboard') },
-        role == 'admin' ? { label: 'Usuarios', value: '/admin/users', handleClick: () => router.push('/admin/users') } : { label: 'Soporte', value: 'contact-us', handleClick: () => { window.location.hash = 'contact-us' } },
+        ...(role === 'admin' ? [{ label: 'Usuarios', value: '/admin/users', handleClick: () => router.push('/admin/users') }] : []),
+        { label: 'Soporte', value: 'support', href: '/support', openInNewTab: true },
     ];
 
     return (
@@ -72,16 +73,14 @@ function Navbar(): JSX.Element {
             </div>
 
             {/* Menú Desktop (Mostrado en pantallas medianas o mayores) */}
-            <div className="hidden md:flex flex-grow justify-center space-x-6">
-                {itemsPerRole.map((item, i) => {
-                    return (
-                        <Link key={i} href={`${item.to}`} className="flex text-white hover:text-gray-300"><item.icon className={cn('h-6 mr-4')} width={20} height={20} />{item.label}</Link>
-                    )
-                })}
+            <div className="hidden lg:flex flex-grow justify-center space-x-6">
+                {itemsPerRole.map((item) => item.to === '/support'
+                    ? <a key={item.to} href={item.to} target="_blank" rel="noopener noreferrer" className="flex text-white hover:text-gray-300"><item.icon className={cn('h-6 mr-4')} width={20} height={20} />{item.label}</a>
+                    : <Link key={item.to} href={item.to} className="flex text-white hover:text-gray-300"><item.icon className={cn('h-6 mr-4')} width={20} height={20} />{item.label}</Link>)}
             </div>
 
             {/* Sección Usuario Desktop */}
-            <div className="hidden md:flex items-center space-x-4">
+            <div className="hidden lg:flex items-center space-x-4">
                 {isLogged ? (
                     <>
                         <Dropdown
@@ -112,7 +111,7 @@ function Navbar(): JSX.Element {
             </div>
 
             {/* Menú Móvil (visible en pantallas pequeñas) */}
-            <div className="md:hidden flex items-center space-x-4">
+            <div className="flex items-center space-x-4 lg:hidden">
                 <MobileMenu options={mobileOptions} avatar={isLogged ? <ProfileAvatar
                     name={clientProfile?.name ?? session?.user.name ?? ''}
                     lastName={clientProfile?.lastName ?? ''}

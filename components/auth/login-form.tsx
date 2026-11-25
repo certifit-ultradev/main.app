@@ -64,7 +64,7 @@ export const LoginForm = () => {
                     Introduce tu usuario y contraseña para continuar
                 </p>
 
-                <form onSubmit={handleSubmit(onSubmit)} className={cn('w-full max-w-lg min-w-[20rem]')}>
+                <form onSubmit={handleSubmit(onSubmit)} className={cn('w-full min-w-0 max-w-lg')}>
                     <div className={cn('relative mb-4')}>
                         <input
                             type='email'

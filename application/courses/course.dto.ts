@@ -15,7 +15,19 @@ export type CatalogCourseCardDto = {
     alreadyPurchased: boolean;
 };
 
-type AuthorQuestionBase = { id: number; title: string; points: number };
+export type AuthorQuestionValidationIssue =
+    | 'missing_text_answer'
+    | 'insufficient_options'
+    | 'empty_option'
+    | 'invalid_correct_answer_count';
+
+type AuthorQuestionBase = {
+    id: number;
+    title: string;
+    points: number;
+    /** Present only when persisted legacy content needs author correction. */
+    validationIssue?: AuthorQuestionValidationIssue;
+};
 export type AuthorQuestionDto = AuthorQuestionBase & (
     | { type: 'text'; expectedAnswer: { value: string }; options?: never }
     | { type: 'multiple'; options: Array<{ id: number; value: string; isCorrect: boolean }>; expectedAnswer?: never }

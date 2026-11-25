@@ -47,13 +47,13 @@ function Layout(props: LayoutProps): JSX.Element {
     return (
         <main
             className={cn({
-                'relative flex flex-col min-h-screen items-center max-md:justify-center  max-md:mx-0 max-md:h-auto max-md:w-full':
+                'relative flex min-h-screen w-full min-w-0 flex-col items-center':
                     true,
                 [additionalClass]: !!additionalClass,
             })}
         >
             {<Navbar />}
-            <div className={cn('w-full max-w-lg min-w-0 md:min-w-[48rem] lg:min-w-[110rem]')}>
+            <div className={cn('w-full max-w-[110rem] min-w-0 px-4 sm:px-6 lg:px-8')}>
                 <div className={cn('mt-10')}>
                     <div className={cn('mb-5 justify-start')}>
                         <Breadcrumb items={items} />
@@ -61,7 +61,9 @@ function Layout(props: LayoutProps): JSX.Element {
                     <div className={cn('justify-start')}><p>Hola de nuevo, {data?.user.name}</p></div>
                 </div>
             </div>
-            {children}
+            <div className={cn('w-full max-w-[110rem] min-w-0 px-4 pb-10 sm:px-6 lg:px-8')}>
+                {children}
+            </div>
         </main>
     )
 }

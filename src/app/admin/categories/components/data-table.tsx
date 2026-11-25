@@ -80,9 +80,9 @@ export function CategoryListDataTable() {
     });
 
     return (
-        <div className={cn('mt-10')}>
+        <div className={cn('mt-10 min-w-0')}>
             <DataTableToolbar />
-            <Table className='table-auto w-full shadow-md rounded-lg border-separate border-spacing-y-2'>
+            <Table className='table-auto w-full min-w-[320px] shadow-md rounded-lg border-separate border-spacing-y-2'>
                 <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
                         <TableRow key={headerGroup.id}>
@@ -131,7 +131,7 @@ export function CategoryListDataTable() {
                     )}
                 </TableBody>
             </Table>
-            <div className={cn('flex items-center gap-2 mt-4')}>
+            <div className={cn('mt-4 flex flex-wrap items-center gap-2')}>
                 <Button
                     onClick={() => table.setPageIndex(0)}
                     disabled={!table.getCanPreviousPage()}

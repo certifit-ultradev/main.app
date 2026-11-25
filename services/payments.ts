@@ -51,17 +51,17 @@ export const quoteCoursePaymentTransaction = async (command: QuoteCoursePaymentC
 
         const course = await prismaPaymentCourseReadPort.findCourseForQuote(command.canonicalId);
         if (course === null) {
-            safeLogger.error('service.payment.quote.course_not_found');
+            safeLogger.debug('service.payment.quote.course_not_found');
             throw new NotFoundError("Curso no encontrado");
         }
 
         if (!course.isActive) {
-            safeLogger.error('service.payment.quote.course_inactive', { courseId: course.id });
+            safeLogger.debug('service.payment.quote.course_inactive', { courseId: course.id });
             throw new CourseInvalidStateError("El curso no esta activo");
         }
 
         if (course.expiresAt < new Date()) {
-            safeLogger.error('service.payment.quote.course_expired', { courseId: course.id });
+            safeLogger.debug('service.payment.quote.course_expired', { courseId: course.id });
             throw new CourseInvalidStateError("El curso ha expirado");
         }
 
@@ -71,14 +71,14 @@ export const quoteCoursePaymentTransaction = async (command: QuoteCoursePaymentC
         }
 
         if (await prismaPaymentCourseReadPort.hasEnrollment(course.id, user.id)) {
-            safeLogger.error('service.payment.quote.already_purchased', { courseId: course.id });
+            safeLogger.debug('service.payment.quote.already_purchased', { courseId: course.id });
             throw new CourseAlreadyPurchasedError("Curso ya ha sido comprado.");
         }
 
         const courseId = requirePersistentId(course.id, 'El curso');
         let currentPurchase: PurchaseRecord | null = await findLastCoursePendingPurchase(courseId, user.id);
         if (!currentPurchase) {
-            safeLogger.info('service.payment.quote.purchase_create_started', { courseId });
+            safeLogger.debug('service.payment.quote.purchase_create_started', { courseId });
             currentPurchase = await storeCoursePaymentTransaction({
                 courseId, userId: user.id, reference: uuidv4(), occurredAt: new Date(),
             });
@@ -107,7 +107,7 @@ export const quoteCoursePaymentTransaction = async (command: QuoteCoursePaymentC
             signature: { integrity: await createWompiCheckoutIntegrity(reference, amountInCents, sigData) },
             expirationTime: Date.now()
         };
-    });
+    }, { event: 'service.payment.quote.failed' });
 }
 
 /**
@@ -160,7 +160,7 @@ export const createCoursePaymentTransaction = async (command: RegisterCoursePaym
             success: true,
             message: "Pago registrado correctamente."
         };
-    });
+    }, { event: 'service.payment.transaction_create.failed', metadata: { purchaseId: command.purchaseId } });
 }
 
 /**
@@ -198,5 +198,5 @@ export const updateCoursePaymentTransaction = async (event: ApplyPaymentEventCom
         }
 
         return { outcome: 'applied' };
-    });
+    }, { event: 'service.payment.webhook_apply.failed', metadata: { status: event.status } });
 }

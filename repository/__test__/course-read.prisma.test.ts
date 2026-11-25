@@ -5,6 +5,7 @@ import {
     prismaStudentQuizReadPort,
 } from '@/repository/course-read.prisma';
 import { prisma } from '@/lib/prisma';
+import { safeLogger } from '@/shared/observability/safe-logger';
 
 jest.mock('@/lib/prisma', () => ({
     prisma: {
@@ -218,6 +219,31 @@ describe('Prisma course-read ports', () => {
         const query = (prisma.course.findFirst as jest.Mock).mock.calls[0][0];
         expect(query.include.courseModules.orderBy).toEqual([{ position: 'asc' }, { id: 'asc' }]);
         expect(query.include.courseModules.include.moduleClass.orderBy).toEqual([{ position: 'asc' }, { id: 'asc' }]);
+    });
+
+    it('loads a legacy quiz without a marked correct option so an admin can repair it', async () => {
+        const legacyCourse = structuredClone(course);
+        legacyCourse.courseModules[0].moduleQuiz[0].quizQuestion[0].possibleAnswerQuestion.forEach((answer) => {
+            answer.isCorrect = false;
+        });
+        (prisma.course.findFirst as jest.Mock).mockResolvedValue(legacyCourse);
+        const log = jest.spyOn(safeLogger, 'info').mockImplementation(() => undefined);
+
+        try {
+            const result = await prismaCourseEditorReadPort.findEditorCourseById(7);
+            expect(result?.modules[0].quiz?.questions[0]).toMatchObject({
+                id: 14,
+                validationIssue: 'invalid_correct_answer_count',
+                options: [{ id: 15, isCorrect: false }, { id: 18, isCorrect: false }],
+            });
+            expect(log).toHaveBeenCalledWith('course.editor.question_requires_correction', expect.objectContaining({
+                courseId: 7,
+                questionId: 14,
+                correctAnswerCount: 0,
+            }));
+        } finally {
+            log.mockRestore();
+        }
     });
 
     it('reads a new text question without options and an unmigrated historical question', async () => {

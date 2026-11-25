@@ -12,6 +12,7 @@ import { CourseNotPurchasedError } from "./course-not-purchased";
 import { MalformedJsonError } from './malformed-json';
 import { ProfileImageInvalidError } from './profile-image-invalid';
 import { safeLogger } from '@/shared/observability/safe-logger';
+import { getPrismaTransactionFailureReason, getSafePrismaErrorCode } from '@/shared/observability/prisma-error-code';
 import { apiFailure, type ApiErrorCode } from '@/interfaces/http/api-response';
 
 const httpFailure = (status: number, code: ApiErrorCode, message: string): Response =>
@@ -55,10 +56,7 @@ export function mapErrorToAPIResponse(error: unknown): Response {
         case error instanceof ProfileImageInvalidError:
             return httpFailure(422, 'VALIDATION', 'La foto de perfil no es válida.');
         default:
-            safeLogger.error('http.error.unexpected', {
-                name: error instanceof Error ? error.name : 'unknown',
-                ...(error instanceof Prisma.PrismaClientKnownRequestError ? { code: error.code } : {}),
-            });
+            safeLogger.error('http.error.unexpected', {}, error);
             return httpFailure(500, 'UNEXPECTED', 'Ocurrió un error. Inténtalo más tarde.');
     }
 }
@@ -69,20 +67,16 @@ export function mapErrorToAPIResponse(error: unknown): Response {
  * @param error - The error to log.
  */
 export function logPrismaError(error: unknown) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2028') {
-            // Classify transaction failures without printing Prisma's raw metadata,
-            // which may contain SQL or user-supplied values.
-            const detail = error.meta?.error;
-            const reason = typeof detail !== 'string' ? 'unknown'
-                : /expired|timeout|timed out/i.test(detail) ? 'expired'
-                    : /start/i.test(detail) ? 'start_failed'
-                        : /closed/i.test(detail) ? 'closed' : 'other';
-            safeLogger.error('persistence.known', { code: error.code, reason });
-        } else safeLogger.error('persistence.known', { code: error.code });
+    const code = getSafePrismaErrorCode(error);
+    if (code) {
+        if (code === 'P2028') {
+            safeLogger.error('persistence.known', { code, reason: getPrismaTransactionFailureReason(error) }, error);
+        } else safeLogger.error('persistence.known', { code }, error);
     }
-    else if (error instanceof Prisma.PrismaClientValidationError) safeLogger.error('persistence.validation');
-    else if (error instanceof Prisma.PrismaClientInitializationError) safeLogger.error('persistence.initialization');
-    else if (error instanceof Prisma.PrismaClientRustPanicError) safeLogger.error('persistence.panic');
-    else if (error instanceof Error) safeLogger.error('persistence.unexpected', { name: error.name });
+    else if (error instanceof Prisma.PrismaClientValidationError) safeLogger.error('persistence.validation', {}, error);
+    else if (error instanceof Prisma.PrismaClientInitializationError) safeLogger.error('persistence.initialization', {}, error);
+    else if (error instanceof Prisma.PrismaClientRustPanicError) safeLogger.error('persistence.panic', {}, error);
+    else if (error instanceof Error && /^PrismaClient[A-Za-z]+Error$/.test(error.name)) {
+        safeLogger.error('persistence.unexpected', {}, error);
+    }
 }

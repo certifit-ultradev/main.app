@@ -46,9 +46,10 @@ describe('course action validation', () => {
         expect(createCourseDraft).toHaveBeenCalledWith(expect.objectContaining({ courseImage: '', instructorPhoto: '' }));
     });
 
-    it('logs the basic step and course ID without logging exception contents', async () => {
+    it('logs the basic step and course ID with the original cause', async () => {
         const log = jest.spyOn(safeLogger, 'error').mockImplementation(() => undefined);
-        (updateCourseBasics as jest.Mock).mockRejectedValue(new Error('secret database detail'));
+        const cause = new Error('secret database detail');
+        (updateCourseBasics as jest.Mock).mockRejectedValue(cause);
 
         const result = await updateBasics({ courseId: 42, basics: {
             title: 'Curso', price: 100, description: 'Descripción',
@@ -57,7 +58,7 @@ describe('course action validation', () => {
         } });
 
         expect(result).toMatchObject({ ok: false, error: { code: 'UNEXPECTED' } });
-        expect(log).toHaveBeenCalledWith('course.basics.update.failed', { courseId: 42, name: 'Error' });
+        expect(log).toHaveBeenCalledWith('course.basics.update.failed', { courseId: 42 }, cause);
     });
 
     it('maps a sparse basics update without replacing untouched fields', async () => {
@@ -75,7 +76,8 @@ describe('course action validation', () => {
 
     it('logs failures from the content step with its course ID', async () => {
         const log = jest.spyOn(safeLogger, 'error').mockImplementation(() => undefined);
-        (saveCourseContent as jest.Mock).mockRejectedValue(new Error('secret database detail'));
+        const cause = new Error('secret database detail');
+        (saveCourseContent as jest.Mock).mockRejectedValue(cause);
 
         const result = await saveContent({ courseId: 42, content: { modules: [{
             title: 'Módulo', minRequiredPoints: 1,
@@ -86,7 +88,7 @@ describe('course action validation', () => {
         }] } });
 
         expect(result).toMatchObject({ ok: false, error: { code: 'UNEXPECTED' } });
-        expect(log).toHaveBeenCalledWith('course.content.save.failed', { courseId: 42, name: 'Error' });
+        expect(log).toHaveBeenCalledWith('course.content.save.failed', { courseId: 42 }, cause);
     });
 
     it('does not create a course from an incomplete command', async () => {

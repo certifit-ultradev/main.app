@@ -12,7 +12,7 @@ const Loading = () => (
                 <div className={cn('h-4 mt-1 bg-gray-200 rounded w-3/4')}></div>
             </span>
         </div>
-        <div className={cn('w-full mt-4 max-w-lg min-w-[20rem] space-y-4')}>
+        <div className={cn('mt-4 w-full min-w-0 max-w-lg space-y-4')}>
             <div className={cn('flex flex-wrap -mx-2 mb-4')}>
                 <div className={cn('w-full md:w-1/2 px-2 mb-4 md:mb-0')}>
                     <div className={cn('w-full p-3 border border-gray-300 rounded-lg bg-gray-100 h-10')}></div>

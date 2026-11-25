@@ -4,6 +4,7 @@ import { SessionProvider } from 'next-auth/react'
 import '../globals.css';
 import { auth } from "@/auth";
 import { AppHeroUIProvider } from '@/components/heroui-provider';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata: Metadata = {
     title: 'Certifit',
@@ -27,6 +28,7 @@ export default async function RootLayout({
                         </Layout>
                     </AppHeroUIProvider>
                 </SessionProvider>
+                <SpeedInsights />
             </body>
         </html>
     )

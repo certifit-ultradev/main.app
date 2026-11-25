@@ -31,7 +31,7 @@ export const UserCourses = () => {
             ? <EmptyCourseProgressCard course={course} position={index} />
             : <CourseProgressCard course={course} />;
         return (
-            <div key={course.canonicalId}>
+            <div key={course.canonicalId} className="min-w-0">
                 {cardComponent}
             </div>
         )
@@ -39,7 +39,7 @@ export const UserCourses = () => {
 
     return (
         <div className={cn("max-h-[75vh] overflow-y-auto")}>
-            <div className={cn('grid grid-cols-1 md:grid-cols-3 auto-rows-min gap-6')}>
+            <div className={cn('grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 auto-rows-min gap-6')}>
                 {isLoading ? (<Loading />) : coursesElements.length > 0 ? coursesElements : EmptyCourse()}
             </div>
         </div>
@@ -48,7 +48,7 @@ export const UserCourses = () => {
 
 const EmptyCourse = () => {
     return (
-        <div className={cn('flex col-start-2 justify-center')}>
+        <div className={cn('col-span-full flex justify-center')}>
             <p className={cn('text-gray-500')}>No tienes cursos todavía</p>
         </div>
     );

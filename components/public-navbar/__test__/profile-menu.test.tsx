@@ -52,11 +52,28 @@ describe('public navbar profile menu', () => {
         expect(mockPush).toHaveBeenCalledWith('/users/profile');
     });
 
+    it('shows the saved profile photo in both client menus', async () => {
+        (useOptionalClientProfile as jest.Mock).mockReturnValue({ profile: {
+            name: 'Pablo', lastName: 'Lozano',
+            profileImage: 'https://vnruzfzvnvdhb848.public.blob.vercel-storage.com/users/client/profile/photo.png',
+        } });
+        (useSession as jest.Mock).mockReturnValue({ status: 'authenticated', data: { user: { name: 'Pablo', isAdmin: false } } });
+
+        await act(async () => root.render(<PublicNavbar />));
+
+        const avatars = container.querySelectorAll('[aria-label="Perfil de Pablo Lozano"]');
+        expect(avatars).toHaveLength(2);
+        avatars.forEach((avatar) => expect(avatar.querySelector('img')).not.toBeNull());
+    });
+
     it('shows administration for administrators in desktop and mobile menus', async () => {
         (useSession as jest.Mock).mockReturnValue({ status: 'authenticated', data: { user: { name: 'Admin', isAdmin: true } } });
         await act(async () => root.render(<PublicNavbar />));
         expect(container.textContent).not.toContain('Mi perfil');
         expect(container.textContent).toContain('Administración');
+        const avatars = container.querySelectorAll('[aria-label="Perfil de Admin"]');
+        expect(avatars).toHaveLength(2);
+        avatars.forEach((avatar) => expect(avatar.textContent).toBe('A'));
         await act(async () => { (container.querySelector('[aria-label="Abrir menú"]') as HTMLButtonElement).click(); });
         expect(container.textContent).not.toContain('Mi perfil');
         expect(container.textContent?.match(/Administración/g)).toHaveLength(2);
