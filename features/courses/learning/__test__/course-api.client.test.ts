@@ -6,7 +6,8 @@ const enrolledCourse = {
     canonicalId: 'course-1', title: 'Curso', price: 100, courseImage: 'https://example.com/course.jpg',
     instructorName: 'Ada', instructorPhoto: 'https://example.com/ada.jpg', courseDuration: '10 min',
     category: null, description: 'Descripción', expiresAt: '2030-01-01T00:00:00.000Z',
-    progressPercent: 0, totalClasses: 0, visibleClasses: [],
+    classViewed: [], moduleViewed: [], classesWithCompletion: [], progressPercent: 0, currentIndex: 0,
+    totalClasses: 0, visibleClasses: [],
 };
 
 describe('course list HTTP client', () => {

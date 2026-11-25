@@ -87,7 +87,11 @@ export type StudentCourseListItemDto = {
     category: { id: number; name: string } | null;
     description: string;
     expiresAt: string;
+    classViewed: Array<{ classId: number; currentVideoTime: number; completed: boolean }>;
+    moduleViewed: Array<{ moduleId: number; completed: boolean }>;
+    classesWithCompletion: Array<{ id: number; title: string; completed: boolean }>;
     progressPercent: number;
+    currentIndex: number;
     totalClasses: number;
-    visibleClasses: Array<{ position: number; title: string; completed: boolean; isCurrent: boolean }>;
+    visibleClasses: Array<{ id: number; title: string; completed: boolean }>;
 };

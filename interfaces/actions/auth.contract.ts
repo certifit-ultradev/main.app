@@ -12,10 +12,7 @@ export const LoginInputSchema = z.object({
     email: z.string().trim().email('El correo no es válido.'),
     password: z.string().min(1, 'La contraseña es obligatoria.'),
     rememberMe: z.boolean().default(false),
-    callbackUrl: z.string().trim().refine(
-        (path) => path.startsWith('/') && !path.startsWith('//') && !path.includes('\\'),
-        'La URL de retorno no es válida.',
-    ).nullable().optional(),
+    callbackUrl: z.string().trim().startsWith('/', 'La URL de retorno no es válida.').nullable().optional(),
 }).strict();
 
 export const RegisterAccountInputSchema = z.object({
