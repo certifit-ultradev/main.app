@@ -9,7 +9,6 @@ import { ErrorMessage } from '@hookform/error-message';
 import { LoginSchema } from '@/features/auth/auth-form.schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FormError } from '@/components/form/form-error';
-import { FormSuccess } from '@/components/form/form-success';
 import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import CircularProgress from '../circular-progress-bar';
@@ -17,13 +16,11 @@ import { BoardIcon, LaptopIcon } from '../svg/certifit-icons';
 
 export const LoginForm = () => {
     const [error, setError] = useState<string | undefined>('');
-    const [success, setSuccess] = useState<string | undefined>('');
     const [isPending, startTransition] = useTransition();
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get('callbackUrl');
     const {
-        reset,
         register,
         handleSubmit,
         formState: { errors },
@@ -34,19 +31,17 @@ export const LoginForm = () => {
 
     const onSubmit = (values: z.infer<typeof LoginSchema>) => {
         setError('');
-        setSuccess('');
-        startTransition(() => {
-            login({ ...values, callbackUrl })
-                .then((data) => {
-                    if (data.ok) {
-                        reset();
-                        setSuccess(data.message);
-                    } else {
-                        setError(data.error.message);
-                    }
-                }).catch(() => {
-                    setError('Algo ha pasado, intenta mas tarde!');
-                });
+        startTransition(async () => {
+            try {
+                const result = await login({ ...values, callbackUrl });
+                if (!result.ok) {
+                    setError(result.error.message);
+                    return;
+                }
+                window.location.replace(result.data.redirectTo);
+            } catch {
+                setError('Algo ha pasado, intenta mas tarde!');
+            }
         });
     };
 
@@ -124,7 +119,6 @@ export const LoginForm = () => {
                     </div>
                     <div className={cn('relative mb-4')}>
                         <FormError error={error} />
-                        <FormSuccess message={success} />
                     </div>
                     <SubmitButton label='Ingresar' isLoading={isPending} disabled={isPending} />
                 </form>

@@ -2,7 +2,6 @@
 
 import { signIn } from "@/auth";
 import { DEFAULT_LOGIN_REDIRECT } from "@/routes";
-import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { AuthError } from 'next-auth';
 import { actionFailure, actionSuccess, type ActionResult } from '@/interfaces/actions/action-result';
 import { LoginInputSchema } from '@/interfaces/actions/auth.contract';
@@ -16,7 +15,7 @@ import { safeLogger } from '@/shared/observability/safe-logger';
  * @returns 
  */
 /** Public action: invalid and unverified credentials receive the same response. */
-export const login = async (input: unknown): Promise<ActionResult<null>> => {
+export const login = async (input: unknown): Promise<ActionResult<{ redirectTo: string }>> => {
     const parsedInput = validateActionInput(LoginInputSchema, input);
     if (!parsedInput.ok) return parsedInput;
 
@@ -25,14 +24,11 @@ export const login = async (input: unknown): Promise<ActionResult<null>> => {
             email: parsedInput.data.email,
             password: parsedInput.data.password,
             rememberMe: parsedInput.data.rememberMe ? 'true' : 'false',
-            redirect: true,
+            redirect: false,
             redirectTo: parsedInput.data.callbackUrl || DEFAULT_LOGIN_REDIRECT,
         });
-        return actionSuccess(null, 'Ha iniciado sesión correctamente.');
+        return actionSuccess({ redirectTo: parsedInput.data.callbackUrl || DEFAULT_LOGIN_REDIRECT }, 'Ha iniciado sesión correctamente.');
     } catch (error) {
-        if (isRedirectError(error)) {
-            throw error;
-        }
         if (error instanceof AuthError && error.type === 'CredentialsSignin') {
             return actionFailure('UNAUTHENTICATED', 'Credenciales inválidas.');
         }

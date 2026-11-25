@@ -120,20 +120,28 @@ const studentCourseListInclude = {
             category: { select: { id: true, name: true } },
             courseModules: {
                 select: {
-                    moduleClass: { select: { id: true, title: true, videoDuration: true }, orderBy: presentationOrder },
+                    id: true,
+                    moduleClass: {
+                        where: { deleted: false },
+                        select: { id: true, title: true, videoDuration: true },
+                        orderBy: presentationOrder,
+                    },
+                    moduleQuiz: {
+                        where: { deleted: false },
+                        select: { id: true },
+                        take: 1,
+                    },
                 },
+                where: { deleted: false },
                 orderBy: presentationOrder,
             },
         },
     },
     userClassesState: {
-        select: { classId: true, currentVideoTime: true, completed: true, createdAt: true },
+        select: { classId: true, completed: true },
         orderBy: { id: 'desc' },
     },
-    userModuleState: {
-        select: { moduleId: true, completed: true, createdAt: true },
-        orderBy: { id: 'desc' },
-    },
+    userQuizState: { where: { passed: true }, select: { quizId: true } },
 } as const;
 
 type CatalogCourseRow = Prisma.CourseGetPayload<{ include: typeof catalogInclude }>;
@@ -284,28 +292,37 @@ function toStudentCourse(enrollment: StudentEnrollmentRow): StudentCourseDto {
 
 function toStudentCourseListItem(enrollment: StudentCourseListRow): StudentCourseListItemDto {
     const course = enrollment.course;
-    const classes = course.courseModules.flatMap((module) => module.moduleClass);
+    const unlocked = unlockedModuleIds(
+        course.courseModules.map((module) => ({ id: module.id, quizId: module.moduleQuiz[0]?.id ?? null })),
+        new Set(enrollment.userQuizState.map((state) => state.quizId)),
+    );
+    const classes = course.courseModules.flatMap((module) =>
+        module.moduleClass.map((courseClass) => ({ ...courseClass, moduleId: module.id })));
     const latestClassStates = new Map<number, boolean>();
     for (const state of enrollment.userClassesState) {
         if (!latestClassStates.has(state.classId)) latestClassStates.set(state.classId, state.completed);
     }
-    const classesWithCompletion = classes.map((courseClass) => ({
-        id: courseClass.id,
-        title: courseClass.title,
-        completed: latestClassStates.get(courseClass.id) ?? false,
-    }));
-    const totalClasses = classesWithCompletion.length;
-    const completedClasses = classesWithCompletion.filter((courseClass) => courseClass.completed).length;
+    const totalClasses = classes.length;
+    const completedClasses = classes.filter((courseClass) => latestClassStates.get(courseClass.id)).length;
     const progressPercent = totalClasses === 0 ? 0 : Math.round((completedClasses / totalClasses) * 100);
-    const currentIndex = totalClasses === 0
-        ? -1
-        : classesWithCompletion.findIndex((courseClass) => !courseClass.completed);
-    const resolvedCurrentIndex = currentIndex === -1 ? totalClasses - 1 : currentIndex;
-    const visibleClasses = totalClasses <= 1
-        ? classesWithCompletion
-        : resolvedCurrentIndex === totalClasses - 1
-            ? classesWithCompletion.slice(Math.max(0, resolvedCurrentIndex - 1), resolvedCurrentIndex + 1)
-            : classesWithCompletion.slice(resolvedCurrentIndex, resolvedCurrentIndex + 2);
+    const availableClasses = classes.flatMap((courseClass, index) => unlocked.has(courseClass.moduleId)
+        ? [{
+            position: index + 1,
+            title: courseClass.title,
+            completed: latestClassStates.get(courseClass.id) ?? false,
+        }]
+        : []);
+    const firstIncompleteIndex = availableClasses.findIndex((courseClass) => !courseClass.completed);
+    const currentIndex = firstIncompleteIndex === -1 ? availableClasses.length - 1 : firstIncompleteIndex;
+    const selectedClasses = availableClasses.length <= 1
+        ? availableClasses
+        : currentIndex === availableClasses.length - 1
+            ? availableClasses.slice(Math.max(0, currentIndex - 1), currentIndex + 1)
+            : availableClasses.slice(currentIndex, currentIndex + 2);
+    const visibleClasses = selectedClasses.map((courseClass) => ({
+        ...courseClass,
+        isCurrent: courseClass.position === availableClasses[currentIndex]?.position,
+    }));
     const totalDuration = classes.reduce((sum, courseClass) => sum + (courseClass.videoDuration ?? 0), 0);
 
     return {
@@ -319,15 +336,7 @@ function toStudentCourseListItem(enrollment: StudentCourseListRow): StudentCours
         category: toCategory(course.category),
         description: course.description,
         expiresAt: course.expiresAt.toISOString(),
-        classViewed: enrollment.userClassesState.map((state) => ({
-            classId: state.classId,
-            currentVideoTime: state.currentVideoTime,
-            completed: state.completed,
-        })),
-        moduleViewed: enrollment.userModuleState.map((state) => ({ moduleId: state.moduleId, completed: state.completed })),
-        classesWithCompletion,
         progressPercent,
-        currentIndex: resolvedCurrentIndex,
         totalClasses,
         visibleClasses,
     };
