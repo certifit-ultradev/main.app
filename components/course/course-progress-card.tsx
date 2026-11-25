@@ -40,10 +40,10 @@ export function CourseProgressCard({ course }: CourseProgressCardProps) {
                         <div className={cn('flex items-center space-x-4 mb-4')}>
                             <div className={cn("flex-1 mr-4")}>
                                 {course.visibleClasses.map((cls) => {
-                                    const isCurrentGlobal = cls.isCurrent;
+                                    const isCurrentGlobal = course.classesWithCompletion.findIndex((c) => c.id === cls.id) === course.currentIndex;
 
                                     return (
-                                        <div key={cls.position} className={cn("flex items-center mb-2")}>
+                                        <div key={cls.id} className={cn("flex items-center mb-2")}>
                                             <div className={cn("mr-2")}>
                                                 {cls.completed ? (
                                                     <div className={cn("w-4 h-4 bg-[#0BBBE7] rounded-full flex items-center justify-center text-white text-xs")}>
@@ -62,7 +62,7 @@ export function CourseProgressCard({ course }: CourseProgressCardProps) {
 
                                             <div className={cn(`text-md ${isCurrentGlobal ? 'font-semibold' : ''}`)}>
                                                 {/* Dibuja la posición real en todo el curso */}
-                                                <p className={cn(`text-xs`)}>Clase {cls.position}</p>
+                                                <p className={cn(`text-xs`)}>Clase {course.classesWithCompletion.findIndex((c) => c.id === cls.id) + 1}</p>
                                                 <p>{cls.title}</p>
                                             </div>
                                         </div>

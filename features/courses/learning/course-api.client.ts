@@ -22,10 +22,11 @@ const StudentCourseListItemSchema = z.object({
     canonicalId: z.string().min(1), title: z.string(), price: z.number().finite(), courseImage: z.string(),
     instructorName: z.string(), instructorPhoto: z.string(), courseDuration: z.string(),
     category: z.object({ id: z.number().int().positive(), name: z.string() }).nullable(), description: z.string(),
-    expiresAt: z.string(), progressPercent: z.number().finite(), totalClasses: z.number().int().nonnegative(),
-    visibleClasses: z.array(z.object({
-        position: z.number().int().positive(), title: z.string(), completed: z.boolean(), isCurrent: z.boolean(),
-    })),
+    expiresAt: z.string(), classViewed: z.array(z.object({ classId: z.number().int().positive(), currentVideoTime: z.number().finite(), completed: z.boolean() })),
+    moduleViewed: z.array(z.object({ moduleId: z.number().int().positive(), completed: z.boolean() })),
+    classesWithCompletion: z.array(z.object({ id: z.number().int().positive(), title: z.string(), completed: z.boolean() })),
+    progressPercent: z.number().finite(), currentIndex: z.number().int().nonnegative(), totalClasses: z.number().int().nonnegative(),
+    visibleClasses: z.array(z.object({ id: z.number().int().positive(), title: z.string(), completed: z.boolean() })),
 });
 
 async function parseResponse<T>(response: Response, schema: z.ZodType<T>): Promise<T> {

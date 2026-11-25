@@ -2,16 +2,6 @@
 
 ## [unreleased]
 
-### Changed
-
-- Reduced the enrolled-course list response to progress and visible class summaries, removing detailed class and module state from the client payload.
-- Switched the Prisma seed to `bcryptjs`, moved `jest-environment-jsdom` to development dependencies, and removed unused packages.
-
-### Fixed
-
-- Fixed login error message after a successful login.
-- Hid classes in locked modules from enrolled-course summaries and excluded deleted modules and classes from progress calculations.
-
 ## 1.2.1
 
 ### Fixed
